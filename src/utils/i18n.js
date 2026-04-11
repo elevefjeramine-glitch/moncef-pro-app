@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export const LanguageContext = createContext('fr');
 export const useLanguage = () => useContext(LanguageContext);
@@ -8,39 +8,176 @@ export const translations = {
   fr: {
     home: "Accueil", calendar: "Calendrier", messages: "Messagerie", settings: "Paramètres du Compte",
     dashboard: "Tableau de Bord", ai: "Intelligence Artificielle", my_schedule: "Mon Emploi du Temps", internal_msg: "Messagerie Interne",
+    profile: "Mon Profil", interface: "Interface", logout: "Déconnexion",
+    
     hello: "Bonjour", ready: "Prêt à exceller aujourd'hui ? Voici un résumé de votre activité.",
     productivity: "Productivité", remaining_hw: "Devoirs Restants", hw_list: "Liste de Devoirs",
     subject_ph: "Matière (ex: Mathématiques)", task_ph: "Travail à faire", btn_add: "Ajouter",
-    loading_hw: "Chargement de votre liste...", empty_hw: "Aucun devoir enregistré. 🚀 Super ! ",
-    profile: "Mon Profil", interface: "Interface", logout: "Déconnexion"
+    loading_hw: "Chargement de votre liste...", empty_hw: "Aucun devoir enregistré. 🚀 Super !",
+
+    access_app: "Accéder à la plateforme",
+    hero_badge: "Une nouvelle ère pour l'Éducation",
+    hero_title: "L'intelligence artificielle au service de votre Réussite Absolue",
+    hero_desc: "Transformez votre méthode de travail avec Moncef IA. Un écosystème révolutionnaire combinant IA de pointe, gestion du temps et collaboration en temps réel.",
+    hero_btn_start: "Commencer Gratuitement ➜", герой_btn_login: "Se Connecter", hero_btn_login: "Se Connecter",
+    feat_title: "Nos FONCTIONNALITÉS", feat_desc: "Une suite absolue d'outils pour transformer votre expérience éducative",
+    hw_title: "COMMENT ÇA MARCHE ?", hw_desc: "En 4 étapes simples, transformez votre expérience",
+    ti_title: "NIVEAUX DE COMPTE", ti_desc: "Chaque utilisateur possède un rôle clair avec des droits différenciés",
+    sec_title: "SÉCURITÉ INÉBRANLABLE", sec_desc: "// Propulsé par la meilleure infrastructure mondiale.",
+    
+    ai_status: "Assistant en ligne (Claude)",
+    new_chat: "Nouveau Chat",
+    ai_placeholder: "Posez votre question à Moncef IA...",
+    ai_disclaimer: "Les réponses sont générées par l'intelligence artificielle et peuvent être approximatives.",
+    
+    auth_title_login: "Se connecter", auth_title_signup: "Créer un compte",
+    auth_desc: "Entrez vos informations pour continuer",
+    auth_email: "Adresse Email", auth_pwd: "Mot de passe",
+    auth_btn_login: "Connexion sécurisée", auth_btn_signup: "S'inscrire gratuitement",
+    auth_switch_login: "Déjà un compte ? Se connecter", auth_switch_signup: "Pas encore de compte ? S'inscrire",
+
+    sch_day: "Jour", sch_time: "Horaire (ex: 08:00 - 10:00)", sch_time_ph: "Heure de cours",
+    sch_subj: "Matière", sch_subj_ph: "Mathématiques, Histoire...", sch_add: "Ajouter",
+    sch_courses: "cours", sch_loading: "Chargement...", sch_empty: "Aucun cours prévu",
+    d0: "Lundi", d1: "Mardi", d2: "Mercredi", d3: "Jeudi", d4: "Vendredi", d5: "Samedi", d6: "Dimanche",
+
+    comm_title: "Messagerie Interne", comm_select: "Sélectionnez un contact dans la liste pour commencer à discuter.",
+    comm_ph: "Écrivez votre message...", comm_loading: "Chargement des contacts..."
   },
   en: {
     home: "Home", calendar: "Schedule", messages: "Messages", settings: "Account Settings",
     dashboard: "Dashboard", ai: "Artificial Intelligence", my_schedule: "My Schedule", internal_msg: "Internal Messaging",
+    profile: "My Profile", interface: "Interface", logout: "Log Out",
+    
     hello: "Hello", ready: "Ready to excel today? Here is a summary of your activity.",
     productivity: "Productivity", remaining_hw: "Pending Homework", hw_list: "Homework List",
     subject_ph: "Subject (e.g. Math)", task_ph: "Task description", btn_add: "Add",
     loading_hw: "Loading your list...", empty_hw: "No pending homework. 🚀 Awesome!",
-    profile: "My Profile", interface: "Interface", logout: "Log Out"
+
+    access_app: "Access Platform",
+    hero_badge: "A new era for Education",
+    hero_title: "Artificial intelligence for your Absolute Success",
+    hero_desc: "Transform your working method with Moncef IA. A revolutionary ecosystem combining advanced AI, time management, and real-time collaboration.",
+    hero_btn_start: "Start for Free ➜", hero_btn_login: "Log In",
+    feat_title: "Our FEATURES", feat_desc: "A complete suite of tools to transform your educational experience",
+    hw_title: "HOW IT WORKS?", hw_desc: "In 4 simple steps, transform your experience",
+    ti_title: "ACCOUNT TIERS", ti_desc: "Each user has a clear role with differentiated rights",
+    sec_title: "UNBREAKABLE SECURITY", sec_desc: "// Powered by the best global infrastructure.",
+
+    ai_status: "Online Assistant (Claude)",
+    new_chat: "New Chat",
+    ai_placeholder: "Ask Moncef IA your question...",
+    ai_disclaimer: "Answers are generated by artificial intelligence and may be inaccurate.",
+
+    auth_title_login: "Log In", auth_title_signup: "Create Account",
+    auth_desc: "Enter your information to continue",
+    auth_email: "Email Address", auth_pwd: "Password",
+    auth_btn_login: "Secure Login", auth_btn_signup: "Sign up for free",
+    auth_switch_login: "Already have an account? Log in", auth_switch_signup: "No account yet? Sign up",
+
+    sch_day: "Day", sch_time: "Time (e.g. 08:00 - 10:00)", sch_time_ph: "Class time",
+    sch_subj: "Subject", sch_subj_ph: "Math, History...", sch_add: "Add",
+    sch_courses: "classes", sch_loading: "Loading...", sch_empty: "No classes scheduled",
+    d0: "Monday", d1: "Tuesday", d2: "Wednesday", d3: "Thursday", d4: "Friday", d5: "Saturday", d6: "Sunday",
+
+    comm_title: "Internal Messaging", comm_select: "Select a contact from the list to start chatting.",
+    comm_ph: "Type your message...", comm_loading: "Loading contacts..."
   },
   es: {
     home: "Inicio", calendar: "Calendario", messages: "Mensajes", settings: "Configuración de la cuenta",
     dashboard: "Panel de control", ai: "Inteligencia Artificial", my_schedule: "Mi Horario", internal_msg: "Mensajería Interna",
+    profile: "Mi Perfil", interface: "Interfaz", logout: "Cerrar sesión",
+    
     hello: "Hola", ready: "¿Listo para brillar hoy? Aquí tienes un resumen de tu actividad.",
     productivity: "Productividad", remaining_hw: "Tareas Restantes", hw_list: "Lista de Tareas",
     subject_ph: "Materia (ej: Matemáticas)", task_ph: "Tarea a realizar", btn_add: "Añadir",
     loading_hw: "Cargando tu lista...", empty_hw: "Ninguna tarea registrada. 🚀 ¡Genial!",
-    profile: "Mi Perfil", interface: "Interfaz", logout: "Cerrar sesión"
+
+    access_app: "Acceder a la plataforma",
+    hero_badge: "Una nueva era para la Educación",
+    hero_title: "Inteligencia artificial al servicio de tu Éxito Absoluto",
+    hero_desc: "Transforma tu método de estudio con Moncef IA. Un ecosistema revolucionario que combina IA predictiva, gestión del tiempo y colaboración.",
+    hero_btn_start: "Comenzar Gratis ➜", hero_btn_login: "Iniciar sesión",
+    feat_title: "Nuestras FUNCIONES", feat_desc: "Una suite completa de herramientas para tu experiencia",
+    hw_title: "¿CÓMO FUNCIONA?", hw_desc: "En 4 simples pasos, transforma tu experiencia",
+    ti_title: "NIVELES DE CUENTA", ti_desc: "Cada usuario posee un rol claro con derechos diferenciados",
+    sec_title: "SEGURIDAD INQUEBRANTABLE", sec_desc: "// Impulsado por la mejor infraestructura global.",
+
+    ai_status: "Asistente en línea (Claude)",
+    new_chat: "Nuevo Chat",
+    ai_placeholder: "Haz tu pregunta a Moncef IA...",
+    ai_disclaimer: "Las respuestas son generadas por la inteligencia artificial y pueden ser aproximadas.",
+
+    auth_title_login: "Iniciar Sesión", auth_title_signup: "Crear cuenta",
+    auth_desc: "Ingresa tu información para continuar",
+    auth_email: "Correo Electrónico", auth_pwd: "Contraseña",
+    auth_btn_login: "Conexión segura", auth_btn_signup: "Registrarse gratis",
+    auth_switch_login: "¿Ya tienes cuenta? Iniciar", auth_switch_signup: "¿No tienes cuenta? Regístrate",
+
+    sch_day: "Día", sch_time: "Horario (ej: 08:00 - 10:00)", sch_time_ph: "Hora de clase",
+    sch_subj: "Materia", sch_subj_ph: "Matemáticas, Historia...", sch_add: "Añadir",
+    sch_courses: "clases", sch_loading: "Cargando...", sch_empty: "No hay clases programadas",
+    d0: "Lunes", d1: "Martes", d2: "Miércoles", d3: "Jueves", d4: "Viernes", d5: "Sábado", d6: "Domingo",
+
+    comm_title: "Mensajería Interna", comm_select: "Selecciona un contacto de la lista para empezar a chatear.",
+    comm_ph: "Escribe tu mensaje...", comm_loading: "Cargando contactos..."
   },
   ar: {
     home: "الرئيسية", calendar: "التقويم", messages: "الرسائل", settings: "إعدادات الحساب",
     dashboard: "لوحة القيادة", ai: "الذكاء الاصطناعي", my_schedule: "جدولي الزمني", internal_msg: "المراسلة الداخلية",
+    profile: "ملفي الشخصي", interface: "الواجهة", logout: "تسجيل الخروج",
+    
     hello: "مرحباً", ready: "مستعد للتفوق اليوم؟ إليك ملخص لنشاطك.",
     productivity: "الإنتاجية", remaining_hw: "الواجبات المتبقية", hw_list: "قائمة الواجبات",
     subject_ph: "المادة (مثال: رياضيات)", task_ph: "العمل المطلوب", btn_add: "إضافة",
     loading_hw: "جاري تحميل القائمة...", empty_hw: "لا توجد واجبات مسجلة. 🚀 رائع!",
-    profile: "ملفي الشخصي", interface: "الواجهة", logout: "تسجيل الخروج"
+
+    access_app: "الدخول للمنصة",
+    hero_badge: "حقبة جديدة للتعليم",
+    hero_title: "الذكاء الاصطناعي في خدمة نجاحك المطلق",
+    hero_desc: "قم بتغيير طريقة عملك مع منصف للذكاء الاصطناعي. نظام بيئي ثوري يجمع بين الذكاء وإدارة الوقت.",
+    hero_btn_start: "ابدأ مجاناً ➜", hero_btn_login: "تسجيل الدخول",
+    feat_title: "مميزاتنا", feat_desc: "مجموعة أدوات كاملة لتحويل تجربتك التعليمية",
+    hw_title: "كيف يعمل؟", hw_desc: "في 4 خطوات بسيطة، غيّر تجربتك",
+    ti_title: "مستويات الحساب", ti_desc: "كل مستخدم لديه دور واضح بحقوق مختلفة",
+    sec_title: "أمان لا يتزعزع", sec_desc: "// مدعوم بأفضل بنية تحتية عالمية.",
+
+    ai_status: "مساعد متصل (كلود)",
+    new_chat: "محادثة جديدة",
+    ai_placeholder: "اطرح سؤالك على منصف...",
+    ai_disclaimer: "يتم إنشاء الردود بواسطة الذكاء الاصطناعي وقد تكون تقريبية.",
+
+    auth_title_login: "تسجيل الدخول", auth_title_signup: "إنشاء حساب",
+    auth_desc: "أدخل معلوماتك للمتابعة",
+    auth_email: "البريد الإلكتروني", auth_pwd: "كلمة المرور",
+    auth_btn_login: "دخول آمن", auth_btn_signup: "سجل مجانا",
+    auth_switch_login: "لديك حساب؟ تسجيل الدخول", auth_switch_signup: "ليس لديك حساب؟ سجل",
+
+    sch_day: "اليوم", sch_time: "الوقت (مثال: 08:00 - 10:00)", sch_time_ph: "وقت الدرس",
+    sch_subj: "المادة", sch_subj_ph: "رياضيات، تاريخ...", sch_add: "إضافة",
+    sch_courses: "حصص", sch_loading: "جاري التحميل...", sch_empty: "لا توجد حصص مبرمجة",
+    d0: "الاثنين", d1: "الثلاثاء", d2: "الأربعاء", d3: "الخميس", d4: "الجمعة", d5: "السبت", d6: "الأحد",
+
+    comm_title: "المراسلة الداخلية", comm_select: "اختر جهة اتصال من القائمة لبدء الدردشة.",
+    comm_ph: "اكتب رسالتك...", comm_loading: "جاري تحميل جهات الاتصال..."
   }
 };
 
 export const t = (lang, key) => translations[lang]?.[key] || translations['fr'][key] || key;
+
+export function LanguageProvider({ children, initialLang = 'fr' }) {
+  const [lang, setLang] = useState(initialLang);
+
+  useEffect(() => {
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  return (
+    <LanguageContext.Provider value={lang}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </div>
+    </LanguageContext.Provider>
+  );
+}

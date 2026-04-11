@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/utils/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
 import { Send, Users, Activity } from "lucide-react";
+import { useLanguage, t } from "@/utils/i18n";
 
 export default function CommPage() {
+  const lang = useLanguage();
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -65,7 +66,7 @@ export default function CommPage() {
       <motion.div variants={itemVariants} className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <Users color="var(--a)" />
-          <h3 style={{ fontSize: '18px', color: '#fff', fontWeight: 600 }}>Membres Actifs</h3>
+          <h3 style={{ fontSize: '18px', color: '#fff', fontWeight: 600 }}>{t(lang, 'comm_title')}</h3>
         </div>
         
         <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -87,8 +88,8 @@ export default function CommPage() {
       {/* Panneau droit : Chat */}
       <motion.div variants={itemVariants} className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '24px', overflow: 'hidden' }}>
         <div style={{ padding: '20px 24px', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ fontSize: '18px', margin: 0, color: '#fff' }}>Salon Principal</h3>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Discussion générale avec sauvegarde en temps réel</p>
+          <h3 style={{ fontSize: '18px', margin: 0, color: '#fff' }}>{t(lang, 'comm_title')}</h3>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{t(lang, 'comm_select')}</p>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -132,13 +133,13 @@ export default function CommPage() {
             <input 
               className="fi" 
               style={{ flex: 1, borderRadius: '20px' }} 
-              placeholder="Écrivez un message ici..." 
+              placeholder={t(lang, 'comm_ph')} 
               value={newMsg} 
               onChange={(e) => setNewMsg(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             />
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '50px', height: '50px', borderRadius: '50%', padding: 0 }} onClick={sendMessage}>
-              <Send size={18} />
+              <Send size={18} style={{ transform: lang === 'ar' ? 'scaleX(-1)' : 'none' }} />
             </motion.button>
           </div>
         </div>

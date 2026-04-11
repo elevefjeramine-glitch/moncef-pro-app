@@ -4,20 +4,46 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star } from "lucide-react";
 import TiltCard from "@/components/TiltCard";
+import { t } from "@/utils/i18n";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const [lang, setLang] = useState('fr');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('site_lang');
+    if (saved) {
+      setLang(saved);
+      document.documentElement.dir = saved === 'ar' ? 'rtl' : 'ltr';
+    }
+  }, []);
+
+  const switchLang = (l) => {
+    setLang(l);
+    localStorage.setItem('site_lang', l);
+    document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+  };
+
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const item = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } } };
 
   return (
-    <div className="landing-wrap active" style={{ overflowX: 'hidden' }}>
+    <div className="landing-wrap active" style={{ overflowX: 'hidden', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       <div className="mesh" />
       
       <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="landing-header" style={{ background: 'rgba(6,11,26,0.5)', backdropFilter: 'var(--glass)' }}>
         <div className="landing-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/auth">
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn">Accéder à la plateforme</motion.button>
-          </Link>
+          <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+            <Link href="/auth">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn">{t(lang, 'access_app')}</motion.button>
+            </Link>
+            <select value={lang} onChange={e => switchLang(e.target.value)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px', borderRadius: '10px', outline: 'none', cursor: 'pointer' }}>
+              <option value="fr">FR</option>
+              <option value="en">EN</option>
+              <option value="es">ES</option>
+              <option value="ar">AR</option>
+            </select>
+          </div>
           <div className="landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 'bold' }}>
             <span>Moncef <span style={{ color: 'var(--a)' }}>IA</span></span>
             <img src="/logo.png" alt="Logo" style={{ width: 40, height: 40, borderRadius: 10, boxShadow: '0 0 15px rgba(0,210,182,0.4)' }} />
@@ -35,27 +61,25 @@ export default function Home() {
         />
 
         <motion.div variants={item} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 30, fontSize: 13, fontWeight: 700, marginBottom: 30, display: 'flex', alignItems: 'center', gap: 10, backdropFilter: 'blur(10px)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-          <Star size={16} color="var(--a)" /> Une nouvelle ère pour l'Éducation
+          <Star size={16} color="var(--a)" /> {t(lang, 'hero_badge')}
         </motion.div>
         
-        <motion.h2 variants={item} style={{ fontSize: 'clamp(50px, 8vw, 85px)', lineHeight: 1.05, marginBottom: 30, maxWidth: 1000, textShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 1 }}>
-          L'intelligence artificielle <br/>au service de votre <span style={{ background: 'linear-gradient(135deg, var(--p), var(--a), #FFD700)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block', paddingBottom: '10px' }}>Réussite Absolue</span>
-        </motion.h2>
+        <motion.h2 variants={item} style={{ fontSize: 'clamp(50px, 8vw, 85px)', lineHeight: 1.05, marginBottom: 30, maxWidth: 1000, textShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 1 }} dangerouslySetInnerHTML={{ __html: t(lang, 'hero_title').replace('Réussite Absolue', `<span style="background: linear-gradient(135deg, var(--p), var(--a), #FFD700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; padding-bottom: 10px">Réussite Absolue</span>`).replace('Absolute Success', `<span style="background: linear-gradient(135deg, var(--p), var(--a), #FFD700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; padding-bottom: 10px">Absolute Success</span>`).replace('Éxito Absoluto', `<span style="background: linear-gradient(135deg, var(--p), var(--a), #FFD700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; padding-bottom: 10px">Éxito Absoluto</span>`).replace('نجاحك المطلق', `<span style="background: linear-gradient(135deg, var(--p), var(--a), #FFD700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; padding-bottom: 10px">نجاحك المطلق</span>`) }} />
 
         <motion.p variants={item} style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', maxWidth: 650, marginBottom: 50, lineHeight: 1.6, zIndex: 1 }}>
-          Transformez votre méthode de travail avec Moncef IA. Un écosystème révolutionnaire combinant IA de pointe, gestion du temps et collaboration en temps réel.
+          {t(lang, 'hero_desc')}
         </motion.p>
         
         {/* Grouped Button Pill */}
         <motion.div variants={item} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '6px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', boxShadow: '0 10px 40px rgba(0,0,0,0.3)', zIndex: 1 }}>
           <Link href="/auth?tab=signup" style={{ textDecoration: 'none' }}>
             <motion.div whileHover={{ scale: 1.02 }} className="interactive" style={{ background: 'linear-gradient(135deg, var(--p), var(--a))', color: '#fff', padding: '16px 36px', borderRadius: '100px', fontWeight: 600, fontSize: 16, boxShadow: '0 4px 15px rgba(0,210,182,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              Commencer Gratuitement ➜
+              {t(lang, 'hero_btn_start')}
             </motion.div>
           </Link>
           <Link href="/auth?tab=login" style={{ textDecoration: 'none' }}>
             <motion.div whileHover={{ background: 'rgba(255,255,255,0.08)' }} className="interactive" style={{ color: 'rgba(255,255,255,0.8)', padding: '16px 36px', borderRadius: '100px', fontWeight: 600, fontSize: 16, transition: 'all 0.3s' }}>
-              Se Connecter
+              {t(lang, 'hero_btn_login')}
             </motion.div>
           </Link>
         </motion.div>
@@ -63,8 +87,8 @@ export default function Home() {
 
       <section className="landing-section" id="features" style={{ background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.6 }}>
-          <h2 style={{ fontSize: 40, marginBottom: 16 }}>Nos <span style={{ color: 'var(--a)' }}>FONCTIONNALITÉS</span></h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>Une suite complète d'outils pour transformer votre expérience éducative</p>
+          <h2 style={{ fontSize: 40, marginBottom: 16 }}>{t(lang, 'feat_title')}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>{t(lang, 'feat_desc')}</p>
         </motion.div>
 
         <div className="features-grid">
@@ -79,8 +103,8 @@ export default function Home() {
 
       <section className="landing-section" id="how-it-works" style={{ background: 'rgba(0,0,0,0.1)' }}>
         <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.6 }}>
-          <h2 style={{ fontSize: 40, marginBottom: 16 }}>COMMENT ÇA <span style={{ color: 'var(--a)' }}>MARCHE</span> ?</h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>En 4 étapes simples, transformez votre expérience éducative</p>
+          <h2 style={{ fontSize: 40, marginBottom: 16 }}>{t(lang, 'hw_title')}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>{t(lang, 'hw_desc')}</p>
         </motion.div>
         
         <div className="steps-grid">
@@ -109,8 +133,8 @@ export default function Home() {
 
       <section className="landing-section" id="tiers" style={{ background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.6 }}>
-          <h2 style={{ fontSize: 40, marginBottom: 16 }}>NIVEAUX DE <span style={{ color: 'var(--a)' }}>COMPTE</span></h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>Chaque utilisateur possède un rôle clair avec des droits différenciés</p>
+          <h2 style={{ fontSize: 40, marginBottom: 16 }}>{t(lang, 'ti_title')}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>{t(lang, 'ti_desc')}</p>
         </motion.div>
         
         <div className="tiers-grid">
@@ -122,8 +146,8 @@ export default function Home() {
 
       <section className="landing-section" id="infrastructure" style={{ background: 'radial-gradient(ellipse at bottom, rgba(46,91,255,0.1) 0%, rgba(0,0,0,0) 70%)', position: 'relative', overflow: 'hidden' }}>
         <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ position: 'relative', zIndex: 1, marginBottom: 60 }}>
-          <h2 style={{ fontSize: 'clamp(40px, 6vw, 60px)', textTransform: 'uppercase', letterSpacing: '4px', textShadow: '0 0 40px rgba(0,210,182,0.4)', background: 'linear-gradient(to right, #ffffff, var(--a), var(--p))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 10 }}>Sécurité Inébranlable</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 20, maxWidth: 600, margin: '0 auto', fontFamily: 'JetBrains Mono, monospace' }}>// Propulsé par la meilleure infrastructure mondiale.</p>
+          <h2 style={{ fontSize: 'clamp(40px, 6vw, 60px)', textTransform: 'uppercase', letterSpacing: '4px', textShadow: '0 0 40px rgba(0,210,182,0.4)', background: 'linear-gradient(to right, #ffffff, var(--a), var(--p))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 10 }}>{t(lang, 'sec_title')}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 20, maxWidth: 600, margin: '0 auto', fontFamily: 'JetBrains Mono, monospace' }}>{t(lang, 'sec_desc')}</p>
         </motion.div>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 30, maxWidth: 1000, margin: '0 auto', textAlign: 'left' }}>

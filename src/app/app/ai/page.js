@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, Sparkles, User, RefreshCw } from "lucide-react";
+import { useLanguage, t } from "@/utils/i18n";
 
 export default function AIPage() {
+  const lang = useLanguage();
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Bonjour ! Je suis Moncef IA, votre assistant pédagogique propulsé par Claude. Comment puis-je vous aider aujourd\'hui ?' }
   ]);
@@ -37,7 +39,7 @@ export default function AIPage() {
         body: JSON.stringify({ 
           model: 'claude-haiku-4-5-20251001',
           messages: newContext.map(m => ({ role: m.role, content: m.content })),
-          system: 'Tu es Moncef IA, un assistant éducatif intelligent, bienveillant et expert en pédagogie. Réponds de manière concise et structurée.'
+          system: `Tu es Moncef IA, un assistant éducatif intelligent. IMPORTANT: You must reply entirely in the language corresponding to this code: ${lang}.`
         })
       });
       
@@ -72,12 +74,12 @@ export default function AIPage() {
               Moncef IA <Sparkles size={18} color="var(--a)" />
             </h2>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ok)' }} /> Assistant en ligne (Claude)
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ok)' }} /> {t(lang, 'ai_status')}
             </div>
           </div>
         </div>
         <button onClick={clearChat} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-          <RefreshCw size={14} /> Nouveau Chat
+          <RefreshCw size={14} /> {t(lang, 'new_chat')}
         </button>
       </motion.div>
 
@@ -143,18 +145,18 @@ export default function AIPage() {
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 8px 8px 24px', borderRadius: '24px' }}>
             <input 
               style={{ flex: 1, background: 'none', border: 'none', color: '#fff', fontSize: '15px', outline: 'none' }} 
-              placeholder="Posez votre question à Moncef IA..." 
+              placeholder={t(lang, 'ai_placeholder')} 
               value={input} 
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               disabled={loading}
             />
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={sendMessage} disabled={loading}>
-              <Send size={20} style={{ marginLeft: '-2px' }} />
+              <Send size={20} style={{ marginLeft: lang === 'ar' ? '2px' : '-2px', transform: lang === 'ar' ? 'scaleX(-1)' : 'none' }} />
             </motion.button>
           </div>
           <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
-            Les réponses sont générées par l'intelligence artificielle et peuvent être approximatives.
+            {t(lang, 'ai_disclaimer')}
           </div>
         </div>
 

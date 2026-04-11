@@ -4,13 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 
-const t = {
-  fr: { sub: "Plateforme Éducative Intelligente", login: "Se connecter", signup: "S'inscrire", email: "Adresse e-mail", password: "Mot de passe", btn_loading: "Chargement...", btn_login: "Se connecter ➜", btn_signup: "Créer mon compte ➜", err_fill: "Veuillez remplir tous les champs.", msg_created: "Compte créé ! Vérifiez vos emails." },
-  en: { sub: "Intelligent Educational Platform", login: "Log In", signup: "Sign Up", email: "Email Address", password: "Password", btn_loading: "Loading...", btn_login: "Log In ➜", btn_signup: "Sign Up ➜", err_fill: "Please fill all fields.", msg_created: "Account created! Check your email." },
-  es: { sub: "Plataforma Educativa Inteligente", login: "Iniciar sesión", signup: "Registrarse", email: "Correo electrónico", password: "Contraseña", btn_loading: "Cargando...", btn_login: "Iniciar sesión ➜", btn_signup: "Crear cuenta ➜", err_fill: "Por favor complete todos los campos.", msg_created: "¡Cuenta creada! Revisa tu correo." },
-  ar: { sub: "منصة تعليمية ذكية", login: "تسجيل الدخول", signup: "إنشاء حساب", email: "البريد الإلكتروني", password: "كلمة المرور", btn_loading: "جار التحميل...", btn_login: "تسجيل الدخول ➜", btn_signup: "إنشاء حساب ➜", err_fill: "يرجى ملء جميع الحقول.", msg_created: "تم إنشاء الحساب! تحقق من بريدك الإلكتروني." },
-  zh: { sub: "智能教育平台", login: "登录", signup: "注册", email: "电子邮件地址", password: "密码", btn_loading: "加载中...", btn_login: "登录 ➜", btn_signup: "注册 ➜", err_fill: "请填写所有字段。", msg_created: "账户已创建！请查看您的电子邮件。" }
-};
+import { t } from "@/utils/i18n";
 
 export default function AuthPage() {
   const [tab, setTab] = useState("login");
@@ -22,16 +16,22 @@ export default function AuthPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const texts = t[lang];
+  useEffect(() => {
+    const saved = localStorage.getItem('site_lang');
+    if (saved) setLang(saved);
+  }, []);
 
-  useEffect(() => { document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; }, [lang]);
+  useEffect(() => { 
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; 
+    localStorage.setItem('site_lang', lang);
+  }, [lang]);
 
   const handleAuth = async () => { /* Même logique qu'avant */
     setLoading(true); setErrorMsg(""); setSuccessMsg("");
-    if (!email || !password) { setErrorMsg(texts.err_fill); setLoading(false); return; }
+    if (!email || !password) { setErrorMsg("Veuillez remplir tous les champs."); setLoading(false); return; }
     if (tab === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) setErrorMsg(error.message); else setSuccessMsg(texts.msg_created);
+      if (error) setErrorMsg(error.message); else setSuccessMsg("Compte créé ! Vérifiez vos emails.");
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErrorMsg(error.message); else window.location.href = "/app";
@@ -56,21 +56,21 @@ export default function AuthPage() {
         
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ fontSize: '32px', color: 'var(--a)', marginBottom: '8px', textShadow: '0 0 20px rgba(0,210,182,0.4)' }}>🎓 Moncef IA</motion.h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>{texts.sub}</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>{t(lang, 'hero_badge')}</p>
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginBottom: "32px" }}>
-          {['fr', 'en', 'es', 'ar', 'zh'].map(l => (
+          {['fr', 'en', 'es', 'ar'].map(l => (
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} key={l} className="btn-sec" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', background: lang === l ? 'var(--p)' : 'rgba(255,255,255,0.05)', color: lang === l ? '#fff' : 'rgba(255,255,255,0.6)', border: lang === l ? '1px solid var(--p)' : '1px solid rgba(255,255,255,0.1)' }} onClick={() => setLang(l)}>
-              {l === 'fr' ? '🇫🇷 FR' : l === 'en' ? '🇬🇧 EN' : l === 'es' ? '🇪🇸 ES' : l === 'ar' ? '🇸🇦 AR' : '🇨🇳 ZH'}
+              {l === 'fr' ? '🇫🇷 FR' : l === 'en' ? '🇬🇧 EN' : l === 'es' ? '🇪🇸 ES' : '🇸🇦 AR'}
             </motion.button>
           ))}
         </div>
 
         <div style={{ display: "flex", gap: "8px", background: "rgba(0,0,0,0.3)", padding: "6px", borderRadius: "14px", marginBottom: "28px" }}>
-          {['login', 'signup'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "12px", borderRadius: "10px", background: tab === t ? 'var(--p)' : 'transparent', border: 'none', color: tab === t ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s' }}>
-              {t === 'login' ? texts.login : texts.signup}
+          {['login', 'signup'].map(tb => (
+            <button key={tb} onClick={() => setTab(tb)} style={{ flex: 1, padding: "12px", borderRadius: "10px", background: tab === tb ? 'var(--p)' : 'transparent', border: 'none', color: tab === tb ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s' }}>
+              {tb === 'login' ? t(lang, 'auth_title_login') : t(lang, 'auth_title_signup')}
             </button>
           ))}
         </div>
@@ -81,18 +81,18 @@ export default function AuthPage() {
             {successMsg && <div style={{ color: "var(--ok)", fontSize: "14px", marginBottom: "20px", textAlign: "center", padding: "12px", background: "rgba(0,230,138,0.1)", borderRadius: "10px", border: "1px solid rgba(0,230,138,0.2)" }}>{successMsg}</div>}
             
             <div style={{ marginBottom: "20px" }}>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>{texts.email}</label>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>{t(lang, 'auth_email')}</label>
               <input type="email" className="fi" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" />
             </div>
             <div style={{ marginBottom: "28px", position: "relative" }}>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>{texts.password}</label>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>{t(lang, 'auth_pwd')}</label>
               <input type={showPw ? "text" : "password"} className="fi" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ paddingRight: "40px" }} />
               <button type="button" style={{ position: "absolute", right: "12px", bottom: "12px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "18px" }} onClick={() => setShowPw(!showPw)}>
                 {showPw ? "🙈" : "👁️"}
               </button>
             </div>
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="btn" style={{ width: "100%", height: "52px", fontSize: "16px" }} onClick={handleAuth} disabled={loading}>
-              {loading ? texts.btn_loading : (tab === "login" ? texts.btn_login : texts.btn_signup)}
+              {loading ? "..." : (tab === "login" ? t(lang, 'auth_btn_login') : t(lang, 'auth_btn_signup'))}
             </motion.button>
             
             <div className="oauth-grid">
