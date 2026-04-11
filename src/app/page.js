@@ -14,11 +14,14 @@ export default function Home() {
       <div className="mesh" />
       
       <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="landing-header" style={{ background: 'rgba(6,11,26,0.5)', backdropFilter: 'var(--glass)' }}>
-        <div className="landing-container">
-          <div className="landing-logo">🎓 Moncef <span style={{ color: 'var(--a)' }}>IA</span></div>
+        <div className="landing-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Link href="/auth">
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn">Accéder à la plateforme</motion.button>
           </Link>
+          <div className="landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 'bold' }}>
+            <span>Moncef <span style={{ color: 'var(--a)' }}>IA</span></span>
+            <img src="/logo.png" alt="Logo" style={{ width: 40, height: 40, borderRadius: 10, boxShadow: '0 0 15px rgba(0,210,182,0.4)' }} />
+          </div>
         </div>
       </motion.header>
 

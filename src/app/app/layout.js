@@ -51,7 +51,10 @@ export default function AppLayout({ children }) {
       <div className="mesh" />
       
       <motion.nav initial={{ x: -300 }} animate={{ x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div className="logo">🎓 Moncef <span style={{ color: 'var(--a)' }}>IA</span></div>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: '0 0 10px rgba(0,210,182,0.3)' }} />
+          Moncef <span style={{ color: 'var(--a)' }}>IA</span>
+        </div>
         <div className="nav-items">
           {navItems.map((item, i) => {
             const isActive = pathname === item.path || (item.path !== '/app' && pathname.startsWith(item.path));
