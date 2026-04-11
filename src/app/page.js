@@ -62,18 +62,62 @@ export default function Home() {
         </motion.div>
       </motion.section>
 
-      <section className="landing-section" id="features" style={{ background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <section className="landing-section" id="features" style={{ background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.6 }}>
-          <h2 style={{ fontSize: 40, marginBottom: 16 }}>Nos <span style={{ color: 'var(--a)' }}>Fonctionnalités</span></h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>Une suite absolue d'outils redéfinissant votre workflow pédagogique</p>
+          <h2 style={{ fontSize: 40, marginBottom: 16 }}>Nos <span style={{ color: 'var(--a)' }}>FONCTIONNALITÉS</span></h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>Une suite complète d'outils pour transformer votre expérience éducative</p>
         </motion.div>
 
         <div className="features-grid">
-          <FeatureCard icon={<Bot size={32} />} title="Moncef IA" desc="Assistance complète avec explication détaillée et corrections personnalisées par le LLM Claude Haiku." list={["Réponses intelligentes 24/7", "Explications détaillées", "Révisions personnalisées"]} delay={0.1} />
-          <FeatureCard icon={<CalendarDays size={32} />} title="Emploi du Temps" desc="Gestion absolue de votre emploi du temps avec synchronisation automatique." list={["Semaines A/B automatiques", "Synchronisation en temps réel", "Impressions intelligentes"]} delay={0.2} />
-          <FeatureCard icon={<ClipboardList size={32} />} title="Homework Tracker" desc="Suivi complet de vos devoirs avec analyse IA et rappels automatiques." list={["Extraction automatique", "Priorités intelligentes", "Historique de productivité"]} delay={0.3} />
-          <FeatureCard icon={<MessageSquare size={32} />} title="Messagerie Interne" desc="Plateforme de discussion privée sécurisée pour collaborer avec vos pairs." list={["Chiffrement en temps réel", "Base de données SQL", "Notifications Push"]} delay={0.4} />
-          <FeatureCard icon={<ShieldCheck size={32} color="var(--gold)" />} title="Sécurité Supabase" desc="Infrastructure Entreprise avec authentification OAuth et protection RLS." list={["Row Level Security", "OAuth Google / Apple", "Intégrité des données"]} premium delay={0.5} />
+          <FeatureCard icon={<Bot size={32} />} title="Moncef IA" desc="Assistance pédagogique complète avec explications détaillées et corrections personnalisées." list={["Réponses intelligentes 24/7", "Explications détaillées", "Corrections instantanées", "Révisions personnalisées"]} delay={0.1} />
+          <FeatureCard icon={<CalendarDays size={32} />} title="Emploi de Temps IA" desc="Gestion intelligente de votre emploi du temps avec synchronisation automatique." list={["Semaines A/B automatiques", "Synchronisation en temps réel", "Rappels intelligents", "Impression facile"]} delay={0.2} />
+          <FeatureCard icon={<ClipboardList size={32} />} title="Homework Tracker" desc="Suivi complet de vos devoirs avec analyse IA et rappels automatiques." list={["Extraction automatique", "Priorités intelligentes", "Rappels avant échéance", "Historique complet"]} delay={0.3} />
+          <FeatureCard icon={<MessageSquare size={32} />} title="Communication" desc="Plateforme de messagerie ultra-sécurisée pour collaborer avec vos camarades." list={["Messagerie instantanée", "Profils utilisateurs", "Système de parrainage", "Notifications en temps réel"]} delay={0.4} />
+          <FeatureCard icon={<ShieldCheck size={32} color="var(--gold)" />} title="ALPHA AI" desc="IA exclusive au Fondateur pour la gestion avancée du site en temps réel." list={["Gestion complète du site", "Analyse des données", "Notifications globales", "Contrôle utilisateurs"]} premium delay={0.5} />
+          <FeatureCard icon={<ShieldCheck size={32} />} title="Modération" desc="Outils de gestion communautaire pour les modérateurs et administrateurs." list={["Gestion des utilisateurs", "Modération du contenu", "Rapports d'activité", "Sécurité renforcée"]} delay={0.6} />
+        </div>
+      </section>
+
+      <section className="landing-section" id="how-it-works" style={{ background: 'rgba(0,0,0,0.1)' }}>
+        <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.6 }}>
+          <h2 style={{ fontSize: 40, marginBottom: 16 }}>COMMENT ÇA <span style={{ color: 'var(--a)' }}>MARCHE</span> ?</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>En 4 étapes simples, transformez votre expérience éducative</p>
+        </motion.div>
+        
+        <div className="steps-grid">
+          <TiltCard delay={0.1} className="step-card card">
+            <div className="step-number">1</div>
+            <h3 style={{ color: 'var(--a)', fontSize: 20, marginBottom: 16 }}>Créer ton compte</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Inscris-toi gratuitement en quelques secondes avec votre email</p>
+          </TiltCard>
+          <TiltCard delay={0.2} className="step-card card">
+            <div className="step-number">2</div>
+            <h3 style={{ color: 'var(--a)', fontSize: 20, marginBottom: 16 }}>Brancher ton EDT</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Importez ou créez votre emploi du temps avec l'aide de Moncef IA</p>
+          </TiltCard>
+          <TiltCard delay={0.3} className="step-card card">
+            <div className="step-number">3</div>
+            <h3 style={{ color: 'var(--a)', fontSize: 20, marginBottom: 16 }}>Laisser l'IA travailler</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Laissez Moncef IA gérer vos devoirs et vous assister dans vos études</p>
+          </TiltCard>
+          <TiltCard delay={0.4} className="step-card card">
+            <div className="step-number">4</div>
+            <h3 style={{ color: 'var(--a)', fontSize: 20, marginBottom: 16 }}>Profiter de la plateforme</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Collaborez avec d'autres étudiants et progressez ensemble</p>
+          </TiltCard>
+        </div>
+      </section>
+
+      <section className="landing-section" id="tiers" style={{ background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.6 }}>
+          <h2 style={{ fontSize: 40, marginBottom: 16 }}>NIVEAUX DE <span style={{ color: 'var(--a)' }}>COMPTE</span></h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 60, fontSize: 18 }}>Chaque utilisateur possède un rôle clair avec des droits différenciés</p>
+        </motion.div>
+        
+        <div className="tiers-grid">
+          <TierCard title="Casque Bronze" roleLevel={3} desc="Accès standard avec 100 crédits/jour régénérés toutes les 2 heures" list={["Accès à Moncef IA", "Emploi du temps", "Suivi des devoirs", "Messagerie"]} crossList={["ALPHA AI"]} delay={0.1} />
+          <TierCard title="Casque Argent" roleLevel={2} desc="Modérateur avec accès illimité et crédits infinis pour modérer" list={["Tout du Bronze", "Crédits illimités", "Gestion utilisateurs", "Modération"]} crossList={["ALPHA AI"]} delay={0.2} />
+          <TierCard title="Casque Or" roleLevel="👑" desc="Co-fondateur avec accès complet et contrôle du site (max 2)" list={["Tout du Modérateur", "ALPHA AI", "Gestion complète", "Analytics avancées", "Notifications globales"]} premium delay={0.3} />
         </div>
       </section>
 
@@ -89,15 +133,40 @@ export default function Home() {
 
 function FeatureCard({ icon, title, desc, list, premium = false, delay }) {
   return (
-    <TiltCard delay={delay} className={`feature-card interactive ${premium ? 'premium' : ''}`} style={{ background: premium ? 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02))' : 'rgba(255,255,255,0.02)' }}>
-      {premium && <div className="premium-badge">ALPHA</div>}
+    <TiltCard delay={delay} className={`feature-card interactive ${premium ? 'premium' : ''}`} style={{ background: premium ? 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02))' : 'rgba(255,255,255,0.02)', padding: '30px' }}>
+      {premium && <div className="premium-badge">PREMIUM</div>}
       <div className="feature-icon" style={{ color: premium ? 'var(--gold)' : 'var(--p)', marginBottom: 20 }}>{icon}</div>
       <h3 style={{ fontSize: 22, color: premium ? 'var(--gold)' : '#fff', marginBottom: 12 }}>{title}</h3>
       <p style={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: 20 }}>{desc}</p>
       <ul className="feature-list" style={{ paddingLeft: 0 }}>
         {list.map((item, idx) => (
-          <li key={idx} style={{ padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <li key={idx} style={{ padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
             <span style={{ color: 'var(--ok)' }}>✓</span> {item}
+          </li>
+        ))}
+      </ul>
+    </TiltCard>
+  );
+}
+
+function TierCard({ title, desc, list, crossList = [], roleLevel, premium = false, delay }) {
+  const color = premium ? 'var(--gold)' : (roleLevel === 2 ? 'var(--p)' : 'var(--a)');
+  return (
+    <TiltCard delay={delay} className={`feature-card interactive ${premium ? 'premium' : ''}`} style={{ background: premium ? 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02))' : 'rgba(255,255,255,0.02)', padding: '40px 30px' }}>
+      <div style={{ width: 60, height: 60, borderRadius: '50%', background: `rgba(255,255,255,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 'bold', margin: '0 auto 20px auto', border: `2px solid ${color}`, color }}>
+        {roleLevel}
+      </div>
+      <h3 style={{ fontSize: 24, color: color, marginBottom: 12 }}>{title}</h3>
+      <p style={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: 30, fontSize: 14 }}>{desc}</p>
+      <ul className="feature-list" style={{ paddingLeft: 0, textAlign: 'left' }}>
+        {list.map((item, idx) => (
+          <li key={idx} style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
+            <span style={{ color: 'var(--ok)' }}>✓</span> {item}
+          </li>
+        ))}
+        {crossList.map((item, idx) => (
+          <li key={`x-${idx}`} style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+            <span style={{ color: 'var(--err)' }}>✗</span> {item}
           </li>
         ))}
       </ul>

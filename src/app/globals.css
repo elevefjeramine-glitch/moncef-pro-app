@@ -182,3 +182,16 @@ code, pre { font-family: 'JetBrains Mono', monospace; }
 .custom-cursor-ring {
   position: absolute; top:0; left:0; width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none;
 }
+
+/* LANDING LAYOUT GRIDS */
+.landing-section { padding: 100px 20px; text-align: center; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; text-align: left; }
+.steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
+.tiers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; text-align: center; }
+
+.step-card { padding: 40px 20px; border-radius: 20px; text-align: center; }
+.step-number {
+  width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, var(--p), var(--a));
+  color: #fff; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px auto; box-shadow: 0 4px 15px rgba(0,210,182,0.3);
+}
