@@ -26,19 +26,39 @@ export default function Home() {
         </div>
       </motion.header>
 
-      <motion.section variants={container} initial="hidden" animate="show" className="landing-hero" id="hero" style={{ padding: '120px 20px', minHeight: '80vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-        <motion.div variants={item} style={{ padding: '8px 16px', background: 'rgba(0,210,182,0.1)', border: '1px solid var(--a)', color: 'var(--a)', borderRadius: 30, fontSize: 13, fontWeight: 700, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Star size={14} /> La Next-Gen de l'Éducation
+      <motion.section variants={container} initial="hidden" animate="show" className="landing-hero" id="hero" style={{ padding: '120px 20px', minHeight: '90vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        
+        {/* Glowing Orb Background */}
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3], rotate: [0, 90, 0] }} 
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          style={{ position: 'absolute', top: '20%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(0,210,182,0.15) 0%, rgba(46,91,255,0.15) 50%, transparent 70%)', filter: 'blur(100px)', zIndex: -1, pointerEvents: 'none' }}
+        />
+
+        <motion.div variants={item} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 30, fontSize: 13, fontWeight: 700, marginBottom: 30, display: 'flex', alignItems: 'center', gap: 10, backdropFilter: 'blur(10px)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+          <Star size={16} color="var(--a)" /> Une nouvelle ère pour l'Éducation
         </motion.div>
-        <motion.h2 variants={item} style={{ fontSize: 'clamp(40px, 8vw, 70px)', lineHeight: 1.1, marginBottom: 24, maxWidth: 900 }}>
-          L'intelligence artificielle <br/>au service de votre <span style={{ background: 'linear-gradient(90deg, var(--p), var(--a))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Réussite</span>
+        
+        <motion.h2 variants={item} style={{ fontSize: 'clamp(50px, 8vw, 85px)', lineHeight: 1.05, marginBottom: 30, maxWidth: 1000, textShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 1 }}>
+          L'intelligence artificielle <br/>au service de votre <span style={{ background: 'linear-gradient(135deg, var(--p), var(--a), #FFD700)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block', paddingBottom: '10px' }}>Réussite Absolue</span>
         </motion.h2>
-        <motion.p variants={item} style={{ fontSize: 20, color: 'rgba(255,255,255,0.6)', maxWidth: 600, marginBottom: 40, lineHeight: 1.6 }}>
-          Transformez votre manière d'apprendre avec Moncef IA. Un écosystème complet combinant IA de pointe, gestion du temps et collaboration.
+
+        <motion.p variants={item} style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', maxWidth: 650, marginBottom: 50, lineHeight: 1.6, zIndex: 1 }}>
+          Transformez votre méthode de travail avec Moncef IA. Un écosystème révolutionnaire combinant IA de pointe, gestion du temps et collaboration en temps réel.
         </motion.p>
-        <motion.div variants={item} style={{ display: 'flex', gap: 16 }}>
-          <Link href="/auth?tab=signup"><motion.button whileHover={{ scale: 1.05 }} className="btn" style={{ height: 56, padding: '0 32px', fontSize: 16 }}>Commencer Gratuitement ➜</motion.button></Link>
-          <Link href="/auth?tab=login"><motion.button whileHover={{ scale: 1.05 }} className="btn-sec" style={{ height: 56, padding: '0 32px', fontSize: 16, border: '2px solid rgba(255,255,255,0.1)', borderRadius: 12, background:'rgba(255,255,255,0.05)', color:'#fff' }}>Connexion</motion.button></Link>
+        
+        {/* Grouped Button Pill */}
+        <motion.div variants={item} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '6px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', boxShadow: '0 10px 40px rgba(0,0,0,0.3)', zIndex: 1 }}>
+          <Link href="/auth?tab=signup" style={{ textDecoration: 'none' }}>
+            <motion.div whileHover={{ scale: 1.02 }} className="interactive" style={{ background: 'linear-gradient(135deg, var(--p), var(--a))', color: '#fff', padding: '16px 36px', borderRadius: '100px', fontWeight: 600, fontSize: 16, boxShadow: '0 4px 15px rgba(0,210,182,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              Commencer Gratuitement ➜
+            </motion.div>
+          </Link>
+          <Link href="/auth?tab=login" style={{ textDecoration: 'none' }}>
+            <motion.div whileHover={{ background: 'rgba(255,255,255,0.08)' }} className="interactive" style={{ color: 'rgba(255,255,255,0.8)', padding: '16px 36px', borderRadius: '100px', fontWeight: 600, fontSize: 16, transition: 'all 0.3s' }}>
+              Se Connecter
+            </motion.div>
+          </Link>
         </motion.div>
       </motion.section>
 
