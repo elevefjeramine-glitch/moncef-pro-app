@@ -11,6 +11,9 @@ CREATE TABLE public.users (
   last_name TEXT,
   role TEXT DEFAULT 'normal'::text CHECK (role IN ('normal', 'moderator', 'founder')),
   tokens INTEGER DEFAULT 700,
+  theme_color TEXT DEFAULT '#00D2B6',
+  avatar_url TEXT,
+  language TEXT DEFAULT 'fr',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

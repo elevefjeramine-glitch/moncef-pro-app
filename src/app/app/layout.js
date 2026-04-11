@@ -79,8 +79,12 @@ export default function AppLayout({ children }) {
           className="user-profile" 
           style={{ cursor: 'pointer', position: 'relative', marginTop: 'auto' }}
         >
-          <motion.div className="av">
-            {user.first_name ? user.first_name[0] : '?'}
+          <motion.div className="av" style={{ overflow: 'hidden' }}>
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              user.first_name ? user.first_name[0] : '?'
+            )}
           </motion.div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
@@ -140,6 +144,8 @@ function SettingsModal({ user, close }) {
   const [tab, setTab] = useState('profil');
   const [firstName, setFirstName] = useState(user.first_name || "");
   const [themeColor, setThemeColor] = useState(user.theme_color || "#00D2B6");
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url || "");
+  const [language, setLanguage] = useState(user.language || "fr");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -148,7 +154,9 @@ function SettingsModal({ user, close }) {
     try {
       const { error } = await supabase.from('users').update({
         first_name: firstName,
-        theme_color: themeColor
+        theme_color: themeColor,
+        avatar_url: avatarUrl,
+        language: language
       }).eq('id', user.id);
 
       if (error) {
@@ -199,6 +207,15 @@ function SettingsModal({ user, close }) {
         <div style={{ padding: '24px' }}>
           {tab === 'profil' && (
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+              <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+                  {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', color: 'rgba(255,255,255,0.2)' }}>?</div>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>URL de la Photo (Avatar)</label>
+                  <input className="fi" placeholder="https://..." value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} />
+                </div>
+              </div>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>Prénom / Pseudo</label>
                 <input className="fi" value={firstName} onChange={e => setFirstName(e.target.value)} />
@@ -213,6 +230,16 @@ function SettingsModal({ user, close }) {
 
           {tab === 'interface' && (
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', textTransform: 'uppercase' }}>Langue de l'Interface</label>
+                <select className="fi" value={language} onChange={(e) => setLanguage(e.target.value)} style={{ WebkitAppearance: 'none', cursor: 'pointer' }}>
+                  <option value="fr">🇫🇷 Français (FR)</option>
+                  <option value="en">🇬🇧 English (EN)</option>
+                  <option value="es">🇪🇸 Español (ES)</option>
+                  <option value="ar">🇲🇦 العربية (AR)</option>
+                </select>
+              </div>
+
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', textTransform: 'uppercase' }}>Couleur d'Accentuation Unique</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
