@@ -109,7 +109,7 @@ export default function AppLayout({ children }) {
           
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="header-actions">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14 }}>
-               ⚡ {tokens} cr.
+               ⚡ {['founder', 'co-founder', 'moderator'].includes(user?.role) ? 'Illimité' : `${tokens} cr.`}
             </div>
           </motion.div>
         </header>
