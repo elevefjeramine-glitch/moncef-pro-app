@@ -94,7 +94,6 @@ export default function AppLayout({ children }) {
             <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
             <div className="role-badge">{user.role === 'founder' ? '👑 ALPHA' : '👤 Normal'}</div>
           </div>
-          </div>
           <button style={{ background:'none', border:'none', color:'var(--err)', cursor:'pointer', padding: '4px' }} onClick={handleLogout} title={t(lang, 'logout')}>
             <LogOut size={18} />
           </button>
