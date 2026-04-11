@@ -16,10 +16,6 @@ export default function Home() {
       <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="landing-header" style={{ background: 'rgba(6,11,26,0.5)', backdropFilter: 'var(--glass)' }}>
         <div className="landing-container">
           <div className="landing-logo">🎓 Moncef <span style={{ color: 'var(--a)' }}>IA</span></div>
-          <nav className="landing-nav" style={{ display: 'flex', gap: 30 }}>
-            <motion.a whileHover={{ scale: 1.05, color: 'var(--a)' }} href="#features">Fonctionnalités</motion.a>
-            <motion.a whileHover={{ scale: 1.05, color: 'var(--a)' }} href="#contact">Contact</motion.a>
-          </nav>
           <Link href="/auth">
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn">Accéder à la plateforme</motion.button>
           </Link>
