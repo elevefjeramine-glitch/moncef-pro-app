@@ -5,8 +5,10 @@ import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Circle, Trash2, Plus, Sparkles, LayoutList } from "lucide-react";
 import TiltCard from "@/components/TiltCard";
+import { useLanguage, t } from "@/utils/i18n";
 
 export default function DashboardPage() {
+  const lang = useLanguage();
   const [userName, setUserName] = useState("Utilisateur");
   const [homeworks, setHomeworks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,44 +55,44 @@ export default function DashboardPage() {
   const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ maxWidth: '900px', margin: '0 auto', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       
       <TiltCard delay={0.1} style={{ marginBottom: 40, background: 'linear-gradient(135deg, rgba(46,91,255,0.1), rgba(0,210,182,0.1))', padding: 30, borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
-        <Sparkles size={120} style={{ position: 'absolute', right: -20, top: -20, color: 'rgba(0,210,182,0.1)', transform: 'rotate(15deg)' }} />
-        <h1 style={{ fontSize: 32, marginBottom: 8, color: '#fff' }}>Bonjour, <span style={{ color: 'var(--a)' }}>{userName}</span> 👋</h1>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>Prêt à exceller aujourd'hui ? Voici un résumé de votre activité.</p>
+        <Sparkles size={120} style={{ position: 'absolute', right: lang === 'ar' ? 'auto' : -20, left: lang === 'ar' ? -20 : 'auto', top: -20, color: 'rgba(0,210,182,0.1)', transform: 'rotate(15deg)' }} />
+        <h1 style={{ fontSize: 32, marginBottom: 8, color: '#fff' }}>{t(lang, 'hello')}, <span style={{ color: 'var(--a)' }}>{userName}</span> 👋</h1>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>{t(lang, 'ready')}</p>
       </TiltCard>
 
       <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 40 }}>
         <TiltCard delay={0.2} className="stat-card" style={{ padding: 24, textAlign: 'center', borderRadius: 20 }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--a)', fontFamily: 'Cinzel', marginBottom: 4 }}>{productivity}%</div>
-          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Productivité</div>
+          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{t(lang, 'productivity')}</div>
         </TiltCard>
         <TiltCard delay={0.3} className="stat-card" style={{ padding: 24, textAlign: 'center', borderRadius: 20 }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--p)', fontFamily: 'Cinzel', marginBottom: 4 }}>{remaining}</div>
-          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Devoirs Restants</div>
+          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{t(lang, 'remaining_hw')}</div>
         </TiltCard>
       </motion.div>
 
       <motion.div variants={itemVariants} className="card" style={{ padding: 30, borderRadius: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
           <LayoutList color="var(--a)" />
-          <h3 style={{ fontSize: 20, fontWeight: 600, color: '#fff' }}>Liste de Devoirs</h3>
+          <h3 style={{ fontSize: 20, fontWeight: 600, color: '#fff' }}>{t(lang, 'hw_list')}</h3>
         </div>
         
         <div style={{ display: 'flex', gap: 12, marginBottom: 30 }}>
-          <input className="fi" style={{ flex: 1, height: 44 }} placeholder="Matière (ex: Mathématiques)" value={newSubj} onChange={(e) => setNewSubj(e.target.value)} />
-          <input className="fi" style={{ flex: 2, height: 44 }} placeholder="Travail à faire" value={newTask} onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addHomework()} />
+          <input className="fi" style={{ flex: 1, height: 44 }} placeholder={t(lang, 'subject_ph')} value={newSubj} onChange={(e) => setNewSubj(e.target.value)} />
+          <input className="fi" style={{ flex: 2, height: 44 }} placeholder={t(lang, 'task_ph')} value={newTask} onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addHomework()} />
           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ height: 44, padding: '0 20px', borderRadius: 10 }} onClick={addHomework}>
-            <Plus size={18} /> Ajouter
+            <Plus size={18} /> {t(lang, 'btn_add')}
           </motion.button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading ? (
-             <div className="empty-state">Chargement de votre liste...</div>
+             <div className="empty-state">{t(lang, 'loading_hw')}</div>
           ) : homeworks.length === 0 ? (
-             <div className="empty-state" style={{ padding: 40 }}>Aucun devoir enregistré. 🚀 Super !</div>
+             <div className="empty-state" style={{ padding: 40 }}>{t(lang, 'empty_hw')}</div>
           ) : (
             <AnimatePresence>
               {homeworks.map(hw => (

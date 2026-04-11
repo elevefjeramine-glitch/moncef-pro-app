@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown } from "lucide-react";
+import { LanguageContext, t } from "@/utils/i18n";
 
 export default function AppLayout({ children }) {
   const [user, setUser] = useState(null);
@@ -32,11 +33,13 @@ export default function AppLayout({ children }) {
 
   const activeColor = user.theme_color || '#00D2B6';
 
+  const lang = user.language || 'fr';
+
   let navItems = [
-    { name: 'Accueil', path: '/app', icon: Home },
-    { name: 'Moncef IA', path: '/app/ai', icon: Bot },
-    { name: 'Calendrier', path: '/app/schedule', icon: CalendarDays },
-    { name: 'Messagerie', path: '/app/comm', icon: MessageSquare }
+    { name: t(lang, 'home'), path: '/app', icon: Home },
+    { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
+    { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
+    { name: t(lang, 'messages'), path: '/app/comm', icon: MessageSquare }
   ];
 
   if (user.role === 'founder') {
@@ -44,7 +47,8 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
+    <LanguageContext.Provider value={lang}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       {/* Surcharge dynamique de la couleur d'accent */}
       <style dangerouslySetInnerHTML={{__html: ` :root { --a: ${activeColor} !important; } `}} />
 
@@ -90,24 +94,25 @@ export default function AppLayout({ children }) {
             <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
             <div className="role-badge">{user.role === 'founder' ? '👑 ALPHA' : '👤 Normal'}</div>
           </div>
-          <button style={{ background:'none', border:'none', color:'var(--err)', cursor:'pointer', padding: '4px' }} onClick={handleLogout} title="Déconnexion">
+          </div>
+          <button style={{ background:'none', border:'none', color:'var(--err)', cursor:'pointer', padding: '4px' }} onClick={handleLogout} title={t(lang, 'logout')}>
             <LogOut size={18} />
           </button>
         </motion.div>
       </motion.nav>
 
-      <main className="main-content" style={{ flex: 1, position: 'relative' }}>
-        <header className="glass-header">
+      <main className="main-content" style={{ flex: 1, position: 'relative', marginLeft: lang === 'ar' ? 0 : 'var(--sw)', marginRight: lang === 'ar' ? 'var(--sw)' : 0 }}>
+        <header className="glass-header" style={{ padding: lang === 'ar' ? '0 40px 0 20px' : '0 40px' }}>
           <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-            {pathname === '/app' ? 'Tableau de Bord' 
-             : pathname === '/app/ai' ? 'Intelligence Artificielle' 
+            {pathname === '/app' ? t(lang, 'dashboard') 
+             : pathname === '/app/ai' ? t(lang, 'ai') 
              : pathname === '/app/alpha' ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFD700' }}>
                   <Crown size={22} /> ALPHA AI
                 </span>
              )
-             : pathname === '/app/schedule' ? 'Mon Emploi du Temps' 
-             : pathname === '/app/comm' ? 'Messagerie Interne'
+             : pathname === '/app/schedule' ? t(lang, 'my_schedule') 
+             : pathname === '/app/comm' ? t(lang, 'internal_msg')
              : 'Moncef IA'}
           </motion.h2>
           
@@ -128,19 +133,21 @@ export default function AppLayout({ children }) {
         {showSettings && (
           <SettingsModal 
             user={user} 
+            lang={lang}
             close={() => { setShowSettings(false); loadUser(); }} 
           />
         )}
       </AnimatePresence>
 
     </div>
+    </LanguageContext.Provider>
   );
 }
 
 // ----------------------------------------------------
 // COMPOSANT MODALE POUR LES PARAMÈTRES
 // ----------------------------------------------------
-function SettingsModal({ user, close }) {
+function SettingsModal({ user, lang, close }) {
   const [tab, setTab] = useState('profil');
   const [firstName, setFirstName] = useState(user.first_name || "");
   const [themeColor, setThemeColor] = useState(user.theme_color || "#00D2B6");
@@ -191,16 +198,16 @@ function SettingsModal({ user, close }) {
       <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="card" style={{ width: '100%', maxWidth: '500px', background: 'var(--sb)', position: 'relative', zIndex: 10000, padding: 0 }}>
         
         <div style={{ padding: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '20px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Settings size={20} color="var(--a)" /> Paramètres du Compte</h2>
+          <h2 style={{ fontSize: '20px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Settings size={20} color="var(--a)" /> {t(lang, 'settings')}</h2>
           <button onClick={close} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}><X size={20}/></button>
         </div>
 
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
           <button onClick={() => setTab('profil')} style={{ flex: 1, padding: '16px', background: tab === 'profil' ? 'rgba(255,255,255,0.05)' : 'none', border: 'none', borderBottom: tab === 'profil' ? '2px solid var(--a)' : '2px solid transparent', color: tab === 'profil' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
-            <UserCircle size={18}/> Mon Profil
+            <UserCircle size={18}/> {t(lang, 'profile')}
           </button>
           <button onClick={() => setTab('interface')} style={{ flex: 1, padding: '16px', background: tab === 'interface' ? 'rgba(255,255,255,0.05)' : 'none', border: 'none', borderBottom: tab === 'interface' ? '2px solid var(--a)' : '2px solid transparent', color: tab === 'interface' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
-            <Palette size={18}/> Interface
+            <Palette size={18}/> {t(lang, 'interface')}
           </button>
         </div>
 
