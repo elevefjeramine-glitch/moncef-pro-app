@@ -121,6 +121,39 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="landing-section" id="infrastructure" style={{ background: 'radial-gradient(ellipse at bottom, rgba(46,91,255,0.1) 0%, rgba(0,0,0,0) 70%)', position: 'relative', overflow: 'hidden' }}>
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ position: 'relative', zIndex: 1, marginBottom: 60 }}>
+          <h2 style={{ fontSize: 'clamp(40px, 6vw, 60px)', textTransform: 'uppercase', letterSpacing: '4px', textShadow: '0 0 40px rgba(0,210,182,0.4)', background: 'linear-gradient(to right, #ffffff, var(--a), var(--p))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 10 }}>Sécurité Inébranlable</h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 20, maxWidth: 600, margin: '0 auto', fontFamily: 'JetBrains Mono, monospace' }}>// Propulsé par la meilleure infrastructure mondiale.</p>
+        </motion.div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 30, maxWidth: 1000, margin: '0 auto', textAlign: 'left' }}>
+          <TiltCard delay={0.2} style={{ background: 'rgba(25,30,40,0.6)', border: '1px solid rgba(0,210,182,0.3)', borderRadius: 24, padding: 40, boxShadow: '0 20px 40px rgba(0,210,182,0.15)' }}>
+            <h3 style={{ fontSize: 28, color: 'var(--a)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <ShieldCheck size={36} /> Supabase Auth
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginBottom: 20 }}>Notre base de données de niveau entreprise vous garantit que vos créations et vos notes sont toujours protégées et encryptées.</p>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 14, color: 'rgba(255,255,255,0.9)' }}><span style={{ color:'var(--ok)' }}>✓</span> Row Level Security (RLS) Actif</li>
+              <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 14, color: 'rgba(255,255,255,0.9)' }}><span style={{ color:'var(--ok)' }}>✓</span> OAuth Google Haute Performance</li>
+              <li style={{ padding: '8px 0', fontSize: 14, color: 'rgba(255,255,255,0.9)' }}><span style={{ color:'var(--ok)' }}>✓</span> Base de Données PostgreSQL</li>
+            </ul>
+          </TiltCard>
+
+          <TiltCard delay={0.4} style={{ background: 'rgba(25,30,40,0.6)', border: '1px solid rgba(46,91,255,0.3)', borderRadius: 24, padding: 40, boxShadow: '0 20px 40px rgba(46,91,255,0.15)' }}>
+            <h3 style={{ fontSize: 28, color: 'var(--p)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Star size={36} /> Cloudflare Edge
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginBottom: 20 }}>Le moteur d'Intelligence Artificielle est propulsé via le réseau P2P mondial de Cloudflare, le rendant insensible à toute surcharge locale.</p>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 14, color: 'rgba(255,255,255,0.9)' }}><span style={{ color:'var(--p)' }}>✓</span> Réseau Global Anycast CDN</li>
+              <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 14, color: 'rgba(255,255,255,0.9)' }}><span style={{ color:'var(--p)' }}>✓</span> Protection L7 DDoS Garantie</li>
+              <li style={{ padding: '8px 0', fontSize: 14, color: 'rgba(255,255,255,0.9)' }}><span style={{ color:'var(--p)' }}>✓</span> AI Proxy Workers Sécurisés</li>
+            </ul>
+          </TiltCard>
+        </div>
+      </section>
+
       <footer className="landing-footer" id="contact" style={{ borderTop: 'none', background: 'rgba(0,0,0,0.8)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center', padding: '40px 20px' }}>
           <h4 style={{ color: 'var(--a)', fontSize: 24, marginBottom: 10, fontFamily: 'Cinzel' }}>🎓 Moncef IA</h4>
