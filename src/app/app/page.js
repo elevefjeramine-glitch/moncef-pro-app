@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Circle, Trash2, Plus, Sparkles, LayoutList } from "lucide-react";
+import TiltCard from "@/components/TiltCard";
 
 export default function DashboardPage() {
   const [userName, setUserName] = useState("Utilisateur");
@@ -54,21 +55,21 @@ export default function DashboardPage() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ maxWidth: '900px', margin: '0 auto' }}>
       
-      <motion.div variants={itemVariants} style={{ marginBottom: 40, background: 'linear-gradient(135deg, rgba(46,91,255,0.1), rgba(0,210,182,0.1))', padding: 30, borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+      <TiltCard delay={0.1} style={{ marginBottom: 40, background: 'linear-gradient(135deg, rgba(46,91,255,0.1), rgba(0,210,182,0.1))', padding: 30, borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
         <Sparkles size={120} style={{ position: 'absolute', right: -20, top: -20, color: 'rgba(0,210,182,0.1)', transform: 'rotate(15deg)' }} />
         <h1 style={{ fontSize: 32, marginBottom: 8, color: '#fff' }}>Bonjour, <span style={{ color: 'var(--a)' }}>{userName}</span> 👋</h1>
         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>Prêt à exceller aujourd'hui ? Voici un résumé de votre activité.</p>
-      </motion.div>
+      </TiltCard>
 
       <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 40 }}>
-        <div className="stat-card" style={{ padding: 24, textAlign: 'center', borderRadius: 20 }}>
+        <TiltCard delay={0.2} className="stat-card" style={{ padding: 24, textAlign: 'center', borderRadius: 20 }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--a)', fontFamily: 'Cinzel', marginBottom: 4 }}>{productivity}%</div>
           <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Productivité</div>
-        </div>
-        <div className="stat-card" style={{ padding: 24, textAlign: 'center', borderRadius: 20 }}>
+        </TiltCard>
+        <TiltCard delay={0.3} className="stat-card" style={{ padding: 24, textAlign: 'center', borderRadius: 20 }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--p)', fontFamily: 'Cinzel', marginBottom: 4 }}>{remaining}</div>
           <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Devoirs Restants</div>
-        </div>
+        </TiltCard>
       </motion.div>
 
       <motion.div variants={itemVariants} className="card" style={{ padding: 30, borderRadius: 24 }}>

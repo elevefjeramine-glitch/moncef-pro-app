@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star } from "lucide-react";
+import TiltCard from "@/components/TiltCard";
 
 export default function Home() {
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -68,15 +69,7 @@ export default function Home() {
 
 function FeatureCard({ icon, title, desc, list, premium = false, delay }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 50 }} 
-      whileInView={{ opacity: 1, y: 0 }} 
-      viewport={{ once: true, margin: "-50px" }} 
-      transition={{ duration: 0.5, delay: delay }}
-      whileHover={{ y: -10 }}
-      className={`feature-card ${premium ? 'premium' : ''}`}
-      style={{ background: premium ? 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02))' : 'rgba(255,255,255,0.02)' }}
-    >
+    <TiltCard delay={delay} className={`feature-card interactive ${premium ? 'premium' : ''}`} style={{ background: premium ? 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02))' : 'rgba(255,255,255,0.02)' }}>
       {premium && <div className="premium-badge">ALPHA</div>}
       <div className="feature-icon" style={{ color: premium ? 'var(--gold)' : 'var(--p)', marginBottom: 20 }}>{icon}</div>
       <h3 style={{ fontSize: 22, color: premium ? 'var(--gold)' : '#fff', marginBottom: 12 }}>{title}</h3>
@@ -88,6 +81,6 @@ function FeatureCard({ icon, title, desc, list, premium = false, delay }) {
           </li>
         ))}
       </ul>
-    </motion.div>
+    </TiltCard>
   );
 }

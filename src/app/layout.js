@@ -1,4 +1,6 @@
 import "./globals.css";
+import Cursor from "@/components/Cursor";
+import Loader from "@/components/Loader";
 
 export const metadata = {
   title: "Moncef IA — Plateforme Éducative Intelligente",
@@ -14,6 +16,8 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Raleway:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body>
+        <Cursor />
+        <Loader />
         <div className="mesh" />
         <canvas id="pc" style={{position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none'}} />
         {children}
