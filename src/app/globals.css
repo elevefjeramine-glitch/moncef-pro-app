@@ -195,3 +195,40 @@ code, pre { font-family: 'JetBrains Mono', monospace; }
   color: #fff; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center;
   margin: 0 auto 20px auto; box-shadow: 0 4px 15px rgba(0,210,182,0.3);
 }
+
+/* LANDING HEADER FIXES */
+.landing-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  height: 80px;
+  display: flex;
+  align-items: center;
+}
+
+.landing-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: center;
+  gap: 80px;
+  align-items: center;
+}
+
+.landing-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .landing-header { height: 70px; }
+  .landing-container { padding: 0 16px; }
+  .landing-logo { font-size: 20px; }
+}

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star } from "lucide-react";
 import TiltCard from "@/components/TiltCard";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { t } from "@/utils/i18n";
 import { useEffect, useState } from "react";
 
@@ -31,22 +32,26 @@ export default function Home() {
     <div className="landing-wrap active" style={{ overflowX: 'hidden', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       <div className="mesh" />
       
-      <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="landing-header" style={{ background: 'rgba(6,11,26,0.5)', backdropFilter: 'var(--glass)' }}>
-        <div className="landing-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-            <Link href="/auth">
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn">{t(lang, 'access_app')}</motion.button>
-            </Link>
-            <select value={lang} onChange={e => switchLang(e.target.value)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px', borderRadius: '10px', outline: 'none', cursor: 'pointer' }}>
-              <option value="fr">FR</option>
-              <option value="en">EN</option>
-              <option value="es">ES</option>
-              <option value="ar">AR</option>
-            </select>
-          </div>
-          <div className="landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 'bold' }}>
+      <motion.header 
+        initial={{ y: -100 }} 
+        animate={{ y: 0 }} 
+        transition={{ type: "spring", stiffness: 100, damping: 20 }} 
+        className="landing-header" 
+        style={{ background: 'rgba(6,11,26,0.5)', backdropFilter: 'var(--glass)' }}
+      >
+        <div className="landing-container">
+          <div className="landing-logo">
             <span>Moncef <span style={{ color: 'var(--a)' }}>IA</span></span>
             <img src="/logo.png" alt="Logo" style={{ width: 40, height: 40, borderRadius: 10, boxShadow: '0 0 15px rgba(0,210,182,0.4)' }} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+            <Link href="/auth">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn">
+                {t(lang, 'access_app')}
+              </motion.button>
+            </Link>
+            <LanguageSwitcher currentLang={lang} onSwitch={switchLang} />
           </div>
         </div>
       </motion.header>

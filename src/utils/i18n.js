@@ -39,6 +39,7 @@ export const translations = {
     sch_day: "Jour", sch_time: "Horaire (ex: 08:00 - 10:00)", sch_time_ph: "Heure de cours",
     sch_subj: "Matière", sch_subj_ph: "Mathématiques, Histoire...", sch_add: "Ajouter",
     sch_courses: "cours", sch_loading: "Chargement...", sch_empty: "Aucun cours prévu",
+    sch_week_a: "Semaine A", sch_week_b: "Semaine B", sch_print: "Imprimer",
     d0: "Lundi", d1: "Mardi", d2: "Mercredi", d3: "Jeudi", d4: "Vendredi", d5: "Samedi", d6: "Dimanche",
 
     comm_title: "Messagerie Interne", comm_select: "Sélectionnez un contact dans la liste pour commencer à discuter.",
@@ -78,6 +79,7 @@ export const translations = {
     sch_day: "Day", sch_time: "Time (e.g. 08:00 - 10:00)", sch_time_ph: "Class time",
     sch_subj: "Subject", sch_subj_ph: "Math, History...", sch_add: "Add",
     sch_courses: "classes", sch_loading: "Loading...", sch_empty: "No classes scheduled",
+    sch_week_a: "Week A", sch_week_b: "Week B", sch_print: "Print",
     d0: "Monday", d1: "Tuesday", d2: "Wednesday", d3: "Thursday", d4: "Friday", d5: "Saturday", d6: "Sunday",
 
     comm_title: "Internal Messaging", comm_select: "Select a contact from the list to start chatting.",
@@ -117,6 +119,7 @@ export const translations = {
     sch_day: "Día", sch_time: "Horario (ej: 08:00 - 10:00)", sch_time_ph: "Hora de clase",
     sch_subj: "Materia", sch_subj_ph: "Matemáticas, Historia...", sch_add: "Añadir",
     sch_courses: "clases", sch_loading: "Cargando...", sch_empty: "No hay clases programadas",
+    sch_week_a: "Semana A", sch_week_b: "Semana B", sch_print: "Imprimir",
     d0: "Lunes", d1: "Martes", d2: "Miércoles", d3: "Jueves", d4: "Viernes", d5: "Sábado", d6: "Domingo",
 
     comm_title: "Mensajería Interna", comm_select: "Selecciona un contacto de la lista para empezar a chatear.",
@@ -156,10 +159,50 @@ export const translations = {
     sch_day: "اليوم", sch_time: "الوقت (مثال: 08:00 - 10:00)", sch_time_ph: "وقت الدرس",
     sch_subj: "المادة", sch_subj_ph: "رياضيات، تاريخ...", sch_add: "إضافة",
     sch_courses: "حصص", sch_loading: "جاري التحميل...", sch_empty: "لا توجد حصص مبرمجة",
+    sch_week_a: "الأسبوع أ", sch_week_b: "الأسبوع ب", sch_print: "طباعة",
     d0: "الاثنين", d1: "الثلاثاء", d2: "الأربعاء", d3: "الخميس", d4: "الجمعة", d5: "السبت", d6: "الأحد",
 
     comm_title: "المراسلة الداخلية", comm_select: "اختر جهة اتصال من القائمة لبدء الدردشة.",
     comm_ph: "اكتب رسالتك...", comm_loading: "جاري تحميل جهات الاتصال..."
+  },
+  zh: {
+    home: "首页", calendar: "日程", messages: "消息", settings: "账户设置",
+    dashboard: "仪表板", ai: "人工智能", my_schedule: "我的课程表", internal_msg: "内部消息",
+    profile: "我的资料", interface: "界面", logout: "登出",
+    
+    hello: "你好", ready: "准备好迎接卓越的一天了吗？这是您的活动摘要。",
+    productivity: "生产力", remaining_hw: "剩余作业", hw_list: "作业列表",
+    subject_ph: "科目（如：数学）", task_ph: "待办事项", btn_add: "添加",
+    loading_hw: "正在加载您的列表...", empty_hw: "没有作业。🚀 太棒了！",
+
+    access_app: "进入平台",
+    hero_badge: "教育的新时代",
+    hero_title: "人工智能助力您的绝对成功",
+    hero_desc: "使用 Moncef IA 改变您的工作方式。一个结合了先进人工智能、时间管理和实时协作的革命性生态系统。",
+    hero_btn_start: "免费开始 ➜", hero_btn_login: "登录",
+    feat_title: "我们的功能", feat_desc: "一套改变您教育体验的完整工具",
+    hw_title: "它是如何工作的？", hw_desc: "简单的4个步骤，改变您的体验",
+    ti_title: "账户等级", ti_desc: "每个用户都有明确的角色和不同的权限",
+    sec_title: "坚不可摧的安全", sec_desc: "// 由全球最顶尖的基础设施提供动力。",
+
+    ai_status: "在线助手 (Claude)",
+    new_chat: "新对话",
+    ai_placeholder: "向 Moncef IA 提问...",
+    ai_disclaimer: "答案由人工智能生成，可能不准确。",
+
+    auth_title_login: "登录", auth_title_signup: "创建账户",
+    auth_desc: "输入您的信息以继续",
+    auth_email: "电子邮件地址", auth_pwd: "密码",
+    auth_btn_login: "安全登录", auth_btn_signup: "免费注册",
+    auth_switch_login: "已有账户？登录", auth_switch_signup: "还没有账户？注册",
+
+    sch_day: "日期", sch_time: "时间（如：08:00 - 10:00）", sch_time_ph: "课时",
+    sch_subj: "科目", sch_subj_ph: "数学、历史...", sch_add: "添加",
+    sch_courses: "节课", sch_loading: "正在加载...", sch_empty: "没有预定的课程",
+    d0: "周一", d1: "周二", d2: "周三", d3: "周四", d4: "周五", d5: "周六", d6: "周日",
+
+    comm_title: "内部通讯", comm_select: "从列表中选择联系人开始聊天。",
+    comm_ph: "输入您的消息...", comm_loading: "正在加载联系人..."
   }
 };
 

@@ -60,9 +60,9 @@ export default function AuthPage() {
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginBottom: "32px" }}>
-          {['fr', 'en', 'es', 'ar'].map(l => (
+          {['fr', 'en', 'es', 'ar', 'zh'].map(l => (
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} key={l} className="btn-sec" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', background: lang === l ? 'var(--p)' : 'rgba(255,255,255,0.05)', color: lang === l ? '#fff' : 'rgba(255,255,255,0.6)', border: lang === l ? '1px solid var(--p)' : '1px solid rgba(255,255,255,0.1)' }} onClick={() => setLang(l)}>
-              {l === 'fr' ? '🇫🇷 FR' : l === 'en' ? '🇬🇧 EN' : l === 'es' ? '🇪🇸 ES' : '🇸🇦 AR'}
+              {l === 'fr' ? '🇫🇷 FR' : l === 'en' ? '🇬🇧 EN' : l === 'es' ? '🇪🇸 ES' : l === 'ar' ? '🇸🇦 AR' : '🇨🇳 ZH'}
             </motion.button>
           ))}
         </div>

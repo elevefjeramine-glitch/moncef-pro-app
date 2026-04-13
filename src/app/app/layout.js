@@ -243,6 +243,7 @@ function SettingsModal({ user, lang, close }) {
                   <option value="en">🇬🇧 English (EN)</option>
                   <option value="es">🇪🇸 Español (ES)</option>
                   <option value="ar">🇲🇦 العربية (AR)</option>
+                  <option value="zh">🇨🇳 中文 (ZH)</option>
                 </select>
               </div>
 
