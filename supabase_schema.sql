@@ -35,11 +35,9 @@ CREATE TABLE public.user_messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-ALTER TABLE public.user_messages ENABLE ROW LEVEL SECURITY;
-
--- Politique : Un utilisateur peut voir un message s'il l'a envoyé ou reçu
-CREATE POLICY "Users can view their own messages" ON public.user_messages 
-  FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+-- Politique : Un utilisateur peut voir ses messages privés OU les messages publics (sans destinataire spécifique)
+CREATE POLICY "Users can view messages" ON public.user_messages 
+  FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id OR receiver_id IS NULL);
 -- Politique : Un utilisateur ne peut envoyer un message qu'en son propre nom
 CREATE POLICY "Users can send messages" ON public.user_messages 
   FOR INSERT WITH CHECK (auth.uid() = sender_id);
@@ -51,7 +49,11 @@ CREATE TABLE public.homework (
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   subject TEXT NOT NULL,
   task TEXT NOT NULL,
+  teacher TEXT DEFAULT '',
   is_done BOOLEAN DEFAULT false,
+  priority TEXT DEFAULT 'normal' CHECK (priority IN ('urgent', 'normal', 'low')),
+  status TEXT DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'done', 'forgotten')),
+  progression INTEGER DEFAULT 0 CHECK (progression >= 0 AND progression <= 100),
   due_date DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

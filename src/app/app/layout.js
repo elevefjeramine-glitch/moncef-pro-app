@@ -7,20 +7,24 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function AppLayout({ children }) {
-  const [user, setUser] = useState(null);
-  const [tokens, setTokens] = useState(700);
+  const { user, setUser, credits: tokens, setCredits: setTokens, themeColor, setThemeColor, language, setLanguage } = useUserStore();
   const [showSettings, setShowSettings] = useState(false);
   const pathname = usePathname();
 
   const loadUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { window.location.href = "/auth"; return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = "/auth"; return; }
     
-    const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-    if (data) { setUser(data); setTokens(data.tokens || 700); } 
-    else { setUser(user); }
+    const { data } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+    if (data) { 
+      setUser(data); 
+      setTokens(data.tokens || 700);
+      if (data.theme_color) setThemeColor(data.theme_color);
+      if (data.language) setLanguage(data.language);
+    } else { setUser(session.user); }
   };
 
   useEffect(() => { loadUser(); }, []);
@@ -59,7 +63,7 @@ export default function AppLayout({ children }) {
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: '0 0 10px rgba(0,210,182,0.3)' }} />
           Moncef <span style={{ color: 'var(--a)' }}>IA</span>
         </div>
-        <div className="nav-items">
+        <div className="nav-items" style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {navItems.map((item, i) => {
             const isActive = pathname === item.path || (item.path !== '/app' && pathname.startsWith(item.path));
             const Icon = item.icon;
@@ -75,13 +79,16 @@ export default function AppLayout({ children }) {
           })}
         </div>
         
+        {/* Separator */}
+        <div style={{ margin: '0 20px', height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
         {/* BOUTON PROFIL CLIQUABLE */}
         <motion.div 
           whileHover={{ scale: 1.02, background: 'rgba(255,255,255,0.06)' }} 
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowSettings(true)}
           className="user-profile" 
-          style={{ cursor: 'pointer', position: 'relative', marginTop: 'auto' }}
+          style={{ cursor: 'pointer', position: 'relative', margin: '12px 16px 8px' }}
         >
           <motion.div className="av" style={{ overflow: 'hidden' }}>
             {user.avatar_url ? (
@@ -94,10 +101,25 @@ export default function AppLayout({ children }) {
             <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
             <div className="role-badge">{user.role === 'founder' ? '👑 ALPHA' : '👤 Normal'}</div>
           </div>
-          <button style={{ background:'none', border:'none', color:'var(--err)', cursor:'pointer', padding: '4px' }} onClick={handleLogout} title={t(lang, 'logout')}>
-            <LogOut size={18} />
-          </button>
         </motion.div>
+
+        {/* Logout button — separated */}
+        <motion.button
+          whileHover={{ scale: 1.02, background: 'rgba(255,69,69,0.08)' }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleLogout}
+          title={t(lang, 'logout')}
+          style={{ 
+            margin: '0 16px 16px', padding: '10px 16px', 
+            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', 
+            borderRadius: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', 
+            display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500,
+            fontFamily: 'DM Sans, sans-serif', transition: 'var(--tr)'
+          }}
+        >
+          <LogOut size={16} style={{ color: 'var(--err)' }} />
+          <span>{t(lang, 'logout')}</span>
+        </motion.button>
       </motion.nav>
 
       <main className="main-content" style={{ flex: 1, position: 'relative', marginLeft: lang === 'ar' ? 0 : 'var(--sw)', marginRight: lang === 'ar' ? 'var(--sw)' : 0 }}>

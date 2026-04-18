@@ -9,11 +9,10 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
   const dropdownRef = useRef(null);
 
   const languages = [
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'es', name: 'Español', flag: '🇪🇸' },
-    { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-    { code: 'zh', name: '中文', flag: '🇨🇳' },
+    { code: 'fr', name: 'Français', flag: 'https://flagcdn.com/w40/fr.png' },
+    { code: 'en', name: 'English', flag: 'https://flagcdn.com/w40/gb.png' },
+    { code: 'es', name: 'Español', flag: 'https://flagcdn.com/w40/es.png' },
+    { code: 'ar', name: 'العربية', flag: 'https://flagcdn.com/w40/sa.png' },
   ];
 
   const current = languages.find(l => l.code === currentLang) || languages[0];
@@ -45,11 +44,16 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
           gap: '8px',
           cursor: 'pointer',
           backdropFilter: 'blur(10px)',
-          fontSize: '14px',
-          fontWeight: '600'
+          fontSize: '13px',
+          fontWeight: '600',
+          flexShrink: 0
         }}
       >
-        <span>{current.flag}</span>
+        <img 
+          src={current.flag} 
+          alt={current.code} 
+          style={{ width: 18, height: 'auto', borderRadius: 2, display: 'block' }} 
+        />
         <span style={{ textTransform: 'uppercase' }}>{current.code}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
@@ -101,7 +105,11 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
                   transition: 'color 0.2s'
                 }}
               >
-                <span style={{ fontSize: '18px' }}>{lang.flag}</span>
+                <img 
+                  src={lang.flag} 
+                  alt={lang.code} 
+                  style={{ width: 22, height: 'auto', borderRadius: 3, display: 'block' }} 
+                />
                 <span>{lang.name}</span>
                 {currentLang === lang.code && (
                   <motion.div

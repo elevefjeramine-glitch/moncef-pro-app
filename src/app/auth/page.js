@@ -3,45 +3,121 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { User, Mail, Lock, Phone, MapPin, Building2, Hash, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { t } from "@/utils/i18n";
+
+const LABEL_STYLE = {
+  display: 'block', fontSize: '11px', color: 'rgba(255,255,255,0.5)',
+  marginBottom: '7px', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: '700'
+};
+
+const SECTION_STYLE = {
+  fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+  letterSpacing: '1.5px', color: 'var(--a)', marginBottom: '14px',
+  display: 'flex', alignItems: 'center', gap: 8
+};
+
+const DIVIDER = { height: '1px', background: 'rgba(255,255,255,0.06)', margin: '20px 0' };
+
+function Field({ icon: Icon, label, badge, children }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+        <label style={LABEL_STYLE}>
+          {Icon && <Icon size={11} style={{ display: 'inline', marginRight: 5 }} />}{label}
+        </label>
+        {badge && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>{badge}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default function AuthPage() {
   const [tab, setTab] = useState("login");
   const [lang, setLang] = useState("fr");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // ── Common fields ──────────────────────────────────────────
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // ── Signup-only fields ─────────────────────────────────────
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [postal, setPostal] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem('site_lang');
     if (saved) setLang(saved);
   }, []);
 
-  useEffect(() => { 
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; 
+  useEffect(() => {
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     localStorage.setItem('site_lang', lang);
   }, [lang]);
 
-  const handleAuth = async () => { /* Même logique qu'avant */
+  // Reset form on tab switch
+  const switchTab = (next) => {
+    setTab(next);
+    setErrorMsg("");
+    setSuccessMsg("");
+  };
+
+  const handleAuth = async () => {
     setLoading(true); setErrorMsg(""); setSuccessMsg("");
-    if (!email || !password) { setErrorMsg("Veuillez remplir tous les champs."); setLoading(false); return; }
+
     if (tab === "signup") {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) setErrorMsg(error.message); else setSuccessMsg("Compte créé ! Vérifiez vos emails.");
+      if (!firstName || !lastName || !email || !password) {
+        setErrorMsg(t(lang, 'auth_fill_required'));
+        setLoading(false); return;
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { first_name: firstName, last_name: lastName } }
+      });
+      if (error) {
+        setErrorMsg(error.message);
+      } else if (data.user) {
+        // Save extended profile to users table
+        await supabase.from('users').upsert({
+          id: data.user.id,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone || null,
+          address: address || null,
+          city: city || null,
+          postal_code: postal || null,
+          role: 'normal'
+        });
+        setSuccessMsg(t(lang, 'auth_success'));
+      }
     } else {
+      if (!email || !password) {
+        setErrorMsg(t(lang, 'auth_fill_required'));
+        setLoading(false); return;
+      }
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setErrorMsg(error.message); else window.location.href = "/app";
+      if (error) setErrorMsg(error.message);
+      else window.location.href = "/app";
     }
     setLoading(false);
   };
 
   const handleOAuth = async (provider) => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ provider: provider, options: { redirectTo: `${window.location.origin}/app`, queryParams: { prompt: 'select_account' } } });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/app`, queryParams: { prompt: 'select_account' } }
+    });
     if (error) { setErrorMsg(`Configuration requise: ${error.message}`); setLoading(false); }
   };
 
@@ -52,55 +128,200 @@ export default function AuthPage() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '20px' }}>
-      <motion.div initial={{ opacity: 0, y: 30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className="auth-box" style={{ width: '100%', maxWidth: '440px', padding: '48px 40px' }}>
-        
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ fontSize: '32px', color: 'var(--a)', marginBottom: '8px', textShadow: '0 0 20px rgba(0,210,182,0.4)' }}>🎓 Moncef IA</motion.h1>
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="auth-box"
+        style={{ width: '100%', maxWidth: tab === 'signup' ? '560px' : '440px', padding: '48px 40px', transition: 'max-width 0.4s ease' }}
+      >
+        {/* ── Logo ──────────────────────────────────────────── */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            style={{ fontSize: '32px', color: 'var(--a)', marginBottom: '8px', textShadow: '0 0 20px rgba(0,210,182,0.4)' }}>
+            🎓 Moncef IA
+          </motion.h1>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>{t(lang, 'hero_badge')}</p>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginBottom: "32px" }}>
+        {/* ── Language switcher ─────────────────────────────── */}
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginBottom: "28px" }}>
           {['fr', 'en', 'es', 'ar', 'zh'].map(l => (
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} key={l} className="btn-sec" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', background: lang === l ? 'var(--p)' : 'rgba(255,255,255,0.05)', color: lang === l ? '#fff' : 'rgba(255,255,255,0.6)', border: lang === l ? '1px solid var(--p)' : '1px solid rgba(255,255,255,0.1)' }} onClick={() => setLang(l)}>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} key={l}
+              onClick={() => setLang(l)}
+              style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                background: lang === l ? 'var(--p)' : 'rgba(255,255,255,0.05)',
+                color: lang === l ? '#fff' : 'rgba(255,255,255,0.6)' }}>
               {l === 'fr' ? '🇫🇷 FR' : l === 'en' ? '🇬🇧 EN' : l === 'es' ? '🇪🇸 ES' : l === 'ar' ? '🇸🇦 AR' : '🇨🇳 ZH'}
             </motion.button>
           ))}
         </div>
 
+        {/* ── Tab toggle ─────────────────────────────────────── */}
         <div style={{ display: "flex", gap: "8px", background: "rgba(0,0,0,0.3)", padding: "6px", borderRadius: "14px", marginBottom: "28px" }}>
           {['login', 'signup'].map(tb => (
-            <button key={tb} onClick={() => setTab(tb)} style={{ flex: 1, padding: "12px", borderRadius: "10px", background: tab === tb ? 'var(--p)' : 'transparent', border: 'none', color: tab === tb ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s' }}>
+            <button key={tb} onClick={() => switchTab(tb)}
+              style={{ flex: 1, padding: "12px", borderRadius: "10px", border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'all 0.3s',
+                background: tab === tb ? 'var(--p)' : 'transparent',
+                color: tab === tb ? '#fff' : 'rgba(255,255,255,0.5)' }}>
               {tb === 'login' ? t(lang, 'auth_title_login') : t(lang, 'auth_title_signup')}
             </button>
           ))}
         </div>
-        
+
+        {/* ── Messages ──────────────────────────────────────── */}
+        <AnimatePresence>
+          {errorMsg && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ color: "var(--err)", fontSize: "13px", marginBottom: "20px", padding: "12px 16px",
+                background: "rgba(255,69,69,0.1)", borderRadius: "10px", border: "1px solid rgba(255,69,69,0.2)" }}>
+              ⚠️ {errorMsg}
+            </motion.div>
+          )}
+          {successMsg && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ color: "var(--ok)", fontSize: "13px", marginBottom: "20px", padding: "12px 16px",
+                background: "rgba(0,230,138,0.1)", borderRadius: "10px", border: "1px solid rgba(0,230,138,0.2)" }}>
+              {successMsg}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
-            {errorMsg && <div style={{ color: "var(--err)", fontSize: "14px", marginBottom: "20px", textAlign: "center", padding: "12px", background: "rgba(255,69,69,0.1)", borderRadius: "10px", border: "1px solid rgba(255,69,69,0.2)" }}>{errorMsg}</div>}
-            {successMsg && <div style={{ color: "var(--ok)", fontSize: "14px", marginBottom: "20px", textAlign: "center", padding: "12px", background: "rgba(0,230,138,0.1)", borderRadius: "10px", border: "1px solid rgba(0,230,138,0.2)" }}>{successMsg}</div>}
-            
-            <div style={{ marginBottom: "20px" }}>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>{t(lang, 'auth_email')}</label>
-              <input type="email" className="fi" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" />
+          <motion.div key={tab}
+            initial={{ opacity: 0, x: tab === 'signup' ? 10 : -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}>
+
+            {/* ════════════════ SIGNUP EXTRA FIELDS ════════════════ */}
+            {tab === 'signup' && (
+              <>
+                {/* Section : Identité */}
+                <div style={SECTION_STYLE}>
+                  <User size={12} /> {t(lang, 'auth_first_name')} & {t(lang, 'auth_last_name')}
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{t(lang, 'auth_required_fields')}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <Field label={t(lang, 'auth_first_name')}>
+                    <div style={{ position: 'relative' }}>
+                      <User size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                      <input className="fi" value={firstName} onChange={e => setFirstName(e.target.value)}
+                        placeholder={t(lang, 'auth_ph_firstname')}
+                        style={{ height: 44, paddingLeft: 36 }} />
+                    </div>
+                  </Field>
+                  <Field label={t(lang, 'auth_last_name')}>
+                    <div style={{ position: 'relative' }}>
+                      <User size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                      <input className="fi" value={lastName} onChange={e => setLastName(e.target.value)}
+                        placeholder={t(lang, 'auth_ph_lastname')}
+                        style={{ height: 44, paddingLeft: 36 }} />
+                    </div>
+                  </Field>
+                </div>
+
+                {/* Section : Contact */}
+                <div style={{ ...SECTION_STYLE, marginTop: 4 }}>
+                  <Phone size={12} /> {t(lang, 'auth_phone')}
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{t(lang, 'auth_optional')}</span>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                    <input className="fi" type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                      placeholder={t(lang, 'auth_ph_phone')}
+                      style={{ height: 44, paddingLeft: 36 }} />
+                  </div>
+                </div>
+
+                {/* Section : Adresse */}
+                <div style={{ ...SECTION_STYLE, marginTop: 4 }}>
+                  <MapPin size={12} /> {t(lang, 'auth_address')}
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{t(lang, 'auth_optional')}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 14 }}>
+                  <div style={{ position: 'relative' }}>
+                    <MapPin size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                    <input className="fi" value={address} onChange={e => setAddress(e.target.value)}
+                      placeholder={t(lang, 'auth_ph_address')}
+                      style={{ height: 44, paddingLeft: 36 }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px', gap: 12 }}>
+                    <div style={{ position: 'relative' }}>
+                      <Building2 size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                      <input className="fi" value={city} onChange={e => setCity(e.target.value)}
+                        placeholder={t(lang, 'auth_ph_city')}
+                        style={{ height: 44, paddingLeft: 36 }} />
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Hash size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                      <input className="fi" value={postal} onChange={e => setPostal(e.target.value)}
+                        placeholder={t(lang, 'auth_ph_postal')}
+                        style={{ height: 44, paddingLeft: 36 }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={DIVIDER} />
+              </>
+            )}
+
+            {/* ════════════════ EMAIL + PASSWORD ════════════════ */}
+            {tab === 'signup' && (
+              <div style={SECTION_STYLE}>
+                <Mail size={12} /> {t(lang, 'auth_email')} & {t(lang, 'auth_pwd')}
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{t(lang, 'auth_required_fields')}</span>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              {tab === 'login' && <label style={LABEL_STYLE}>{t(lang, 'auth_email')}</label>}
+              <div style={{ position: 'relative' }}>
+                <Mail size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                <input type="email" className="fi" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  style={{ height: 44, paddingLeft: 36 }} />
+              </div>
             </div>
-            <div style={{ marginBottom: "28px", position: "relative" }}>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>{t(lang, 'auth_pwd')}</label>
-              <input type={showPw ? "text" : "password"} className="fi" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ paddingRight: "40px" }} />
-              <button type="button" style={{ position: "absolute", right: "12px", bottom: "12px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "18px" }} onClick={() => setShowPw(!showPw)}>
-                {showPw ? "🙈" : "👁️"}
-              </button>
+
+            <div style={{ marginBottom: '24px', position: 'relative' }}>
+              {tab === 'login' && <label style={LABEL_STYLE}>{t(lang, 'auth_pwd')}</label>}
+              <div style={{ position: 'relative' }}>
+                <Lock size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                <input type={showPw ? "text" : "password"} className="fi" value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ height: 44, paddingLeft: 36, paddingRight: 44 }} />
+                <button type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="btn" style={{ width: "100%", height: "52px", fontSize: "16px" }} onClick={handleAuth} disabled={loading}>
-              {loading ? "..." : (tab === "login" ? t(lang, 'auth_btn_login') : t(lang, 'auth_btn_signup'))}
+
+            {/* ── Submit ──────────────────────────────────────── */}
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              className="btn"
+              style={{ width: '100%', height: 52, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              onClick={handleAuth} disabled={loading}>
+              {loading ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                  style={{ width: 18, height: 18, border: '2px solid rgba(0,0,0,0.3)', borderTop: '2px solid #000', borderRadius: '50%' }} />
+              ) : (
+                <>{tab === "login" ? t(lang, 'auth_btn_login') : t(lang, 'auth_btn_signup')} <ChevronRight size={18} /></>
+              )}
             </motion.button>
-            
-            <div className="oauth-grid">
+
+            {/* ── OAuth ──────────────────────────────────────── */}
+            <div className="oauth-grid" style={{ marginTop: 20 }}>
               <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('google')}><IconGoogle /> Google</motion.button>
               <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('azure')}><IconMicrosoft /> Microsoft</motion.button>
               <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('apple')}><IconApple /> Apple</motion.button>
               <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('github')}><IconGitHub /> GitHub</motion.button>
             </div>
+
           </motion.div>
         </AnimatePresence>
       </motion.div>
