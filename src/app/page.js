@@ -178,15 +178,16 @@ export default function Home() {
             </motion.p>
 
             {/* CTA Pill Group */}
-            <motion.div variants={fadeUp} style={{ display: "flex", gap: 0, justifyContent: "center" }}>
+            <motion.div variants={fadeUp} className="hero-actions">
               <div style={{
                 display: "inline-flex", alignItems: "center",
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
                 borderRadius: 99, padding: 6,
-                boxShadow: "0 20px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)"
-              }}>
+                boxShadow: "0 20px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+                flexWrap: "wrap", justifyContent: "center"
+              }} className="hero-pill-container">
                 <Link href="/auth?tab=signup" style={{ textDecoration: "none" }}>
                   <motion.div
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}

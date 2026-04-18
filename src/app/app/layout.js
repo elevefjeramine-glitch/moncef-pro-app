@@ -5,13 +5,14 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown } from "lucide-react";
+import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
 import { useUserStore } from "@/store/useUserStore";
 
 export default function AppLayout({ children }) {
   const { user, setUser, credits: tokens, setCredits: setTokens, themeColor, setThemeColor, language, setLanguage } = useUserStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   const loadUser = async () => {
@@ -58,7 +59,12 @@ export default function AppLayout({ children }) {
 
       <div className="mesh" />
       
-      <motion.nav initial={{ x: -300 }} animate={{ x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div 
+        className={`mobile-overlay ${isMobileMenuOpen ? 'active' : ''}`} 
+        onClick={() => setIsMobileMenuOpen(false)} 
+      />
+      
+      <motion.nav initial={{ x: -300 }} animate={{ x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: '0 0 10px rgba(0,210,182,0.3)' }} />
           Moncef <span style={{ color: 'var(--a)' }}>IA</span>
@@ -124,8 +130,12 @@ export default function AppLayout({ children }) {
 
       <main className="main-content" style={{ flex: 1, position: 'relative', marginLeft: lang === 'ar' ? 0 : 'var(--sw)', marginRight: lang === 'ar' ? 'var(--sw)' : 0 }}>
         <header className="glass-header" style={{ padding: lang === 'ar' ? '0 40px 0 20px' : '0 40px' }}>
-          <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-            {pathname === '/app' ? t(lang, 'dashboard') 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
+              <Menu size={24} />
+            </button>
+            <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+              {pathname === '/app' ? t(lang, 'dashboard') 
              : pathname === '/app/ai' ? t(lang, 'ai') 
              : pathname === '/app/alpha' ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFD700' }}>
@@ -134,8 +144,9 @@ export default function AppLayout({ children }) {
              )
              : pathname === '/app/schedule' ? t(lang, 'my_schedule') 
              : pathname === '/app/comm' ? t(lang, 'internal_msg')
-             : 'Moncef IA'}
-          </motion.h2>
+               : 'Moncef IA'}
+            </motion.h2>
+          </div>
           
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="header-actions">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14 }}>
