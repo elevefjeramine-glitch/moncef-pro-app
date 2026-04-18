@@ -7,6 +7,8 @@ import TiltCard from "@/components/TiltCard";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { t } from "@/utils/i18n";
 import { useEffect, useState, useRef } from "react";
+import { useUserStore } from "@/store/useUserStore";
+import { supabase } from "@/utils/supabase/client";
 
 /* ─── Variants Framer Motion ─── */
 const stagger = {
@@ -23,6 +25,7 @@ const fadeIn = {
 };
 
 export default function Home() {
+  const { user, setUser, credits, setCredits } = useUserStore();
   const [lang, setLang] = useState("fr");
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
@@ -35,6 +38,23 @@ export default function Home() {
       setLang(saved);
       document.documentElement.dir = saved === "ar" ? "rtl" : "ltr";
     }
+
+    // Load user session for tokens display
+    const loadUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        if (profile) {
+          setUser(profile);
+          setCredits(profile.tokens);
+        }
+      }
+    };
+    loadUser();
   }, []);
 
   const switchLang = (l) => {
@@ -53,42 +73,53 @@ export default function Home() {
         animate={{ y: 0,   opacity: 1 }}
         transition={{ type: "spring", stiffness: 80, damping: 16, delay: 0.1 }}
       >
-        {/* Colonne de gauche (pour l'équilibre) */}
+        {/* Colonne de gauche (Logo) */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+          <div className="landing-logo" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <motion.div
+              style={{
+                width: 32, height: 32, borderRadius: 9,
+                background: "linear-gradient(135deg, hsl(224,100%,62%), hsl(174,100%,41%))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(89,130,255,0.3)"
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🎓</span>
+            </motion.div>
+            <span style={{ fontWeight: 800, fontFamily: "'Sora', sans-serif", fontSize: 16, visibility: 'visible', whiteSpace: 'nowrap' }} className="mobile-hide-text">
+              Moncef <span style={{ color: 'var(--a)' }}>IA</span>
+            </span>
+          </div>
         </div>
 
-        {/* Logo - Centre Parfait */}
-        <div className="landing-logo" style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', gap: '10px' }}>
-          <motion.div
-            style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: "linear-gradient(135deg, hsl(224,100%,62%), hsl(174,100%,41%))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(89,130,255,0.4)"
-            }}
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <span style={{ fontSize: 18 }}>🎓</span>
-          </motion.div>
-          <span style={{ fontWeight: 800, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.04em", display: 'flex', alignItems: 'center' }}>
-            Moncef <span style={{ background: "linear-gradient(135deg, hsl(224,100%,72%), hsl(174,100%,55%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginLeft: '4px' }}>IA</span>
-          </span>
-        </div>
-
-        {/* Actions - Colonne de droite */}
-        <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
-          <LanguageSwitcher currentLang={lang} onSwitch={switchLang} />
-          <Link href="/auth" style={{ display: "inline-flex" }}>
+        {/* Colonne du CENTRE (Le Bouton Principal + Tokens) */}
+        <div style={{ flex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+          {user && (
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              style={{ fontSize: '10px', fontWeight: 800, color: 'var(--a)', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              <Zap size={10} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : `${credits} cr.`}
+            </motion.div>
+          )}
+          <Link href={user ? "/app" : "/auth"} style={{ display: "inline-flex" }}>
             <motion.button
               whileHover={{ scale: 1.04, y: -1 }}
               whileTap={{ scale: 0.96 }}
               className="btn"
-              style={{ minHeight: 38, padding: "8px 20px", fontSize: 13.5, borderRadius: 99, whiteSpace: "nowrap" }}
+              style={{ 
+                minHeight: 38, padding: "8px 24px", fontSize: 13.5, borderRadius: 99, 
+                whiteSpace: "nowrap", boxShadow: 'var(--glow-p)' 
+              }}
             >
-              {t(lang, "access_app")} <ArrowRight size={14} />
+              {user ? t(lang, "dashboard") : t(lang, "access_app")} <ArrowRight size={14} />
             </motion.button>
           </Link>
+        </div>
+
+        {/* Colonne de droite (Sélecteur de Langues) */}
+        <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
+          <LanguageSwitcher currentLang={lang} onSwitch={switchLang} />
         </div>
       </motion.header>
 
