@@ -53,8 +53,12 @@ export default function Home() {
         animate={{ y: 0,   opacity: 1 }}
         transition={{ type: "spring", stiffness: 80, damping: 16, delay: 0.1 }}
       >
-        {/* Logo - Centré Absolu pour être totalement immobile */}
-        <div className="landing-logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', margin: 0 }}>
+        {/* Colonne de gauche (pour l'équilibre) */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+        </div>
+
+        {/* Logo - Centre Parfait */}
+        <div className="landing-logo" style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', gap: '10px' }}>
           <motion.div
             style={{
               width: 34, height: 34, borderRadius: 10,
@@ -67,13 +71,13 @@ export default function Home() {
           >
             <span style={{ fontSize: 18 }}>🎓</span>
           </motion.div>
-          <span style={{ fontWeight: 800, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.04em" }}>
-            Moncef <span style={{ background: "linear-gradient(135deg, hsl(224,100%,72%), hsl(174,100%,55%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>IA</span>
+          <span style={{ fontWeight: 800, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.04em", display: 'flex', alignItems: 'center' }}>
+            Moncef <span style={{ background: "linear-gradient(135deg, hsl(224,100%,72%), hsl(174,100%,55%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginLeft: '4px' }}>IA</span>
           </span>
         </div>
 
-        {/* Actions - Poussé à droite */}
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginLeft: 'auto' }}>
+        {/* Actions - Colonne de droite */}
+        <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
           <LanguageSwitcher currentLang={lang} onSwitch={switchLang} />
           <Link href="/auth" style={{ display: "inline-flex" }}>
             <motion.button

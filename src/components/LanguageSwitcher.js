@@ -9,10 +9,10 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
   const dropdownRef = useRef(null);
 
   const languages = [
-    { code: 'fr', name: 'Français', flag: 'https://flagcdn.com/w40/fr.png' },
-    { code: 'en', name: 'English', flag: 'https://flagcdn.com/w40/gb.png' },
-    { code: 'es', name: 'Español', flag: 'https://flagcdn.com/w40/es.png' },
-    { code: 'ar', name: 'العربية', flag: 'https://flagcdn.com/w40/sa.png' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' },
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'ar', name: 'العربية', flag: '🇲🇦' },
   ];
 
   const current = languages.find(l => l.code === currentLang) || languages[0];
@@ -49,11 +49,7 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
           flexShrink: 0
         }}
       >
-        <img 
-          src={current.flag} 
-          alt={current.code} 
-          style={{ width: 18, height: 'auto', borderRadius: 2, display: 'block' }} 
-        />
+        <span style={{ fontSize: 18, lineHeight: 1 }}>{current.flag}</span>
         <span style={{ textTransform: 'uppercase' }}>{current.code}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
@@ -105,11 +101,7 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
                   transition: 'color 0.2s'
                 }}
               >
-                <img 
-                  src={lang.flag} 
-                  alt={lang.code} 
-                  style={{ width: 22, height: 'auto', borderRadius: 3, display: 'block' }} 
-                />
+                <span style={{ fontSize: 20, lineHeight: 1, display: 'block' }}>{lang.flag}</span>
                 <span>{lang.name}</span>
                 {currentLang === lang.code && (
                   <motion.div
