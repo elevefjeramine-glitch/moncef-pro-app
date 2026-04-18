@@ -1,4 +1,10 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Configuration Supabase (Côté Serveur)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ggnwtszeitrrfhedgipv.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Requis pour déduire les crédits
+const supabase = createClient(supabaseUrl, supabaseServiceKey || "");
 
 // Bug #15 fix: Simple in-memory rate limiter
 // 20 requests per user per 10 minutes
@@ -28,25 +34,35 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 export async function POST(req) {
-  try {
-    const { model, messages, system } = await req.json();
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-
-    if (!apiKey) {
-      console.error("ANTHROPIC_API_KEY is missing in environment variables.");
-      return NextResponse.json({ 
-        response: "🤖 Mode Démo : La clé API n'est pas configurée. Veuillez vérifier votre fichier .env.local." 
-      }, { status: 200 });
+    // Identification de l'utilisateur via le header Authorization
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: "Authentification requise pour utiliser l'IA." }, { status: 401 });
     }
 
-    // Bug #15 fix: Rate limit by Authorization header (user-specific)
-    const authHeader = req.headers.get('authorization') || 
-                       (messages?.[0]?.content ? messages[0].content.substring(0, 20) : 'anon');
-    const identifier = `user:${authHeader.substring(0, 40)}`;
-    if (!checkRateLimit(identifier)) {
+    // Récupérer l'ID utilisateur à partir du JWT
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authError || !user) {
+      return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
+    }
+
+    // Vérifier les crédits en base de données
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tokens, role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData) {
+      return NextResponse.json({ error: "Utilisateur non trouvé en base." }, { status: 404 });
+    }
+
+    const isUnlimited = ['founder', 'moderator'].includes(userData.role);
+    
+    if (!isUnlimited && userData.tokens <= 0) {
       return NextResponse.json({ 
-        response: "⏳ Trop de requêtes. Veuillez attendre quelques minutes avant de continuer." 
-      }, { status: 429 });
+        response: "🚫 **Attention : Plus de crédits !** Vos tokens se recharge automatiquement toutes les 2 heures. Revenez plus tard ou contactez l'admin." 
+      }, { status: 402 });
     }
 
     // Bug #16 fix: model name centralized here, not duplicated across files
@@ -77,8 +93,21 @@ export async function POST(req) {
     }
 
     const data = await response.json();
+    const assistantMessage = data.content[0].text;
+
+    // Déduction des crédits (sauf si illimité)
+    let newTokens = userData.tokens;
+    if (!isUnlimited) {
+      newTokens = Math.max(0, userData.tokens - 10);
+      await supabase
+        .from('users')
+        .update({ tokens: newTokens })
+        .eq('id', user.id);
+    }
+
     return NextResponse.json({ 
-      response: data.content[0].text 
+      response: assistantMessage,
+      newTokens: newTokens
     });
 
   } catch (error) {

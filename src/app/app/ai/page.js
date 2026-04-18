@@ -281,9 +281,14 @@ Exemples :
 - "Réunion parents-profs le 2 mai" → category: "meeting"
 `;
 
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token || ""}`
+        },
         body: JSON.stringify({ 
           model: 'claude-sonnet-4-20250514',
           messages: apiMessages,
@@ -291,9 +296,19 @@ Exemples :
         })
       });
       
-      if (!res.ok) throw new Error("Erreur lors de la communication avec l'IA");
-      
       const data = await res.json();
+      
+      if (!res.ok) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || "Désolé, une erreur est survenue." }]);
+        setLoading(false);
+        return;
+      }
+      
+      // Update global credits if returned
+      if (data.newTokens !== undefined) {
+        useUserStore.getState().setCredits(data.newTokens);
+      }
+
       let aiReply = data.response || "Désolé, je n'ai pas compris.";
       
       // Check if the response contains schedule JSON
