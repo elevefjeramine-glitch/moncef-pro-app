@@ -9,7 +9,7 @@ export default function Cursor() {
   const [hovering, setHovering] = useState(false);
   const [clicking, setClicking] = useState(false);
   const [isMobile, setIsMobile] = useState(true);
-  const rafRef = useRef(null);
+  const rafRef = useRef<number | null>(null);
   const targetRing = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export default function Cursor() {
     setIsMobile(false);
 
     // Smooth ring follow with lerp
-    const lerp = (a, b, t) => a + (b - a) * t;
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
     const animateRing = () => {
       setRing(prev => ({
         x: lerp(prev.x, targetRing.current.x, 0.12),
@@ -27,13 +27,14 @@ export default function Cursor() {
     };
     rafRef.current = requestAnimationFrame(animateRing);
 
-    const onMove = (e) => {
+    const onMove = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       targetRing.current = { x: e.clientX, y: e.clientY };
     };
 
-    const onOver = (e) => {
-      const el = e.target;
+    const onOver = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      if (!el) return;
       const isInteractive =
         el.tagName === "A" || el.tagName === "BUTTON" ||
         el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" ||
@@ -52,7 +53,7 @@ export default function Cursor() {
     window.addEventListener("mouseup",   onUp,   { passive: true });
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       document.body.style.cursor = "auto";
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseover", onOver);

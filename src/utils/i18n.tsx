@@ -571,9 +571,9 @@ export const translations = {
   }
 };
 
-export const t = (lang, key) => translations[lang]?.[key] || translations['fr'][key] || key;
+export const t = (lang: string, key: string) => (translations as any)[lang]?.[key] || (translations as any)['fr'][key] || key;
 
-export function LanguageProvider({ children, initialLang = 'fr' }) {
+export function LanguageProvider({ children, initialLang = 'fr' }: { children: React.ReactNode, initialLang?: string }) {
   const [lang, setLang] = useState(initialLang);
 
   useEffect(() => {

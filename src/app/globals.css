@@ -1,173 +1,95 @@
-/* ══════════════════════════════════════════════════
-   MONCEF IA - PREMIUM DESIGN SYSTEM v3.5 "Cosmic Silk"
-   Ultra-premium, heavy glass, holographic accents
-   ══════════════════════════════════════════════════ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@layer base {
+  :root {
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
 
-:root {
-  /* Brand - Deep Cosmic Palette */
-  --p:     hsl(224, 100%, 66%); /* Electric Blue */
-  --p-g:   linear-gradient(135deg, hsl(224, 100%, 66%), hsl(240, 100%, 70%));
-  
-  --a:     hsl(174, 100%, 45%); /* Neon Teal */
-  --a-g:   linear-gradient(135deg, hsl(174, 100%, 41%), hsl(140, 100%, 50%));
-  
-  --acc2:  hsl(263, 90%, 70%);  /* Mauve/Purple */
-  --gold:  hsl(45, 100%, 65%);
-  --err:   hsl(0, 95%, 65%);
-  --ok:    hsl(150, 100%, 50%);
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
 
-  /* Backgrounds - Midnight Depth */
-  --bg:    hsl(228, 40%, 3%);
-  --bg2:   hsl(228, 35%, 5%);
-  --bg3:   hsl(228, 30%, 7%);
-  --sb:    hsl(228, 35%, 4%);
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
-  /* Glassmorphism 3.0 - Tactile & Deep */
-  --sur0:    rgba(255,255,255,0.015);
-  --sur1:    rgba(255,255,255,0.035);
-  --sur2:    rgba(255,255,255,0.06);
-  --sur3:    rgba(255,255,255,0.1);
-  --border:  rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.12);
-  --glass-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
 
-  /* Typography */
-  --font:  'Plus Jakarta Sans', system-ui, sans-serif;
-  --font2: 'Sora', sans-serif;
-  --mono:  'JetBrains Mono', monospace;
+    --secondary: 217 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-  /* Layout */
-  --hh:    72px;
-  --sw:    280px;
-  
-  /* Transitions */
-  --tr-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-all: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  
-  /* Effects */
-  --glow-p: 0 0 35px rgba(89,130,255,0.35);
-  --shadow: 0 30px 60px rgba(0,0,0,0.6);
-  --inner-glow: inset 0 0.5px 0 rgba(255,255,255,0.15);
-}
+    --muted: 217 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: var(--bg);
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(224, 100%, 66%, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(174, 100%, 45%, 0.05) 0px, transparent 50%);
-  color: #fff;
-  font-family: var(--font);
-  overflow-x: hidden;
-  line-height: 1.6;
-}
+    --accent: 217 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
-/* ─── LANDING STYLES ─── */
-.landing-header {
-  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-  width: calc(100% - 48px); max-width: 1400px; height: 72px;
-  background: rgba(8, 12, 24, 0.6); backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--border2); border-radius: 24px;
-  z-index: 1000; display: flex; align-items: center; padding: 0 32px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4), var(--inner-glow);
-}
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-.landing-section { position: relative; padding: 140px 24px; z-index: 10; }
+    --border: 217 32.6% 17.5%;
+    --input: 217 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
 
-/* ─── BUTTONS PREMIUM ─── */
-.btn {
-  background: var(--p); color: #fff; font-weight: 700;
-  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  gap: 10px; transition: var(--ease-all); outline: none;
-  position: relative; overflow: hidden;
-  box-shadow: var(--inner-glow);
-}
-
-.btn-premium {
-  background: linear-gradient(135deg, var(--p), var(--acc2));
-  padding: 14px 34px; border-radius: 99px;
-  box-shadow: 0 10px 30px rgba(89, 130, 255, 0.4), var(--inner-glow);
-  font-size: 15px; letter-spacing: -0.01em;
-}
-
-.btn-premium::after {
-  content: ''; position: absolute; top: -50%; left: -50%;
-  width: 200%; height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-  opacity: 0; transition: opacity 0.5s; pointer-events: none;
-}
-
-.btn-premium:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 15px 40px rgba(89, 130, 255, 0.5), var(--inner-glow);
-  filter: brightness(1.1);
-}
-
-.btn-premium:hover::after { opacity: 1; }
-
-.btn-ghost {
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  color: rgba(255,255,255,0.8);
-  font-weight: 600;
-}
-
-.btn-ghost:hover {
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  border-color: var(--border2);
-}
-
-/* ─── DASHBOARD CORE ─── */
-.main-content { 
-  margin-left: var(--sw); flex: 1; overflow-y: auto; background: var(--bg); 
-  position: relative; min-height: 100vh; 
-}
-
-.sidebar {
-  width: var(--sw); background: var(--sb); border-right: 1px solid var(--border);
-  position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
-  display: flex; flex-direction: column;
-}
-
-/* ─── COMPONENTS ─── */
-.card {
-  background: var(--sur1); border: 1px solid var(--border); border-radius: 32px;
-  backdrop-filter: blur(24px); transition: var(--ease-all);
-  box-shadow: var(--glass-glow), var(--inner-glow);
-}
-
-.card:hover { 
-  background: var(--sur2); border-color: var(--border2); 
-  transform: translateY(-6px);
-  box-shadow: 0 30px 60px rgba(0,0,0,0.5), var(--inner-glow);
-}
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 1024px) { 
-  .sidebar { width: 240px; }
-  :root { --sw: 240px; }
-}
-
-@media (max-width: 768px) {
-  .landing-header { top: 12px; width: calc(100% - 24px); padding: 0 16px; height: 72px; }
-  h1 { font-size: 40px !important; }
-}
-
-@media (max-width: 600px) {
-  .sidebar { 
-    transform: translateX(-100%); 
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 20px 0 60px rgba(0,0,0,0.8);
-    background: rgba(6,10,22,0.99); 
+    --radius: 0.5rem;
+    
+    /* Premium Moncef IA Custom Tokens */
+    --p: 224 100% 72%;
+    --a: 174 100% 55%;
+    --sur0: 224 71% 4%;
+    --border-color: 230 25% 18%;
   }
-  .sidebar.open { transform: translateX(0); }
-  .main-content { margin-left: 0 !important; }
-  
-  .landing-header .btn { padding: 10px 20px !important; font-size: 14px !important; }
-  .hero-actions { flex-direction: column; width: 100%; gap: 12px !important; }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 32.6% 17.5%;
+    --input: 217 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-size: clamp(14px, 1.5vw, 16px);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 border border-white/10 backdrop-blur-[32px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+  }
+  .glass-card {
+    @apply bg-gradient-to-br from-white/5 to-white/1 border border-white/10 shadow-xl backdrop-blur-2xl rounded-[24px];
+  }
 }

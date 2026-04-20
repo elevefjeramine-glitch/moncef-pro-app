@@ -3,29 +3,38 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star, ArrowRight, Zap, Lock, Globe, Check, X } from "lucide-react";
-import TiltCard from "@/components/TiltCard";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { t } from "@/utils/i18n";
-import InitialLangSelector from "@/components/InitialLangSelector";
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useUserStore } from "@/store/useUserStore";
 import { supabase } from "@/utils/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence } from "framer-motion";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import dynamic from "next/dynamic";
+
+const TiltCard = dynamic(() => import("@/components/TiltCard"), { ssr: false, loading: () => <Skeleton className="w-[320px] h-[300px] rounded-2xl" /> });
+const InitialLangSelector = dynamic(() => import("@/components/InitialLangSelector"), { ssr: false });
+const LanguageSwitcher = dynamic(() => import("@/components/LanguageSwitcher"), { ssr: false });
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 /* ─── Variants Framer Motion ─── */
-const stagger = {
+const stagger: any = {
   hidden: { opacity: 0 },
   show:   { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.4 } }
 };
 
-const fadeUp = {
+const fadeUp: any = {
   hidden: { opacity: 0, y: 40, filter: "blur(10px)" },
   show:   { opacity: 1, y: 0,  filter: "blur(0px)", transition: { type: "spring", stiffness: 70, damping: 20 } }
 };
 
-const letterAnim = {
+const letterAnim: any = {
   hidden: { opacity: 0, y: 50 },
-  show: (i) => ({
+  show: (i: number) => ({
     opacity: 1,
     y: 0,
     transition: { delay: i * 0.03, duration: 0.8, ease: [0.16, 1, 0.3, 1] }
@@ -37,11 +46,28 @@ export default function Home() {
   const [lang, setLang] = useState("fr");
   const [showLangSelector, setShowLangSelector] = useState(false);
   const heroRef = useRef(null);
+  const featuresRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   
   const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
   const heroScale   = useTransform(scrollYProgress, [0, 0.8], [1, 0.95]);
-  const heroY       = useTransform(scrollYProgress, [0, 1], ["0%", "35%"]);
+
+  useEffect(() => {
+    let ctx = gsap.context(() => {
+      gsap.from(".card-gsap", {
+        scrollTrigger: {
+          trigger: ".features-container",
+          start: "top bottom-=100px",
+          stagger: 0.15,
+        },
+        y: 100,
+        opacity: 0,
+        duration: 0.8,
+        ease: "power3.out"
+      });
+    }, featuresRef);
+    return () => ctx.revert();
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("site_lang");
@@ -130,20 +156,34 @@ export default function Home() {
         </div>
 
         <div style={{ flex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          {user && (
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              style={{ fontSize: '11px', fontWeight: 900, color: 'var(--a)', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.15em' }}
-            >
-              <Zap size={11} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : `${credits} credits`}
-            </motion.div>
+          {!user && credits === 0 ? (
+            <div className="flex flex-col items-center gap-2">
+               <Skeleton className="w-24 h-4 rounded-full bg-white/10" />
+               <Skeleton className="w-32 h-10 rounded-full bg-white/10" />
+            </div>
+          ) : user ? (
+            <>
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                style={{ fontSize: '11px', fontWeight: 900, color: 'var(--a)', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.15em' }}
+              >
+                <Zap size={11} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : `${credits} credits`}
+              </motion.div>
+              <Link href="/app">
+                <motion.button className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px" }}>
+                  {t(lang, "dashboard")} <ArrowRight size={16} />
+                </motion.button>
+              </Link>
+            </>
+          ) : (
+             <Link href="/auth">
+              <motion.button className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px" }}>
+                {t(lang, "access_app")} <ArrowRight size={16} />
+              </motion.button>
+            </Link>
           )}
-          <Link href={user ? "/app" : "/auth"}>
-            <motion.button className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px" }}>
-              {user ? t(lang, "dashboard") : t(lang, "access_app")} <ArrowRight size={16} />
-            </motion.button>
-          </Link>
         </div>
+
 
         <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
           <LanguageSwitcher currentLang={lang} onSwitch={switchLang} />
@@ -250,17 +290,13 @@ export default function Home() {
       </motion.section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
-        <div className="landing-section">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.8 }}
-            style={{ textAlign: "center", marginBottom: 80 }}
-          >
+      <section id="features" ref={featuresRef} style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
+        <div className="landing-section features-container">
+          <div style={{ textAlign: "center", marginBottom: 80 }}>
             <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>ULTIMATE TOOLS</span>
             <h2 style={{ fontSize: "clamp(36px, 5vw, 64px)", marginTop: 24, letterSpacing: "-0.04em", fontFamily: "var(--font2)" }}>{t(lang, "feat_title")}</h2>
             <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 18, maxWidth: 600, margin: "16px auto 0" }}>{t(lang, "feat_desc")}</p>
-          </motion.div>
+          </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32, maxWidth: 1300, margin: "0 auto" }}>
             <FeatureCard icon={<Bot size={28} />}          title="Moncef Intelligence" desc="L'épicentre de votre savoir. Une IA capable de comprendre vos cours, corriger vos travaux et expliquer les concepts les plus denses." list={["Analyse Sémantique", "Correction Prédictive", "Révisions Adaptatives"]} delay={0.1} />
@@ -291,9 +327,9 @@ export default function Home() {
   );
 }
 
-function FeatureCard({ icon, title, desc, list, premium = false, delay }) {
+function FeatureCard({ icon, title, desc, list, premium = false, delay }: { icon: React.ReactNode, title: string, desc: string, list: string[], premium?: boolean, delay: number }) {
   return (
-    <TiltCard delay={delay} className="card" style={{ padding: "48px 32px", position: "relative", overflow: "hidden" }}>
+    <TiltCard delay={delay} className="card card-gsap" style={{ padding: "48px 32px", position: "relative", overflow: "hidden" }}>
       {premium && (
         <div style={{
           position: "absolute", top: 12, right: 12, background: "var(--gold)", color: "#000",
