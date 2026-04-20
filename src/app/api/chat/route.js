@@ -3,8 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 
 // Configuration Supabase (Côté Serveur)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ggnwtszeitrrfhedgipv.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Requis pour déduire les crédits
-const supabase = createClient(supabaseUrl, supabaseServiceKey || "");
+
+// Lazy client to prevent build errors
+let supabaseAdmin = null;
+function getSupabaseAdmin() {
+  if (supabaseAdmin) return supabaseAdmin;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    console.warn("SUPABASE_SERVICE_ROLE_KEY is missing. Using anon client (build mode).");
+    return createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "");
+  }
+  supabaseAdmin = createClient(supabaseUrl, key);
+  return supabaseAdmin;
+}
 
 // Bug #15 fix: Simple in-memory rate limiter
 // 20 requests per user per 10 minutes
@@ -34,6 +45,16 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 export async function POST(req) {
+  try {
+    const { messages, system } = await req.json();
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "Configuration API manquante." }, { status: 500 });
+    }
+
+    const supabase = getSupabaseAdmin();
+
     // Identification de l'utilisateur via le header Authorization
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
@@ -66,7 +87,7 @@ export async function POST(req) {
     }
 
     // Bug #16 fix: model name centralized here, not duplicated across files
-    const activeModel = 'claude-sonnet-4-20250514';
+    const activeModel = 'claude-3-5-sonnet-20240620';
     
     const currentDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const enhancedSystem = `${system || ""}\n\n[INFO CONTEXTUELLE] La date d'aujourd'hui est le ${currentDate}.`;
