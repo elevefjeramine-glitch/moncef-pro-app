@@ -69,7 +69,7 @@ export default function InitialLangSelector({ onSelect }) {
           fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 800, fontFamily: 'var(--font2)',
           letterSpacing: '-0.04em', lineHeight: 1.1, color: '#fff'
         }}>
-          Choisissez votre <span style={{ color: 'var(--p)' }}>langue</span>
+          Choose your <span style={{ color: 'var(--p)' }}>language</span>
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.4)', marginTop: 16, fontSize: 18 }}>Select your preferred language to continue</p>
       </motion.div>

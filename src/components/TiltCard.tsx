@@ -9,9 +9,10 @@ interface TiltCardProps {
   className?: string;
   style?: CSSProperties;
   delay?: number;
+  onClick?: () => void;
 }
 
-export default function TiltCard({ children, className, style, delay = 0 }: TiltCardProps) {
+export default function TiltCard({ children, className, style, delay = 0, onClick }: TiltCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -46,6 +47,7 @@ export default function TiltCard({ children, className, style, delay = 0 }: Tilt
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={onClick}
       style={{
         ...style,
         perspective: 1200,
