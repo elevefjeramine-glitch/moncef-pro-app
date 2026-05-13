@@ -299,12 +299,64 @@ export default function Home() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32, maxWidth: 1300, margin: "0 auto" }}>
-            <FeatureCard icon={<Bot size={28} />}          title="Moncef Intelligence" desc="L'épicentre de votre savoir. Une IA capable de comprendre vos cours, corriger vos travaux et expliquer les concepts les plus denses." list={["Analyse Sémantique", "Correction Prédictive", "Révisions Adaptatives"]} delay={0.1} />
-            <FeatureCard icon={<CalendarDays size={28} />}  title="Flux Temporel IA"    desc="Oubliez la gestion manuelle. Votre emploi du temps s'auto-optimise selon vos priorités et vos cycles de concentration." list={["Semaines A/B Dynamiques", "Sync Cloud temps réel", "Alertes Neuronales"]} delay={0.2} />
-            <FeatureCard icon={<ClipboardList size={28} />} title="Smart Tracker"     desc="Extraction automatique des devoirs depuis vos photos ou fichiers. Priorisation intelligente basée sur la complexité." list={["OCR Intégré", "Score de Priorité", "Rappels Adaptatifs"]} delay={0.3} />
-            <FeatureCard icon={<MessageSquare size={28} />} title="Cortex Comm"        desc="Une messagerie chiffrée de bout en bout conçue pour la collaboration académique de haute intensité." list={["Salons de Travail", "DMs Sécurisés", "Partage de Données"]} delay={0.4} />
-            <FeatureCard icon={<ShieldCheck size={28} />}   title="ALPHA ENGINE"       desc="L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel." premium delay={0.5} list={["Console IA Directe", "Analytics Avancés", "Gestion Globale"]} />
-            <FeatureCard icon={<Star size={28} />}          title="Modération 2.0"      desc="Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA." delay={0.6} list={["Safety Layer", "Gestion Rôles", "Logs d'Activité"]} />
+            {(() => {
+              const featuresData = {
+                fr: [
+                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir. Une IA capable de comprendre vos cours, corriger vos travaux et expliquer les concepts les plus denses.", list: ["Analyse Sémantique", "Correction Prédictive", "Révisions Adaptatives"] },
+                  { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Oubliez la gestion manuelle. Votre emploi du temps s'auto-optimise selon vos priorités et vos cycles de concentration.", list: ["Semaines A/B Dynamiques", "Sync Cloud temps réel", "Alertes Neuronales"] },
+                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "Extraction automatique des devoirs depuis vos photos ou fichiers. Priorisation intelligente basée sur la complexité.", list: ["OCR Intégré", "Score de Priorité", "Rappels Adaptatifs"] },
+                  { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Une messagerie chiffrée de bout en bout conçue pour la collaboration académique de haute intensité.", list: ["Salons de Travail", "DMs Sécurisés", "Partage de Données"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Console IA Directe", "Analytics Avancés", "Gestion Globale"] },
+                  { icon: <Star size={28} />, title: "Modération 2.0", desc: "Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA.", list: ["Safety Layer", "Gestion Rôles", "Logs d'Activité"] }
+                ],
+                en: [
+                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge. An AI capable of understanding your courses, correcting your work and explaining the densest concepts.", list: ["Semantic Analysis", "Predictive Correction", "Adaptive Revisions"] },
+                  { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Forget manual management. Your schedule auto-optimizes according to your priorities and concentration cycles.", list: ["Dynamic A/B Weeks", "Real-time Cloud Sync", "Neural Alerts"] },
+                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "Automatic homework extraction from your photos or files. Intelligent prioritization based on complexity.", list: ["Integrated OCR", "Priority Score", "Adaptive Reminders"] },
+                  { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "End-to-end encrypted messaging designed for high-intensity academic collaboration.", list: ["Work Rooms", "Secure DMs", "Data Sharing"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Direct AI Console", "Advanced Analytics", "Global Management"] },
+                  { icon: <Star size={28} />, title: "Moderation 2.0", desc: "Sophisticated tools to maintain the integrity and security of the Moncef IA community.", list: ["Safety Layer", "Role Management", "Activity Logs"] }
+                ],
+                es: [
+                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento. Una IA capaz de entender tus cursos, corregir tus trabajos y explicar los conceptos más densos.", list: ["Análisis Semántico", "Corrección Predictiva", "Revisiones Adaptativas"] },
+                  { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Olvida la gestión manual. Tu horario se auto-optimiza según tus prioridades y ciclos de concentración.", list: ["Semanas A/B Dinámicas", "Sincronización en la Nube", "Alertas Neuronales"] },
+                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "Extracción automática de tareas desde tus fotos o archivos. Priorización inteligente basada en la complejidad.", list: ["OCR Integrado", "Puntuación de Prioridad", "Recordatorios Adaptativos"] },
+                  { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Mensajería encriptada de extremo a extremo diseñada para una colaboración académica de alta intensidad.", list: ["Salas de Trabajo", "MDs Seguros", "Intercambio de Datos"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Consola IA Directa", "Analíticas Avanzadas", "Gestión Global"] },
+                  { icon: <Star size={28} />, title: "Moderación 2.0", desc: "Herramientas sofisticadas para mantener la integridad y seguridad de la comunidad Moncef IA.", list: ["Capa de Seguridad", "Gestión de Roles", "Registros de Actividad"] }
+                ],
+                ar: [
+                  { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك. ذكاء اصطناعي قادر على فهم دروسك وتصحيح أعمالك وشرح أعقد المفاهيم.", list: ["تحليل دلالي", "تصحيح تنبؤي", "مراجعات تكيفية"] },
+                  { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "انسَ الإدارة اليدوية. يتم تحسين جدولك تلقائياً وفقاً لأولوياتك ودورات تركيزك.", list: ["أسابيع أ/ب ديناميكية", "مزامنة سحابية فورية", "تنبيهات عصبية"] },
+                  { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "استخراج تلقائي للواجبات من صورك أو ملفاتك. تحديد الأولويات بذكاء بناءً على التعقيد.", list: ["تعرف بصري متكامل", "نقاط الأولوية", "تذكيرات تكيفية"] },
+                  { icon: <MessageSquare size={28} />, title: "اتصالات كورتيكس", desc: "مراسلة مشفرة من البداية للنهاية مصممة للتعاون الأكاديمي عالي الكثافة.", list: ["غرف عمل", "رسائل خاصة آمنة", "مشاركة البيانات"] },
+                  { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["وحدة تحكم ذكاء مباشر", "تحليلات متقدمة", "إدارة شاملة"] },
+                  { icon: <Star size={28} />, title: "إشراف 2.0", desc: "أدوات متطورة للحفاظ على نزاهة وأمان مجتمع ذكاء منصف.", list: ["طبقة أمان", "إدارة الأدوار", "سجلات النشاط"] }
+                ],
+                zh: [
+                  { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心。能够理解您的课程、批改作业并解释最复杂的概念的AI。", list: ["语义分析", "预测性批改", "适应性复习"] },
+                  { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "忘记手动管理。您的日程会根据您的优先级和专注周期自动优化。", list: ["动态 A/B 周", "实时云同步", "神经警报"] },
+                  { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "从照片或文件中自动提取作业。基于复杂度的智能优先级排序。", list: ["集成 OCR", "优先级得分", "适应性提醒"] },
+                  { icon: <MessageSquare size={28} />, title: "Cortex 通信", desc: "专为高强度学术合作设计的端到端加密消息传递。", list: ["工作区", "安全私信", "数据共享"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["直接 AI 控制台", "高级分析", "全局管理"] },
+                  { icon: <Star size={28} />, title: "审核 2.0", desc: "维护 Moncef IA 社区完整性和安全性的高级工具。", list: ["安全层", "角色管理", "活动日志"] }
+                ]
+              };
+              
+              const currentFeatures = (featuresData as any)[lang] || featuresData.fr;
+              
+              return currentFeatures.map((feat: any, idx: number) => (
+                <FeatureCard 
+                  key={idx} 
+                  icon={feat.icon} 
+                  title={feat.title} 
+                  desc={feat.desc} 
+                  list={feat.list} 
+                  premium={feat.premium} 
+                  delay={0.1 + (idx * 0.1)} 
+                />
+              ));
+            })()}
           </div>
         </div>
       </section>
