@@ -150,7 +150,7 @@ export default function AppLayout({ children }) {
           
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="header-actions">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14 }}>
-               ⚡ {['founder', 'co-founder', 'moderator'].includes(user?.role) ? 'Illimité' : `${tokens} cr.`}
+               ⚡ {['founder', 'co-founder', 'moderator'].includes(user?.role) ? t(lang, 'credits_unlimited') : `${tokens} cr.`}
             </div>
           </motion.div>
         </header>
@@ -201,16 +201,16 @@ function SettingsModal({ user, lang, close }) {
       if (error) {
         // Fallback gracefully si la colonne theme_color n'existe pas encore dans SQL
         if(error.message.includes("could not find the 'theme_color' column")) {
-          setMsg("⚠️ Attention: L'Admin doit rajouter la colonne SQL 'theme_color' en base de données.");
+          setMsg(t(lang, 'settings_col_warn'));
         } else {
           throw error;
         }
       } else {
-        setMsg("Paramètres sauvegardés avec succès ! ✅");
+        setMsg(t(lang, 'settings_saved'));
         setTimeout(() => close(), 1500);
       }
     } catch(err) {
-      setMsg("Erreur de sauvegarde: " + err.message);
+      setMsg(t(lang, 'settings_error') + ": " + err.message);
     } finally {
       setLoading(false);
     }
@@ -251,37 +251,37 @@ function SettingsModal({ user, lang, close }) {
                   {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', color: 'rgba(255,255,255,0.2)' }}>?</div>}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>URL de la Photo (Avatar)</label>
+                  <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>{t(lang, 'settings_avatar_label')}</label>
                   <input className="fi" placeholder="https://..." value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} />
                 </div>
               </div>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>Prénom / Pseudo</label>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>{t(lang, 'settings_name_label')}</label>
                 <input className="fi" value={firstName} onChange={e => setFirstName(e.target.value)} />
               </div>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>Email (Fixe)</label>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>{t(lang, 'settings_email_label')}</label>
                 <input className="fi" value={user.email} disabled style={{ opacity: 0.5, cursor: 'not-allowed' }} />
               </div>
-              <div className="role-badge" style={{ fontSize: '14px', padding: '8px 16px', display: 'inline-block' }}>Grade : {user.role === 'founder' ? '👑 Fondateur Alpha' : 'Membre'}</div>
+              <div className="role-badge" style={{ fontSize: '14px', padding: '8px 16px', display: 'inline-block' }}>{t(lang, 'settings_grade_label')} : {user.role === 'founder' ? t(lang, 'settings_grade_founder') : t(lang, 'settings_grade_member')}</div>
             </motion.div>
           )}
 
           {tab === 'interface' && (
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}>
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', textTransform: 'uppercase' }}>Langue de l'Interface</label>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', textTransform: 'uppercase' }}>{t(lang, 'settings_lang_label')}</label>
                 <select className="fi" value={language} onChange={(e) => setLanguage(e.target.value)} style={{ WebkitAppearance: 'none', cursor: 'pointer' }}>
-                  <option value="fr">🇫🇷 Français (FR)</option>
-                  <option value="en">🇬🇧 English (EN)</option>
-                  <option value="es">🇪🇸 Español (ES)</option>
-                  <option value="ar">🇲🇦 العربية (AR)</option>
-                  <option value="zh">🇨🇳 中文 (ZH)</option>
+                  <option value="fr">FR - Français</option>
+                  <option value="en">EN - English</option>
+                  <option value="es">ES - Español</option>
+                  <option value="ar">AR - العربية</option>
+                  <option value="zh">ZH - 中文</option>
                 </select>
               </div>
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', textTransform: 'uppercase' }}>Couleur d'Accentuation Unique</label>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '12px', textTransform: 'uppercase' }}>{t(lang, 'settings_color_label')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                   {colors.map(c => (
                     <div 
@@ -298,12 +298,12 @@ function SettingsModal({ user, lang, close }) {
             </motion.div>
           )}
 
-          {msg && <div style={{ marginTop: '20px', fontSize: '13px', color: msg.includes('Erreur') || msg.includes('Attention') ? 'var(--warn)' : 'var(--ok)', background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px' }}>{msg}</div>}
+          {msg && <div style={{ marginTop: '20px', fontSize: '13px', color: msg.includes('✅') ? 'var(--ok)' : 'var(--warn)', background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px' }}>{msg}</div>}
 
           <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            <button onClick={close} style={{ padding: '10px 20px', background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '10px', cursor: 'pointer' }}>Annuler</button>
+            <button onClick={close} style={{ padding: '10px 20px', background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '10px', cursor: 'pointer' }}>{t(lang, 'btn_cancel')}</button>
             <button onClick={saveSettings} disabled={loading} className="btn" style={{ padding: '10px 24px', minHeight: 'auto', borderRadius: '10px' }}>
-              {loading ? '...' : <><Save size={16}/> Enregistrer</>}
+              {loading ? '...' : <><Save size={16}/> {t(lang, 'btn_save')}</>}
             </button>
           </div>
         </div>

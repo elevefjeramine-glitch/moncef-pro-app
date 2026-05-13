@@ -5,6 +5,7 @@ import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Lock, Phone, MapPin, Building2, Hash, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { t } from "@/utils/i18n";
+import FlagIcon from "@/components/FlagIcon";
 
 const LABEL_STYLE = {
   display: 'block', fontSize: '11px', color: 'rgba(255,255,255,0.5)',
@@ -152,7 +153,10 @@ export default function AuthPage() {
               style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', border: 'none', cursor: 'pointer',
                 background: lang === l ? 'var(--p)' : 'rgba(255,255,255,0.05)',
                 color: lang === l ? '#fff' : 'rgba(255,255,255,0.6)' }}>
-              {l === 'fr' ? '🇫🇷 FR' : l === 'en' ? '🇬🇧 EN' : l === 'es' ? '🇪🇸 ES' : l === 'ar' ? '🇸🇦 AR' : '🇨🇳 ZH'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FlagIcon code={l === 'ar' ? 'ar' : l} size={16} />
+                {l.toUpperCase()}
+              </div>
             </motion.button>
           ))}
         </div>

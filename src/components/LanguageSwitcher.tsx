@@ -3,16 +3,17 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import FlagIcon from "./FlagIcon";
 
 export default function LanguageSwitcher({ currentLang, onSwitch }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const languages = [
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'es', name: 'Español', flag: '🇪🇸' },
-    { code: 'ar', name: 'العربية', flag: '🇲🇦' },
+    { code: 'fr', name: 'Français' },
+    { code: 'en', name: 'English' },
+    { code: 'es', name: 'Español' },
+    { code: 'ar', name: 'العربية' },
   ];
 
   const current = languages.find(l => l.code === currentLang) || languages[0];
@@ -49,7 +50,7 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
           flexShrink: 0
         }}
       >
-        <span style={{ fontSize: 18, lineHeight: 1 }}>{current.flag}</span>
+        <FlagIcon code={current.code} size={18} />
         <span style={{ textTransform: 'uppercase' }}>{current.code}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
@@ -101,7 +102,7 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
                   transition: 'color 0.2s'
                 }}
               >
-                <span style={{ fontSize: 20, lineHeight: 1, display: 'block' }}>{lang.flag}</span>
+                <FlagIcon code={lang.code} size={20} />
                 <span>{lang.name}</span>
                 {currentLang === lang.code && (
                   <motion.div

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Crown, Sparkles, RefreshCw, Terminal, Users, BookOpen, MessageSquare, Calendar, Trash2, Shield, Zap, BarChart3, ChevronDown, ChevronUp, AlertTriangle, Check, X, Database } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
+import { useLanguage, t } from "@/utils/i18n";
 import { useRouter } from "next/navigation";
 
 const ROLE_COLORS = {
@@ -31,6 +32,7 @@ function StatCard({ icon: Icon, label, value, sub, color = '#FFD700', delay = 0 
 }
 
 export default function AlphaPage() {
+  const lang = useLanguage();
   const router = useRouter();
   const [isFounder, setIsFounder] = useState(false);
   const [authToken, setAuthToken] = useState(null);

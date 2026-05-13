@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, Sparkles, User, RefreshCw, ImagePlus, CalendarPlus, X, Check, BookOpen, BarChart3, CalendarDays } from "lucide-react";
 import { useLanguage, t } from "@/utils/i18n";
 import { supabase } from "@/utils/supabase/client";
+import { useUserStore } from "@/store/useUserStore";
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 

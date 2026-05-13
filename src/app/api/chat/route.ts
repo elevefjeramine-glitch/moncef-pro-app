@@ -87,7 +87,7 @@ export async function POST(req) {
     }
 
     // Bug #16 fix: model name centralized here, not duplicated across files
-    const activeModel = 'claude-3-5-sonnet-20240620';
+    const activeModel = 'claude-sonnet-4-20250514';
     
     const currentDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const enhancedSystem = `${system || ""}\n\n[INFO CONTEXTUELLE] La date d'aujourd'hui est le ${currentDate}.`;

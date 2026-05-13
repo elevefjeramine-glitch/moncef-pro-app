@@ -3,12 +3,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, ArrowRight } from "lucide-react";
 import TiltCard from "./TiltCard";
+import FlagIcon from "./FlagIcon";
 
 const languages = [
-  { code: 'fr', name: 'Français', flag: '🇫🇷', desc: 'Accéder en Français' },
-  { code: 'en', name: 'English', flag: '🇬🇧', desc: 'Access in English' },
-  { code: 'es', name: 'Español', flag: '🇪🇸', desc: 'Acceder en Español' },
-  { code: 'ar', name: 'العربية', flag: '🇲🇦', desc: 'الدخول بالعربية' },
+  { code: 'fr', name: 'Français', desc: 'Accéder en Français' },
+  { code: 'en', name: 'English', desc: 'Access in English' },
+  { code: 'es', name: 'Español', desc: 'Acceder en Español' },
+  { code: 'ar', name: 'العربية', desc: 'الدخول بالعربية' },
 ];
 
 export default function InitialLangSelector({ onSelect }) {
@@ -107,7 +108,7 @@ export default function InitialLangSelector({ onSelect }) {
               }}
               className="lang-card-hover"
             >
-              <div style={{ fontSize: 44, marginBottom: 24, filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))' }}>{l.flag}</div>
+              <div style={{ marginBottom: 24, filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))' }}><FlagIcon code={l.code} size={56} /></div>
               <h3 style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 8, fontFamily: 'var(--font2)' }}>{l.name}</h3>
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, marginBottom: 24 }}>{l.desc}</p>
               <div style={{
