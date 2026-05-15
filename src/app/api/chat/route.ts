@@ -47,10 +47,10 @@ setInterval(() => {
 export async function POST(req) {
   try {
     const { messages, system } = await req.json();
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: "Configuration API manquante." }, { status: 500 });
+      return NextResponse.json({ error: "Configuration API manquante. Ajoutez GEMINI_API_KEY." }, { status: 500 });
     }
 
     const supabase = getSupabaseAdmin();
@@ -86,35 +86,36 @@ export async function POST(req) {
       }, { status: 402 });
     }
 
-    // Bug #16 fix: model name centralized here, not duplicated across files
-    const activeModel = 'claude-3-7-sonnet-20250219';
-    
+    // --- GOOGLE GEMINI INTEGRATION ---
     const currentDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const enhancedSystem = `${system || ""}\n\n[INFO CONTEXTUELLE] La date d'aujourd'hui est le ${currentDate}.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const geminiMessages = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: activeModel,
-        max_tokens: 4096,
-        messages: messages,
-        system: enhancedSystem
+        contents: geminiMessages,
+        systemInstruction: {
+          parts: [{ text: enhancedSystem }]
+        }
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Anthropic API Error:", errorData);
-      throw new Error(errorData.error?.message || "Erreur de communication avec Anthropic");
+      console.error("Gemini API Error:", errorData);
+      throw new Error(errorData.error?.message || "Erreur de communication avec Google Gemini");
     }
 
     const data = await response.json();
-    const assistantMessage = data.content[0].text;
+    const assistantMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur: Pas de réponse générée.";
 
     // Déduction des crédits (sauf si illimité)
     let newTokens = userData.tokens;

@@ -198,7 +198,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
         })
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || 'Erreur.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.response || (data.error ? `${data.error} ${data.details || ''}` : 'Erreur.') }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: '❌ Erreur de connexion.' }]);
     } finally {
