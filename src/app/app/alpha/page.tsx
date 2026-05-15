@@ -181,7 +181,10 @@ DONNÉES EN TEMPS RÉEL:
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         body: JSON.stringify({
           messages: ctx.map(m => ({ role: m.role, content: m.content })),
           system: `Tu es ALPHA, l'IA d'administration de la plateforme "Moncef IA", créée par Amine FJER. Tu as accès à toutes les données de la plateforme en temps réel. 
@@ -195,7 +198,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
         })
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response || 'Erreur.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || 'Erreur.' }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: '❌ Erreur de connexion.' }]);
     } finally {
