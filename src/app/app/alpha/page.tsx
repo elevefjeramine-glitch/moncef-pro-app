@@ -143,6 +143,7 @@ export default function AlphaPage() {
     const res = await alphaFetch('DELETE_USER', { userId });
     if (res?.success) {
       setActionMsg(`✅ Utilisateur supprimé`);
+      setUsers(prev => prev.filter(u => u.id !== userId)); // Instant UI update
       loadStats();
     } else {
       setActionMsg(`❌ ${res?.error}`);
