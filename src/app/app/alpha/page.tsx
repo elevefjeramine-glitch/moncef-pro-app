@@ -465,7 +465,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
           })}
           {users.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
-              {loadingData ? 'Chargement...' : 'Aucun utilisateur trouvé — clé service role requise'}
+              {loadingData ? 'Chargement...' : (serviceKeyMissing ? 'Clé service role requise' : 'Aucun utilisateur trouvé.')}
             </div>
           )}
         </motion.div>
@@ -502,7 +502,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
           ))}
           {allHomework.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
-              {loadingData ? 'Chargement...' : 'Aucun devoir trouvé — clé service role requise'}
+              {loadingData ? 'Chargement...' : (serviceKeyMissing ? 'Clé service role requise' : 'Aucun devoir pour le moment.')}
             </div>
           )}
         </motion.div>
