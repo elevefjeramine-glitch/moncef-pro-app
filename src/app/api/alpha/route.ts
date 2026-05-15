@@ -61,8 +61,23 @@ export async function POST(req) {
 
       case 'DELETE_USER': {
         const { userId } = payload;
+        
+        // 1. Force delete all related records to avoid Foreign Key constraints
+        await Promise.all([
+          admin.from('homework').delete().eq('user_id', userId),
+          admin.from('schedule').delete().eq('user_id', userId),
+          admin.from('user_messages').delete().eq('user_id', userId),
+          admin.from('conversation_messages').delete().eq('sender_id', userId),
+          admin.from('conversations').delete().or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+        ]);
+
+        // 2. Delete public profile
+        await admin.from('users').delete().eq('id', userId);
+
+        // 3. Delete auth user
         const { error } = await admin.auth.admin.deleteUser(userId);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        
         return NextResponse.json({ success: true });
       }
 
