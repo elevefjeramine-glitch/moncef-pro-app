@@ -6,6 +6,8 @@ import { Send, Crown, Sparkles, RefreshCw, Terminal, Users, BookOpen, MessageSqu
 import { supabase } from "@/utils/supabase/client";
 import { useLanguage, t } from "@/utils/i18n";
 import { useRouter } from "next/navigation";
+import DOMPurify from "isomorphic-dompurify";
+import { marked } from "marked";
 
 const ROLE_COLORS = {
   founder: { color: '#FFD700', bg: 'rgba(255,215,0,0.15)', label: '👑 Fondateur' },
@@ -521,9 +523,9 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
                   <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     style={{ alignSelf: isAi ? 'flex-start' : 'flex-end', maxWidth: '85%', display: 'flex', gap: 10 }}>
                     {isAi && <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,215,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', flexShrink: 0, border: '1px solid rgba(255,215,0,0.25)' }}><Crown size={18} /></div>}
-                    <div style={{ padding: '14px 18px', borderRadius: 18, borderTopLeftRadius: isAi ? 4 : 18, borderTopRightRadius: isAi ? 18 : 4, background: isAi ? 'rgba(255,215,0,0.04)' : 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))', border: `1px solid ${isAi ? 'rgba(255,215,0,0.12)' : 'rgba(255,215,0,0.3)'}`, color: isAi ? '#EEDD88' : '#fff', fontSize: 14, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
-                      {msg.content}
-                    </div>
+                    <div className={isAi ? "alpha-markdown" : ""} style={{ padding: '14px 18px', borderRadius: 18, borderTopLeftRadius: isAi ? 4 : 18, borderTopRightRadius: isAi ? 18 : 4, background: isAi ? 'rgba(255,215,0,0.04)' : 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))', border: `1px solid ${isAi ? 'rgba(255,215,0,0.12)' : 'rgba(255,215,0,0.3)'}`, color: isAi ? '#EEDD88' : '#fff', fontSize: 14, lineHeight: 1.65, whiteSpace: 'normal', wordBreak: 'break-word' }}
+                      dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '')) : msg.content }}
+                    />
                   </motion.div>
                 );
               })}
