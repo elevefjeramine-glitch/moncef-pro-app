@@ -291,7 +291,7 @@ Exemples :
           "Authorization": `Bearer ${session?.access_token || ""}`
         },
         body: JSON.stringify({ 
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-3-7-sonnet-20250219',
           messages: apiMessages,
           system: `Tu es Moncef IA, un assistant éducatif intelligent et bienveillant créé par Amine FJER. Tu fais partie de la plateforme "Moncef IA" qui a été entièrement conçue et développée par Amine FJER. Si on te demande qui t'a créé, qui a créé ce site, qui est le fondateur, ou qui est derrière ce projet, tu dois TOUJOURS répondre que c'est Amine FJER. IMPORTANT: You must reply entirely in the language corresponding to this code: ${lang}. La date d'aujourd'hui est le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. ${schedulePrompt} ${homeworkPrompt} ${eventPrompt}`
         })

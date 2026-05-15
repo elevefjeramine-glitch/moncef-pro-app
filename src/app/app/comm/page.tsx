@@ -22,6 +22,7 @@ export default function CommPage() {
   const [groupName, setGroupName] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [onlineUsers, setOnlineUsers] = useState({});
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const myIdRef = useRef(null); // Bug #4 fix: stable ref for realtime callback closure
@@ -134,17 +135,40 @@ export default function CommPage() {
   // ─── Init & Realtime ────────────────────────────────────
   useEffect(() => {
     let myId = null;
+    let presenceChannel = null;
+    let msgChannel = null;
+
     const init = async () => {
       myId = await loadCurrentUser();
       if (myId) {
         await loadAllUsers(myId);
         await loadConversations(myId);
+
+        // Init Presence
+        presenceChannel = supabase.channel('online-users', {
+          config: { presence: { key: myId } },
+        });
+
+        presenceChannel.on('presence', { event: 'sync' }, () => {
+          const state = presenceChannel.presenceState();
+          const online = {};
+          for (const id in state) {
+            online[id] = true;
+          }
+          setOnlineUsers(online);
+        });
+
+        presenceChannel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await presenceChannel.track({ online_at: new Date().toISOString(), user_id: myId });
+          }
+        });
       }
     };
     init();
 
     // Realtime for new messages — Bug #4 fix: use myIdRef.current instead of closure var
-    const msgChannel = supabase.channel('realtime:conv_messages')
+    msgChannel = supabase.channel('realtime:conv_messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
         const newMessage = payload.new;
         setMessages(prev => {
@@ -160,7 +184,10 @@ export default function CommPage() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(msgChannel); };
+    return () => { 
+      if (msgChannel) supabase.removeChannel(msgChannel); 
+      if (presenceChannel) supabase.removeChannel(presenceChannel);
+    };
   }, []);
 
   // ─── When active conversation changes, load messages ─────
@@ -356,6 +383,8 @@ export default function CommPage() {
     });
   };
 
+  const isUserOnline = (userId) => !!onlineUsers[userId];
+
   // ─── Render Helpers ───────────────────────────────────────
   const renderMessages = () => {
     if (messages.length === 0) {
@@ -485,8 +514,11 @@ export default function CommPage() {
                   className={`conv-item ${activeConv?.id === conv.id ? 'active' : ''}`}
                   onClick={() => { setActiveConv(conv); setShowInfoPanel(false); }}
                 >
-                  <div className={`conv-avatar ${conv.type === 'group' ? 'group' : ''}`}>
+                  <div className={`conv-avatar ${conv.type === 'group' ? 'group' : ''}`} style={{ position: 'relative' }}>
                     {getConvAvatar(conv)}
+                    {conv.type === 'dm' && conv.dmPartner && isUserOnline(conv.dmPartner.id) && (
+                      <div style={{ position: 'absolute', bottom: -2, right: -2, width: 14, height: 14, background: '#00D2B6', border: '3px solid rgba(6,10,20,1)', borderRadius: '50%' }} />
+                    )}
                   </div>
                   <div className="conv-info">
                     <div className="conv-name">
@@ -511,15 +543,18 @@ export default function CommPage() {
           <div className="chat-area">
             {/* Chat Header */}
             <div className="chat-header">
-              <div className={`conv-avatar ${activeConv.type === 'group' ? 'group' : ''}`} style={{ width: 42, height: 42, fontSize: 16 }}>
+              <div className={`conv-avatar ${activeConv.type === 'group' ? 'group' : ''}`} style={{ width: 42, height: 42, fontSize: 16, position: 'relative' }}>
                 {getConvAvatar(activeConv)}
+                {activeConv.type === 'dm' && activeConv.dmPartner && isUserOnline(activeConv.dmPartner.id) && (
+                  <div style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, background: '#00D2B6', border: '3px solid rgba(6,10,20,1)', borderRadius: '50%' }} />
+                )}
               </div>
               <div className="chat-header-info">
                 <div className="chat-header-name">{getConvName(activeConv)}</div>
                 <div className="chat-header-status">
                   {activeConv.type === 'group' 
                     ? `${activeConv.members?.length || 0} ${t(lang, 'comm_members').toLowerCase()}`
-                    : t(lang, 'comm_online')
+                    : (activeConv.dmPartner && isUserOnline(activeConv.dmPartner.id) ? t(lang, 'comm_online') : (t(lang, 'comm_offline') || 'Hors ligne'))
                   }
                 </div>
               </div>
@@ -601,11 +636,14 @@ export default function CommPage() {
             className="info-panel"
           >
             <div className="info-panel-header">
-              <div className={`info-panel-avatar ${activeConv.type === 'group' ? '' : ''}`} style={activeConv.type === 'group' ? { background: 'linear-gradient(135deg, #9D00FF, var(--p))' } : {}}>
+              <div className={`info-panel-avatar ${activeConv.type === 'group' ? '' : ''}`} style={activeConv.type === 'group' ? { background: 'linear-gradient(135deg, #9D00FF, var(--p))' } : { position: 'relative' }}>
                 {activeConv.type === 'dm' && activeConv.dmPartner?.avatar_url 
                   ? <img src={activeConv.dmPartner.avatar_url} alt="" />
                   : getConvAvatar(activeConv)
                 }
+                {activeConv.type === 'dm' && activeConv.dmPartner && isUserOnline(activeConv.dmPartner.id) && (
+                  <div style={{ position: 'absolute', bottom: 2, right: 2, width: 18, height: 18, background: '#00D2B6', border: '4px solid rgba(6,10,20,1)', borderRadius: '50%' }} />
+                )}
               </div>
               <div className="info-panel-name">{getConvName(activeConv)}</div>
               <div className="info-panel-role">

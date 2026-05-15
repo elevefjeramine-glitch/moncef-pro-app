@@ -167,7 +167,7 @@ export default function DashboardPage() {
         )}
       </motion.div>
 
-      <motion.div variants={itemVariants} className="card" style={{ padding: 30, borderRadius: 24 }}>
+      <motion.div variants={itemVariants} className="card dashboard-card" style={{ padding: 30, borderRadius: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <LayoutList color="var(--a)" />

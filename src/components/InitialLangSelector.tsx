@@ -22,15 +22,24 @@ export default function InitialLangSelector({ onSelect }) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(5, 8, 18, 0.9)',
-        backdropFilter: 'blur(40px) saturate(180%)',
+        background: '#060a14', // Opaque background
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+    >
+      <div style={{
+        position: 'relative',
+        zIndex: 1,
+        minHeight: '100%',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px'
-      }}
-    >
+        padding: '60px 24px'
+      }}>
       {/* Background Glows */}
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         <motion.div
@@ -131,6 +140,7 @@ export default function InitialLangSelector({ onSelect }) {
           box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 0 20px rgba(89,130,255,0.1) !important;
         }
       `}</style>
+      </div>
     </motion.div>
   );
 }
