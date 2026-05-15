@@ -37,6 +37,7 @@ export default function AlphaPage() {
   const lang = useLanguage();
   const router = useRouter();
   const [isFounder, setIsFounder] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [tab, setTab] = useState('dashboard');
   const [stats, setStats] = useState(null);
@@ -65,8 +66,9 @@ export default function AlphaPage() {
       if (!session) { router.push('/auth'); return; }
       setAuthToken(session.access_token);
       const { data } = await supabase.from('users').select('role').eq('id', session.user.id).single();
-      if (data?.role === 'founder') {
+      if (['founder', 'moderator'].includes(data?.role)) {
         setIsFounder(true);
+        setUserRole(data?.role);
       } else {
         router.push('/app');
       }
@@ -190,7 +192,8 @@ DONNÉES EN TEMPS RÉEL:
         },
         body: JSON.stringify({
           messages: ctx.map(m => ({ role: m.role, content: m.content })),
-          system: `Tu es ALPHA, l'IA d'administration de la plateforme "Moncef IA", créée par Amine FJER. Tu as accès à toutes les données de la plateforme en temps réel. 
+          system: `Tu es ALPHA, l'IA d'administration de la plateforme "Moncef IA", propulsée par les technologies IA les plus avancées. Tu as accès à toutes les données de la plateforme en temps réel. 
+L'utilisateur actuel qui te consulte a le rôle de : ${userRole === 'founder' ? '👑 Fondateur' : '🛡️ Modérateur'}.
 Tu es ultra-précis, direct, et tu fournis des analyses détaillées. 
 Tu peux expliquer comment effectuer des actions admin comme changer un rôle utilisateur, supprimer un compte, réinitialiser des tokens.
 La date actuelle est le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
@@ -263,10 +266,10 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
           </div>
           <div>
             <h2 style={{ margin: 0, fontSize: 22, color: '#FFD700', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-              {t(lang,'alpha_title')} <Sparkles size={16} color="#FFD700" />
+              {t(lang,'alpha_title')} ({userRole === 'founder' ? '👑 Fondateur' : '🛡️ Modérateur'}) <Sparkles size={16} color="#FFD700" />
             </h2>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-              {lastRefresh ? `${t(lang,'alpha_last_refresh')} ${lastRefresh.toLocaleTimeString(lang === 'fr' ? 'fr-FR' : 'en-US')}` : t(lang,'alpha_loading')} • {t(lang,'alpha_founder_access')}
+              {lastRefresh ? `${t(lang,'alpha_last_refresh')} ${lastRefresh.toLocaleTimeString(lang === 'fr' ? 'fr-FR' : 'en-US')}` : t(lang,'alpha_loading')} • {userRole === 'founder' ? t(lang,'alpha_founder_access') : 'Accès Modérateur'}
             </div>
           </div>
         </div>

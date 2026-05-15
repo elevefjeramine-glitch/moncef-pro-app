@@ -54,8 +54,8 @@ export default function AppLayout({ children }) {
     { name: t(lang, 'messages'), path: '/app/comm', icon: MessageSquare }
   ];
 
-  if (user.role === 'founder') {
-    navItems.splice(2, 0, { name: 'ALPHA AI', path: '/app/alpha', icon: Crown, isAlpha: true });
+  if (['founder', 'moderator'].includes(user.role)) {
+    navItems.splice(2, 0, { name: user.role === 'founder' ? '👑 ALPHA AI' : '🛡️ MODÉRATEUR', path: '/app/alpha', icon: Crown, isAlpha: true });
   }
 
   return (
@@ -112,7 +112,7 @@ export default function AppLayout({ children }) {
           </motion.div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
-            <div className="role-badge">{user.role === 'founder' ? '👑 ALPHA' : '👤 Normal'}</div>
+            <div className="role-badge">{user.role === 'founder' ? '👑 ALPHA' : user.role === 'moderator' ? '🛡️ Modérateur' : '👤 Normal'}</div>
           </div>
         </motion.div>
 
@@ -270,7 +270,7 @@ function SettingsModal({ user, lang, close }) {
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>{t(lang, 'settings_email_label')}</label>
                 <input className="fi" value={user.email} disabled style={{ opacity: 0.5, cursor: 'not-allowed' }} />
               </div>
-              <div className="role-badge" style={{ fontSize: '14px', padding: '8px 16px', display: 'inline-block' }}>{t(lang, 'settings_grade_label')} : {user.role === 'founder' ? t(lang, 'settings_grade_founder') : t(lang, 'settings_grade_member')}</div>
+              <div className="role-badge" style={{ fontSize: '14px', padding: '8px 16px', display: 'inline-block' }}>{t(lang, 'settings_grade_label')} : {user.role === 'founder' ? t(lang, 'settings_grade_founder') : user.role === 'moderator' ? t(lang, 'role_moderator_full') : t(lang, 'settings_grade_member')}</div>
             </motion.div>
           )}
 

@@ -5,6 +5,8 @@ import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Users, Plus, X, Search, MessageCircle, UserPlus, Hash, LogOut, Info, ChevronLeft } from "lucide-react";
 import { useLanguage, t } from "@/utils/i18n";
+import DOMPurify from "isomorphic-dompurify";
+import { marked } from "marked";
 
 export default function CommPage() {
   const lang = useLanguage();
@@ -421,7 +423,9 @@ export default function CommPage() {
             {activeConv?.type === 'group' && (
               <div className="msg-sender">{getSenderName(msg.sender_id)}</div>
             )}
-            <div className="msg-bubble">{msg.content}</div>
+            <div className="msg-bubble ai-markdown" 
+                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.content || '')) }} 
+            />
             <div className="msg-timestamp">{formatMsgTime(msg.created_at)}</div>
           </motion.div>
         </div>
@@ -648,7 +652,7 @@ export default function CommPage() {
               <div className="info-panel-name">{getConvName(activeConv)}</div>
               <div className="info-panel-role">
                 {activeConv.type === 'dm' 
-                  ? (activeConv.dmPartner?.role === 'founder' ? '👑 Fondateur' : '👤 ' + t(lang, 'comm_member'))
+                  ? (activeConv.dmPartner?.role === 'founder' ? '👑 Fondateur' : activeConv.dmPartner?.role === 'moderator' ? '🛡️ Modérateur' : '👤 ' + t(lang, 'comm_member'))
                   : `${activeConv.members?.length || 0} ${t(lang, 'comm_members').toLowerCase()}`
                 }
               </div>
@@ -736,8 +740,8 @@ export default function CommPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.first_name || 'Utilisateur'} {user.last_name || ''}</div>
-                        <div style={{ fontSize: 12, color: user.role === 'founder' ? 'var(--gold)' : 'rgba(255,255,255,0.4)' }}>
-                          {user.role === 'founder' ? '👑 Fondateur' : user.email}
+                        <div style={{ fontSize: 12, color: user.role === 'founder' ? 'var(--gold)' : user.role === 'moderator' ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>
+                          {user.role === 'founder' ? '👑 Fondateur' : user.role === 'moderator' ? '🛡️ Modérateur' : user.email}
                         </div>
                       </div>
                       <Send size={16} color="var(--a)" style={{ opacity: 0.5 }} />
@@ -828,8 +832,10 @@ export default function CommPage() {
                           {user.avatar_url ? <img src={user.avatar_url} alt="" /> : (user.first_name?.[0] || '?')}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.first_name || 'Utilisateur'}</div>
-                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{user.email}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.first_name || 'Utilisateur'} {user.last_name || ''}</div>
+                          <div style={{ fontSize: 12, color: user.role === 'founder' ? 'var(--gold)' : user.role === 'moderator' ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>
+                            {user.role === 'founder' ? '👑 Fondateur' : user.role === 'moderator' ? '🛡️ Modérateur' : user.email}
+                          </div>
                         </div>
                         <div style={{ width: 22, height: 22, borderRadius: 6, border: isSelected ? '2px solid var(--a)' : '2px solid rgba(255,255,255,0.15)', background: isSelected ? 'var(--a)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--tr)' }}>
                           {isSelected && <span style={{ color: '#000', fontSize: 13, fontWeight: 700 }}>✓</span>}

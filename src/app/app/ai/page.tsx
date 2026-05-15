@@ -460,7 +460,7 @@ Exemples :
                         ))}
                       </div>
                     )}
-                    <div style={{ 
+                    <div className="ai-markdown" style={{ 
                       padding: '16px 20px', 
                       borderRadius: '20px', 
                       borderTopLeftRadius: isAi ? '4px' : '20px',
@@ -471,10 +471,10 @@ Exemples :
                       fontSize: '15px',
                       lineHeight: '1.6',
                       boxShadow: !isAi ? '0 4px 15px rgba(46,91,255,0.2)' : 'none',
-                      whiteSpace: 'pre-wrap',
+                      whiteSpace: 'normal',
                       wordBreak: 'break-word'
                     }}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.content || '')) }}
+                    dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '')) : msg.content }}
                   />
                   </div>
 

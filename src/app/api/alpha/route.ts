@@ -24,7 +24,7 @@ export async function POST(req) {
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     const { data: profile } = await anonClient.from('users').select('role').eq('id', user.id).single();
-    if (profile?.role !== 'founder') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+    if (!['founder', 'moderator'].includes(profile?.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
 
     const admin = getAdminClient();
 
@@ -52,6 +52,12 @@ export async function POST(req) {
 
       case 'UPDATE_USER': {
         const { userId, updates } = payload;
+        if (profile?.role === 'moderator') {
+          const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single();
+          if (targetProfile?.role === 'founder' || updates.role === 'founder') {
+            return NextResponse.json({ error: "Les modérateurs ne peuvent pas modifier un compte fondateur ni accorder le statut fondateur." }, { status: 403 });
+          }
+        }
         const allowed = ['role', 'tokens', 'first_name', 'last_name'];
         const safe = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
         const { error } = await admin.from('users').update(safe).eq('id', userId);
@@ -61,6 +67,12 @@ export async function POST(req) {
 
       case 'DELETE_USER': {
         const { userId } = payload;
+        if (profile?.role === 'moderator') {
+          const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single();
+          if (targetProfile?.role === 'founder') {
+            return NextResponse.json({ error: "Les modérateurs ne peuvent pas supprimer un compte fondateur." }, { status: 403 });
+          }
+        }
         
         // 1. Force delete all related records to avoid Foreign Key constraints
         await Promise.all([

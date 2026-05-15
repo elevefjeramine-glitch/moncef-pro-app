@@ -943,3 +943,18 @@ a { text-decoration: none; color: inherit; }
 .alpha-markdown pre { background: rgba(0, 0, 0, 0.4); padding: 12px; border-radius: 8px; overflow-x: auto; border: 1px solid rgba(255, 215, 0, 0.1); margin: 8px 0; }
 .alpha-markdown code { font-family: monospace; font-size: 12px; background: rgba(255, 215, 0, 0.1); padding: 2px 4px; border-radius: 4px; color: #EEDD88; }
 .alpha-markdown pre code { background: none; padding: 0; border-radius: 0; color: #fff; }
+
+/* Moncef IA Markdown Styles */
+.ai-markdown p { margin-top: 0; margin-bottom: 8px; }
+.ai-markdown p:last-child { margin-bottom: 0; }
+.ai-markdown ul, .ai-markdown ol { margin-top: 0; padding-left: 20px; margin-bottom: 8px; }
+.ai-markdown li { margin-bottom: 4px; }
+.ai-markdown strong { color: #fff; font-weight: 700; }
+.ai-markdown em { color: var(--a); }
+.ai-markdown table { width: 100%; border-collapse: collapse; margin-top: 12px; margin-bottom: 12px; font-size: 14px; }
+.ai-markdown th, .ai-markdown td { border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px; text-align: left; }
+.ai-markdown th { background: rgba(0, 210, 182, 0.1); font-weight: 700; color: var(--a); }
+.ai-markdown td { background: rgba(0, 0, 0, 0.2); }
+.ai-markdown pre { background: rgba(0, 0, 0, 0.4); padding: 14px; border-radius: 12px; overflow-x: auto; border: 1px solid rgba(0, 210, 182, 0.1); margin: 8px 0; }
+.ai-markdown code { font-family: 'Fira Code', monospace; font-size: 13px; background: rgba(0, 210, 182, 0.1); padding: 2px 6px; border-radius: 4px; color: var(--a); }
+.ai-markdown pre code { background: none; padding: 0; border-radius: 0; color: #fff; }
