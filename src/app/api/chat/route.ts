@@ -47,12 +47,7 @@ setInterval(() => {
 export async function POST(req) {
   try {
     const { messages, system } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json({ error: "Configuration API manquante. Ajoutez GEMINI_API_KEY." }, { status: 500 });
-    }
-
+    // On utilise maintenant une API 100% gratuite et sans clé (Pollinations)
     const supabase = getSupabaseAdmin();
 
     // Identification de l'utilisateur via le header Authorization
@@ -86,36 +81,31 @@ export async function POST(req) {
       }, { status: 402 });
     }
 
-    // --- GOOGLE GEMINI INTEGRATION ---
+    // --- FREE KEYLESS AI INTEGRATION (POLLINATIONS) ---
     const currentDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const enhancedSystem = `${system || ""}\n\n[INFO CONTEXTUELLE] La date d'aujourd'hui est le ${currentDate}.`;
 
-    const geminiMessages = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
+    const aiMessages = [
+      { role: 'system', content: enhancedSystem },
+      ...messages.map(m => ({ role: m.role, content: m.content }))
+    ];
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://text.pollinations.ai/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        contents: geminiMessages,
-        systemInstruction: {
-          parts: [{ text: enhancedSystem }]
-        }
+        messages: aiMessages,
+        model: "openai" // Default to a good model on pollinations
       })
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Gemini API Error:", errorData);
-      throw new Error(errorData.error?.message || "Erreur de communication avec Google Gemini");
+      throw new Error("Erreur de communication avec le serveur IA gratuit");
     }
 
-    const data = await response.json();
-    const assistantMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur: Pas de réponse générée.";
+    const assistantMessage = await response.text();
 
     // Déduction des crédits (sauf si illimité)
     let newTokens = userData.tokens;
