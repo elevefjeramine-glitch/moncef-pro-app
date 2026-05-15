@@ -524,10 +524,11 @@ export default function CommPage() {
                       <div style={{ position: 'absolute', bottom: -2, right: -2, width: 14, height: 14, background: '#00D2B6', border: '3px solid rgba(6,10,20,1)', borderRadius: '50%' }} />
                     )}
                   </div>
-                  <div className="conv-info">
-                    <div className="conv-name">
+                    <div className="conv-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {conv.type === 'group' && <Hash size={13} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: 0.5 }} />}
-                      {getConvName(conv)}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getConvName(conv)}</span>
+                      {conv.type === 'dm' && conv.dmPartner?.role === 'founder' && <span style={{ fontSize: 10, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700', padding: '1px 5px', borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>👑 ALPHA</span>}
+                      {conv.type === 'dm' && conv.dmPartner?.role === 'moderator' && <span style={{ fontSize: 10, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', padding: '1px 5px', borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>🛡️ MOD</span>}
                     </div>
                     <div className="conv-last">{getLastMsgPreview(conv)}</div>
                   </div>
@@ -554,7 +555,11 @@ export default function CommPage() {
                 )}
               </div>
               <div className="chat-header-info">
-                <div className="chat-header-name">{getConvName(activeConv)}</div>
+                <div className="chat-header-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {getConvName(activeConv)}
+                  {activeConv.type === 'dm' && activeConv.dmPartner?.role === 'founder' && <span style={{ fontSize: 11, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>👑 Fondateur</span>}
+                  {activeConv.type === 'dm' && activeConv.dmPartner?.role === 'moderator' && <span style={{ fontSize: 11, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>🛡️ Modérateur</span>}
+                </div>
                 <div className="chat-header-status">
                   {activeConv.type === 'group' 
                     ? `${activeConv.members?.length || 0} ${t(lang, 'comm_members').toLowerCase()}`
