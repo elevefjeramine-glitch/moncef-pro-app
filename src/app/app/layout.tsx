@@ -27,6 +27,18 @@ export default function AppLayout({ children }) {
       if (data.theme_color) setThemeColor(data.theme_color);
       if (data.language) setLanguage(data.language);
     } else { setUser(session.user); }
+
+    // 🚀 Écoute temps réel des changements sur le profil utilisateur (Grade, Tokens, Thème...)
+    supabase.channel(`user_updates_${session.user.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${session.user.id}` }, (payload) => {
+        if (payload.new) {
+          setUser(payload.new);
+          if (payload.new.tokens !== undefined) setTokens(payload.new.tokens);
+          if (payload.new.theme_color) setThemeColor(payload.new.theme_color);
+          if (payload.new.language) setLanguage(payload.new.language);
+        }
+      })
+      .subscribe();
   };
 
   useEffect(() => { 
