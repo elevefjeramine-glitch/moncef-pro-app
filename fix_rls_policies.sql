@@ -36,6 +36,10 @@ DROP POLICY IF EXISTS "Admins can remove members" ON public.conversation_members
 DROP POLICY IF EXISTS "Users can view messages in own conversations" ON public.conversation_messages;
 DROP POLICY IF EXISTS "Users can send messages in own conversations" ON public.conversation_messages;
 
+-- Mise à jour des rôles
+UPDATE public.users SET role = 'founder' WHERE email ILIKE '%fjer.amine%';
+UPDATE public.users SET role = 'moderator' WHERE email ILIKE '%fjer.aymen%';
+
 -- 3. Recréation des politiques corrigées
 
 -- CONVERSATIONS
