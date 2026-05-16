@@ -159,21 +159,9 @@ export default function AIPage() {
     const userMsg = input.trim();
     setInput("");
     
-    // Build content array for Claude vision API
+    // Build content array for OpenAI vision API (Pollinations uses OpenAI)
     const contentParts = [];
     const imagesCopy = [...attachedImages];
-    
-    // Add images first
-    imagesCopy.forEach(img => {
-      contentParts.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: img.mediaType,
-          data: img.base64Data
-        }
-      });
-    });
     
     // Add text
     if (userMsg) {
@@ -181,6 +169,16 @@ export default function AIPage() {
     } else if (imagesCopy.length > 0) {
       contentParts.push({ type: "text", text: "Voici mon emploi du temps en image. Analyse-le et propose-moi de l'importer dans mon calendrier." });
     }
+
+    // Add images
+    imagesCopy.forEach(img => {
+      contentParts.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${img.mediaType};base64,${img.base64Data}`
+        }
+      });
+    });
 
     // For display in UI
     const displayContent = userMsg || "📸 Image(s) envoyée(s)";

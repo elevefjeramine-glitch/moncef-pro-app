@@ -37,7 +37,7 @@ export default function CommPage() {
     if (data) {
       myIdRef.current = user.id; // Bug #4 fix: store in ref so realtime callbacks see it
       setCurrentUser({ ...data, id: user.id });
-      return user.id;
+      return { id: user.id, status: data.status || 'online' };
     }
     return null;
   }, []);
@@ -99,7 +99,7 @@ export default function CommPage() {
         const { data: memberUsers } = await supabase.from('users').select('*').in('id', memberIds);
         memberDetails = (memberUsers || []).map(u => ({
           ...u,
-          role: members.find(m => m.user_id === u.id)?.role || 'member'
+          groupRole: members.find(m => m.user_id === u.id)?.role || 'member'
         }));
       }
       
@@ -112,14 +112,29 @@ export default function CommPage() {
       };
     }));
     
-    // Sort by last message date
+    // Deduplicate DMs: hide duplicate empty DMs caused by previous bug
+    const uniqueEnriched = [];
+    const dmPartners = new Set();
+    
+    // We sort first so that conversations with messages (or newer ones) come first
     enriched.sort((a, b) => {
       const aDate = a.lastMessage?.created_at || a.created_at;
       const bDate = b.lastMessage?.created_at || b.created_at;
       return new Date(bDate) - new Date(aDate);
     });
     
-    setConversations(enriched);
+    for (const conv of enriched) {
+      if (conv.type === 'dm' && conv.dmPartner) {
+        if (!dmPartners.has(conv.dmPartner.id)) {
+          uniqueEnriched.push(conv);
+          dmPartners.add(conv.dmPartner.id);
+        }
+      } else {
+        uniqueEnriched.push(conv);
+      }
+    }
+    
+    setConversations(uniqueEnriched);
     setLoading(false);
   }, []);
 
@@ -136,42 +151,57 @@ export default function CommPage() {
 
   // ─── Init & Realtime ────────────────────────────────────
   useEffect(() => {
-    let myId = null;
+    let myUserData = null;
     let presenceChannel = null;
     let msgChannel = null;
+    let ignore = false;
 
     const init = async () => {
-      myId = await loadCurrentUser();
-      if (myId) {
-        await loadAllUsers(myId);
-        await loadConversations(myId);
+      myUserData = await loadCurrentUser();
+      if (!myUserData || ignore) return;
+      
+      await loadAllUsers(myUserData.id);
+      if (ignore) return;
+      
+      await loadConversations(myUserData.id);
+      if (ignore) return;
 
-        // Init Presence
-        presenceChannel = supabase.channel('online-users', {
-          config: { presence: { key: myId } },
-        });
+      // Remove existing to avoid "already subscribed" error in React 18 strict mode
+      const existingPresence = supabase.getChannels().find(c => c.topic === 'realtime:online-users');
+      if (existingPresence) supabase.removeChannel(existingPresence);
 
-        presenceChannel.on('presence', { event: 'sync' }, () => {
-          const state = presenceChannel.presenceState();
-          const online = {};
-          for (const id in state) {
-            online[id] = true;
+      // Init Presence
+      presenceChannel = supabase.channel('online-users', {
+        config: { presence: { key: myUserData.id } },
+      });
+
+      presenceChannel.on('presence', { event: 'sync' }, () => {
+        if (ignore) return;
+        const state = presenceChannel.presenceState();
+        const online = {};
+        for (const id in state) {
+          online[id] = state[id][0]; // Store the full payload
+        }
+        setOnlineUsers(online);
+      });
+
+      presenceChannel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED' && !ignore) {
+          if (myUserData.status !== 'invisible') {
+            await presenceChannel.track({ online_at: new Date().toISOString(), user_id: myUserData.id, status: myUserData.status });
           }
-          setOnlineUsers(online);
-        });
-
-        presenceChannel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await presenceChannel.track({ online_at: new Date().toISOString(), user_id: myId });
-          }
-        });
-      }
+        }
+      });
     };
     init();
+
+    const existingMsg = supabase.getChannels().find(c => c.topic === 'realtime:realtime:conv_messages' || c.topic === 'realtime:conv_messages');
+    if (existingMsg) supabase.removeChannel(existingMsg);
 
     // Realtime for new messages — Bug #4 fix: use myIdRef.current instead of closure var
     msgChannel = supabase.channel('realtime:conv_messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
+        if (ignore) return;
         const newMessage = payload.new;
         setMessages(prev => {
           if (prev.length > 0 && prev[0]?.conversation_id === newMessage.conversation_id) {
@@ -187,6 +217,7 @@ export default function CommPage() {
       .subscribe();
 
     return () => { 
+      ignore = true;
       if (msgChannel) supabase.removeChannel(msgChannel); 
       if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
@@ -210,24 +241,57 @@ export default function CommPage() {
     const content = newMsg.trim();
     setNewMsg(""); 
 
+    // Generate real UUID to perfectly match the realtime event and prevent duplicates (polyfill for non-HTTPS)
+    const generateId = () => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    const messageId = generateId();
+
     // Optimistic add
     const optimistic = {
-      id: 'temp-' + Date.now(),
+      id: messageId,
       conversation_id: activeConv.id,
       sender_id: currentUser.id,
       content,
       created_at: new Date().toISOString()
     };
+    
+    // Add to UI immediately
     setMessages(prev => [...prev, optimistic]);
     scrollToBottom();
 
-    await supabase.from('conversation_messages').insert([{
+    // Send to DB
+    const payload = {
+      id: messageId,
       conversation_id: activeConv.id,
       sender_id: currentUser.id,
       content
-    }]);
+    };
+
+
+    await supabase.from('conversation_messages').insert([payload]);
 
     // Refresh conversations to update last message
+    loadConversations(currentUser.id);
+  };
+
+  // ─── Delete Message ───────────────────────────────────────
+  const deleteMessage = async (msgId) => {
+    if (!window.confirm("Supprimer ce message définitivement ?")) return;
+    
+    // Optimistic remove
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    
+    const { error } = await supabase.from('conversation_messages').delete().eq('id', msgId);
+    if (error) {
+      console.error('Error deleting message:', error);
+      alert("Erreur lors de la suppression du message.");
+    }
+    
     loadConversations(currentUser.id);
   };
 
@@ -251,7 +315,11 @@ export default function CommPage() {
       created_by: currentUser.id
     }]).select().single();
     
-    if (error || !conv) { console.error('Error creating DM:', error); return; }
+    if (error || !conv) { 
+      alert("Erreur base de données: Impossible de créer la conversation.\n\nVeuillez exécuter le script 'fix_rls_policies.sql' dans votre SQL Editor Supabase pour corriger ce bug !");
+      console.error('Error creating DM:', error); 
+      return; 
+    }
     
     // Add members
     await supabase.from('conversation_members').insert([
@@ -277,13 +345,30 @@ export default function CommPage() {
   const createGroup = async () => {
     if (!currentUser || !groupName.trim() || selectedUsers.length === 0) return;
     
+    // Check if group with same name already exists in loaded conversations
+    const existingGroup = conversations.find(c => 
+      c.type === 'group' && c.name?.toLowerCase() === groupName.trim().toLowerCase()
+    );
+    if (existingGroup) {
+      alert("Un groupe avec ce nom existe déjà. Veuillez choisir un autre nom !");
+      return;
+    }
+    
     const { data: conv, error } = await supabase.from('conversations').insert([{
       type: 'group',
       name: groupName.trim(),
       created_by: currentUser.id
     }]).select().single();
     
-    if (error || !conv) { console.error('Error creating group:', error); return; }
+    if (error || !conv) { 
+      if (error?.code === '23505') {
+        alert("Ce nom de groupe est déjà pris par un autre utilisateur dans la base de données.");
+      } else {
+        alert("Erreur base de données: Impossible de créer le groupe.\n\nVeuillez exécuter le script SQL dans votre Supabase !");
+      }
+      console.error('Error creating group:', error); 
+      return; 
+    }
     
     // Add creator as admin + selected members
     const memberInserts = [
@@ -306,6 +391,22 @@ export default function CommPage() {
     await supabase.from('conversation_members').delete()
       .eq('conversation_id', convId)
       .eq('user_id', currentUser.id);
+    setActiveConv(null);
+    setShowInfoPanel(false);
+    loadConversations(currentUser.id);
+  };
+
+  // ─── Delete Conversation ──────────────────────────────────
+  const deleteConversation = async (convId) => {
+    if (!currentUser) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette conversation définitivement ? Cette action est irréversible pour tous les membres.")) return;
+    
+    const { error } = await supabase.from('conversations').delete().eq('id', convId);
+    if (error) {
+      alert("Erreur lors de la suppression. Vous n'avez peut-être pas les droits (seul le créateur ou l'admin peut supprimer).");
+      console.error(error);
+      return;
+    }
     setActiveConv(null);
     setShowInfoPanel(false);
     loadConversations(currentUser.id);
@@ -408,7 +509,7 @@ export default function CommPage() {
       lastDate = msgDate;
 
       return (
-        <div key={msg.id || idx}>
+        <div key={msg.id || idx} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {showDateSep && (
             <div className="date-separator">
               <span>{getDateLabel(msg.created_at)}</span>
@@ -419,13 +520,31 @@ export default function CommPage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.2 }}
             className={`msg-row ${isMe ? 'sent' : 'received'}`}
+            style={{ 
+              alignSelf: isMe ? 'flex-end' : 'flex-start',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: isMe ? 'flex-end' : 'flex-start'
+            }}
           >
-            {activeConv?.type === 'group' && (
+            {activeConv?.type === 'group' && !isMe && (
               <div className="msg-sender">{getSenderName(msg.sender_id)}</div>
             )}
-            <div className="msg-bubble ai-markdown" 
-                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.content || '')) }} 
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row' }}>
+              <div className="msg-bubble ai-markdown" 
+                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.content || '')) }} 
+              />
+              {(isMe || currentUser?.role === 'founder' || currentUser?.role === 'moderator') && !msg.id.toString().startsWith('temp-') && (
+                <motion.button 
+                  whileHover={{ scale: 1.1, color: '#ff4545' }}
+                  onClick={() => deleteMessage(msg.id)}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer', padding: 4, transition: 'color 0.2s' }}
+                  title="Supprimer le message"
+                >
+                  <X size={14} />
+                </motion.button>
+              )}
+            </div>
             <div className="msg-timestamp">{formatMsgTime(msg.created_at)}</div>
           </motion.div>
         </div>
@@ -524,6 +643,7 @@ export default function CommPage() {
                       <div style={{ position: 'absolute', bottom: -2, right: -2, width: 14, height: 14, background: '#00D2B6', border: '3px solid rgba(6,10,20,1)', borderRadius: '50%' }} />
                     )}
                   </div>
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div className="conv-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {conv.type === 'group' && <Hash size={13} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: 0.5 }} />}
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getConvName(conv)}</span>
@@ -563,7 +683,23 @@ export default function CommPage() {
                 <div className="chat-header-status">
                   {activeConv.type === 'group' 
                     ? `${activeConv.members?.length || 0} ${t(lang, 'comm_members').toLowerCase()}`
-                    : (activeConv.dmPartner && isUserOnline(activeConv.dmPartner.id) ? t(lang, 'comm_online') : (t(lang, 'comm_offline') || 'Hors ligne'))
+                    : (() => {
+                      const isOnline = activeConv.dmPartner && isUserOnline(activeConv.dmPartner.id);
+                      const status = activeConv.dmPartner?.status || 'online';
+                      const isDnd = isOnline && status === 'dnd';
+                      
+                      const dotColor = isOnline ? (isDnd ? '#FF3366' : '#00D2B6') : 'rgba(255,255,255,0.3)';
+                      const bgColor = isOnline ? (isDnd ? 'rgba(255, 51, 102, 0.15)' : 'rgba(0, 210, 182, 0.15)') : 'rgba(255, 255, 255, 0.05)';
+                      const borderColor = isOnline ? (isDnd ? 'rgba(255, 51, 102, 0.3)' : 'rgba(0, 210, 182, 0.3)') : 'rgba(255, 255, 255, 0.1)';
+                      const label = isOnline ? (isDnd ? 'Ne pas déranger' : 'En ligne') : 'Hors ligne';
+
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: bgColor, color: dotColor, border: `1px solid ${borderColor}` }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, boxShadow: `0 0 6px ${dotColor}` }} />
+                          {label}
+                        </div>
+                      );
+                    })()
                   }
                 </div>
               </div>
@@ -682,8 +818,8 @@ export default function CommPage() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{member.first_name || member.email}</div>
-                      <div style={{ fontSize: 11, color: member.role === 'admin' ? 'var(--gold)' : 'rgba(255,255,255,0.4)' }}>
-                        {member.role === 'admin' ? `👑 ${t(lang, 'comm_admin')}` : t(lang, 'comm_member')}
+                      <div style={{ fontSize: 11, color: member.groupRole === 'admin' || member.role === 'founder' ? 'var(--gold)' : member.role === 'moderator' ? '#00D2B6' : 'rgba(255,255,255,0.4)' }}>
+                        {member.groupRole === 'admin' ? `👑 ${t(lang, 'comm_admin')}` : (member.role === 'founder' ? '👑 Fondateur' : member.role === 'moderator' ? '🛡️ Modérateur' : t(lang, 'comm_member'))}
                       </div>
                     </div>
                   </div>
@@ -691,18 +827,26 @@ export default function CommPage() {
               </div>
             )}
 
-            {/* Leave group */}
-            {activeConv.type === 'group' && (
-              <div className="info-section">
+            {/* Leave / Delete group */}
+            <div className="info-section" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {activeConv.type === 'group' && (
                 <motion.button
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   onClick={() => leaveGroup(activeConv.id)}
-                  style={{ width: '100%', padding: '12px', background: 'rgba(255,69,69,0.08)', border: '1px solid rgba(255,69,69,0.2)', borderRadius: 14, color: 'var(--err)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}
                 >
                   <LogOut size={16} /> {t(lang, 'comm_leave_group')}
                 </motion.button>
-              </div>
-            )}
+              )}
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={() => deleteConversation(activeConv.id)}
+                style={{ width: '100%', padding: '12px', background: 'rgba(255,69,69,0.08)', border: '1px solid rgba(255,69,69,0.2)', borderRadius: 14, color: 'var(--err)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}
+              >
+                <LogOut size={16} style={{ transform: 'rotate(180deg)' }} /> Supprimer la conversation
+              </motion.button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

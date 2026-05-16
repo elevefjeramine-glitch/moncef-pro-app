@@ -195,6 +195,8 @@ function SettingsModal({ user, lang, close }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
+  const [status, setStatus] = useState(user.status || "online");
+
   const saveSettings = async () => {
     setLoading(true); setMsg("");
     try {
@@ -202,18 +204,18 @@ function SettingsModal({ user, lang, close }) {
         first_name: firstName,
         theme_color: themeColor,
         avatar_url: avatarUrl,
-        language: language
+        language: language,
+        status: status
       }).eq('id', user.id);
 
       if (error) {
-        // Fallback gracefully si la colonne theme_color n'existe pas encore dans SQL
-        if(error.message.includes("could not find the 'theme_color' column")) {
+        if(error.message.includes("could not find the 'theme_color' column") || error.message.includes("could not find the 'status' column")) {
           setMsg(t(lang, 'settings_col_warn'));
         } else {
           throw error;
         }
       } else {
-        setMsg(t(lang, 'settings_saved'));
+        setMsg(t(lang, 'settings_saved') + " ✅");
         setTimeout(() => close(), 1500);
       }
     } catch(err) {
@@ -265,6 +267,14 @@ function SettingsModal({ user, lang, close }) {
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>{t(lang, 'settings_name_label')}</label>
                 <input className="fi" value={firstName} onChange={e => setFirstName(e.target.value)} />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>Statut en ligne</label>
+                <select className="fi" value={status} onChange={(e) => setStatus(e.target.value)} style={{ WebkitAppearance: 'none', cursor: 'pointer' }}>
+                  <option value="online">🟢 En ligne</option>
+                  <option value="dnd">🔴 Ne pas déranger</option>
+                  <option value="invisible">⚪ Invisible</option>
+                </select>
               </div>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', textTransform: 'uppercase' }}>{t(lang, 'settings_email_label')}</label>

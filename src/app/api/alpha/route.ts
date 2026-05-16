@@ -81,7 +81,7 @@ export async function POST(req) {
           admin.from('user_messages').delete().eq('user_id', userId),
           admin.from('conversation_messages').delete().eq('sender_id', userId),
           admin.from('conversation_members').delete().eq('user_id', userId),
-          admin.from('conversations').delete().or(`user1_id.eq.${userId},user2_id.eq.${userId}`),
+          admin.from('conversations').delete().eq('created_by', userId),
           admin.from('events').delete().eq('user_id', userId)
         ]);
 
