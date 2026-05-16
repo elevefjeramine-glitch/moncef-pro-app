@@ -55,7 +55,7 @@ export default function AppLayout({ children }) {
   ];
 
   if (['founder', 'moderator'].includes(user.role)) {
-    navItems.splice(2, 0, { name: user.role === 'founder' ? '👑 ALPHA AI' : '🛡️ MODÉRATEUR', path: '/app/alpha', icon: Crown, isAlpha: true });
+    navItems.splice(2, 0, { name: user.role === 'founder' ? '👑 ALPHA AI' : '🛡️ ALPHA AI', path: '/app/alpha', icon: Crown, isAlpha: true });
   }
 
   return (
