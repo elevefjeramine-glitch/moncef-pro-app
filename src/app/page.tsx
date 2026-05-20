@@ -7,7 +7,7 @@ import { t } from "@/utils/i18n";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useUserStore } from "@/store/useUserStore";
 import { supabase } from "@/utils/supabase/client";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -45,6 +45,7 @@ export default function Home() {
   const { user, setUser, credits, setCredits } = useUserStore();
   const [lang, setLang] = useState("fr");
   const [showLangSelector, setShowLangSelector] = useState(false);
+  const [loading, setLoading] = useState(true);
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
@@ -79,13 +80,19 @@ export default function Home() {
     }
 
     const loadUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single();
-        if (profile) {
-          setUser(profile);
-          setCredits(profile.tokens);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+          if (profile) {
+            setUser(profile);
+            setCredits(profile.tokens);
+          }
         }
+      } catch (err) {
+        console.error("Error loading user:", err);
+      } finally {
+        setLoading(false);
       }
     };
     loadUser();
@@ -156,7 +163,7 @@ export default function Home() {
         </div>
 
         <div style={{ flex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          {!user && credits === 0 ? (
+          {loading ? (
             <div className="flex flex-col items-center gap-2">
                <Skeleton className="w-24 h-4 rounded-full bg-white/10" />
                <Skeleton className="w-32 h-10 rounded-full bg-white/10" />
@@ -169,17 +176,13 @@ export default function Home() {
               >
                 <Zap size={11} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : `${credits} credits`}
               </motion.div>
-              <Link href="/app">
-                <motion.button className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px" }}>
-                  {t(lang, "dashboard")} <ArrowRight size={16} />
-                </motion.button>
+              <Link href="/app" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                {t(lang, "dashboard")} <ArrowRight size={16} />
               </Link>
             </>
           ) : (
-             <Link href="/auth">
-              <motion.button className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px" }}>
-                {t(lang, "access_app")} <ArrowRight size={16} />
-              </motion.button>
+             <Link href="/auth" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              {t(lang, "access_app")} <ArrowRight size={16} />
             </Link>
           )}
         </div>
@@ -231,7 +234,10 @@ export default function Home() {
             }}>
               <span style={{ color: "#fff", display: "inline-block" }}>
                 {firstWords.split(" ").map((word, i) => (
-                  <motion.span key={i} custom={i} variants={letterAnim} style={{ display: "inline-block", marginRight: "0.2em" }}>{word}</motion.span>
+                  <span key={i} style={{ display: "inline-block" }}>
+                    <motion.span custom={i} variants={letterAnim} style={{ display: "inline-block" }}>{word}</motion.span>
+                    {" "}
+                  </span>
                 ))}
               </span>
               <br />
@@ -260,15 +266,11 @@ export default function Home() {
 
             {/* CTA Container */}
             <motion.div variants={fadeUp} style={{ display: "flex", justifyContent: "center", gap: 20 }} className="hero-actions">
-              <Link href="/auth?tab=signup">
-                <motion.button className="btn btn-premium" style={{ fontSize: 17, padding: "18px 48px" }}>
-                  {t(lang, "hero_btn_start")} <ArrowRight size={20} />
-                </motion.button>
+              <Link href="/auth?tab=signup" className="btn btn-premium" style={{ fontSize: 17, padding: "18px 48px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                {t(lang, "hero_btn_start")} <ArrowRight size={20} />
               </Link>
-              <Link href="/auth?tab=login">
-                <motion.button className="btn btn-ghost" style={{ fontSize: 17, padding: "18px 40px" }}>
-                  {t(lang, "hero_btn_login")}
-                </motion.button>
+              <Link href="/auth?tab=login" className="btn btn-ghost" style={{ fontSize: 17, padding: "18px 40px", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+                {t(lang, "hero_btn_login")}
               </Link>
             </motion.div>
 
@@ -370,7 +372,16 @@ export default function Home() {
           </div>
           <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, maxWidth: 400, margin: "0 auto 40px" }}>Propulsé par les dernières avancées en Intelligence Artificielle pour une éducation sans frontière.</p>
           <div style={{ display: "flex", justifyContent: "center", gap: 32, marginBottom: 40 }}>
-            {["Confidentialité", "Termes", "API", "Status"].map(item => <span key={item} style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>{item}</span>)}
+            {[
+              { name: "Confidentialité", href: "/privacy" },
+              { name: "Termes", href: "/terms" },
+              { name: "API", href: "/api-docs" },
+              { name: "Status", href: "/status" }
+            ].map(item => (
+              <Link key={item.name} href={item.href} style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 13, textDecoration: "none", transition: "color 0.2s" }} className="footer-link-hover">
+                {item.name}
+              </Link>
+            ))}
           </div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", letterSpacing: "0.05em" }}>DESIGNED BY AMINE FJER • © 2026 MONCEF IA • ALL RIGHTS RESERVED</div>
         </div>

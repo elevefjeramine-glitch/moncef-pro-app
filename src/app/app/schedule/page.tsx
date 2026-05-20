@@ -36,6 +36,31 @@ export default function SchedulePage() {
 
   useEffect(() => { 
     loadSchedule(); 
+
+    let channel: any;
+    const subscribeRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channel = supabase.channel(`schedule_changes_${user.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'schedule',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          loadSchedule();
+        })
+        .subscribe();
+    };
+
+    subscribeRealtime();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [selectedWeek]);
 
   const addSlot = async () => {
@@ -65,6 +90,7 @@ export default function SchedulePage() {
   };
 
   const deleteSlot = async (id) => {
+    if (!window.confirm(t(lang, 'sch_confirm_delete'))) return;
     await supabase.from('schedule').delete().eq('id', id);
     loadSchedule();
   };

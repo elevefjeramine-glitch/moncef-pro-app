@@ -5,7 +5,7 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, MoreVertical } from "lucide-react";
+import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
 import { useUserStore } from "@/store/useUserStore";
 
@@ -83,7 +83,7 @@ export default function AppLayout({ children }) {
         onClick={() => setIsMobileMenuOpen(false)} 
       />
       
-      <motion.nav initial={isMobile ? false : { x: -300 }} animate={isMobile ? false : { x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+      <motion.nav initial={isMobile ? false : { x: lang === 'ar' ? 300 : -300 }} animate={isMobile ? false : { x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: '0 0 10px rgba(0,210,182,0.3)' }} />
           Moncef <span style={{ color: 'var(--a)' }}>IA</span>
@@ -151,7 +151,7 @@ export default function AppLayout({ children }) {
         <header className="glass-header" style={{ padding: lang === 'ar' ? '0 40px 0 20px' : '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
-              <MoreVertical size={24} />
+              <Menu size={24} />
             </button>
             <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
               {pathname === '/app' ? t(lang, 'dashboard') 

@@ -72,6 +72,25 @@ export default function DashboardPage() {
     enabled: !!user?.id, // Ne lance la requête que si l'utilisateur est connu
   });
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase.channel(`homework_changes_${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'homework',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries(['homeworks', user.id]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
   const addHomework = async () => {
     if (!newSubj || !newTask) return;
     if (!user) return;

@@ -958,3 +958,23 @@ a { text-decoration: none; color: inherit; }
 .ai-markdown pre { background: rgba(0, 0, 0, 0.4); padding: 14px; border-radius: 12px; overflow-x: auto; border: 1px solid rgba(0, 210, 182, 0.1); margin: 8px 0; }
 .ai-markdown code { font-family: 'Fira Code', monospace; font-size: 13px; background: rgba(0, 210, 182, 0.1); padding: 2px 6px; border-radius: 4px; color: var(--a); }
 .ai-markdown pre code { background: none; padding: 0; border-radius: 0; color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════
+   14. RTL LAYOUT SUPPORT (Arabic language alignment)
+   ═══════════════════════════════════════════════════════════════ */
+[dir="rtl"] .sidebar {
+  left: auto !important;
+  right: 0 !important;
+  border-right: none !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+@media (max-width: 768px) {
+  [dir="rtl"] .sidebar {
+    transform: translateX(100%) !important;
+  }
+  [dir="rtl"] .sidebar.open {
+    transform: translateX(0) !important;
+  }
+}
+

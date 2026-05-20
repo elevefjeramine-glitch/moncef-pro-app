@@ -72,15 +72,36 @@ export default function AuthPage() {
   };
 
   const handleAuth = async () => {
-    setLoading(true); setErrorMsg(""); setSuccessMsg("");
+    setErrorMsg(""); setSuccessMsg("");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMsg(t(lang, 'auth_fill_required'));
+      return;
+    }
+
+    // Email format validation (Regex)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setErrorMsg(t(lang, 'auth_invalid_email'));
+      return;
+    }
+
+    // Password length validation (at least 6 characters)
+    if (password.length < 6) {
+      setErrorMsg(t(lang, 'auth_password_short'));
+      return;
+    }
+
+    setLoading(true);
 
     if (tab === "signup") {
-      if (!firstName || !lastName || !email || !password) {
+      if (!firstName || !lastName) {
         setErrorMsg(t(lang, 'auth_fill_required'));
         setLoading(false); return;
       }
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: { data: { first_name: firstName, last_name: lastName } }
       });
@@ -90,7 +111,7 @@ export default function AuthPage() {
         // Save extended profile to users table
         await supabase.from('users').upsert({
           id: data.user.id,
-          email,
+          email: cleanEmail,
           first_name: firstName,
           last_name: lastName,
           phone: phone || null,
@@ -102,11 +123,7 @@ export default function AuthPage() {
         setSuccessMsg(t(lang, 'auth_success'));
       }
     } else {
-      if (!email || !password) {
-        setErrorMsg(t(lang, 'auth_fill_required'));
-        setLoading(false); return;
-      }
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
       if (error) setErrorMsg(error.message);
       else window.location.href = "/app";
     }
