@@ -2,7 +2,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
-import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star, ArrowRight, Zap, Lock, Globe, Check, X } from "lucide-react";
+import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star, ArrowRight, Zap, Lock, Globe, Check, X, Crown, Shield, Database } from "lucide-react";
 import { t } from "@/utils/i18n";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useUserStore } from "@/store/useUserStore";
@@ -359,6 +359,147 @@ export default function Home() {
                 />
               ));
             })()}
+          </div>
+        </div>
+      </section>
+
+      {/* ── NIVEAUX DE COMPTE & TECH STACK ── */}
+      <section id="tiers-tech" style={{ padding: "100px 24px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: 70 }}>
+            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Écosystème & Grades
+            </span>
+            <h2 style={{ fontSize: "clamp(32px, 4vw, 52px)", marginTop: 20, fontFamily: "var(--font2)", letterSpacing: "-0.03em" }}>
+              Niveaux de Grade & Infrastructure
+            </h2>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 16, maxWidth: 600, margin: "12px auto 0" }}>
+              Découvrez la hiérarchie des permissions de la communauté Moncef IA et l'infrastructure technologique ultra-sécurisée qui propulse l'application.
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 40 }}>
+            
+            {/* Column 1: Account Tiers (Grades) */}
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: 36, display: "flex", flexDirection: "column", gap: 24 }}
+            >
+              <h3 style={{ fontSize: 24, fontWeight: 800, fontFamily: "var(--font2)", display: "flex", alignItems: "center", gap: 12 }}>
+                <Crown size={24} style={{ color: "var(--gold)" }} /> Grades & Privilèges
+              </h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* Utilisateur Normal */}
+                <div style={{ background: "rgba(255,255,255,0.02)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>👤</span>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Utilisateur Normal</h4>
+                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>700 cr.</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>
+                    Accès à l'IA pédagogique, gestion de l'emploi du temps individuel (Semaines A/B), messagerie cryptée et suivi des devoirs. Crédits rechargés périodiquement.
+                  </p>
+                </div>
+
+                {/* Modérateur */}
+                <div style={{ background: "rgba(167,139,250,0.03)", padding: 20, borderRadius: 16, border: "1px solid rgba(167,139,250,0.15)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>🛡️</span>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#a78bfa" }}>Modérateur</h4>
+                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(167,139,250,0.15)", color: "#c084fc", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>Illimité</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>
+                    Accès à la console d'administration ALPHA. Privilèges de modération : modification des profils utilisateurs (sauf Fondateur) et suppression des devoirs/contenus abusifs pour maintenir l'intégrité de la communauté.
+                  </p>
+                </div>
+
+                {/* Fondateur */}
+                <div style={{ background: "rgba(255,215,0,0.03)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,215,0,0.15)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>👑</span>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--gold)" }}>Fondateur Alpha</h4>
+                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,215,0,0.15)", color: "var(--gold)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>Propriétaire</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>
+                    Contrôle absolu sur l'écosystème. Privilèges d'administration globaux, consultation des statistiques de base de données en temps réel, réinitialisation de tokens, édition de rôles (promotions de modérateurs) et console de commande IA directe.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Column 2: Tech Stack (Supabase, Cloudflare, etc.) */}
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: 36, display: "flex", flexDirection: "column", gap: 24 }}
+            >
+              <h3 style={{ fontSize: 24, fontWeight: 800, fontFamily: "var(--font2)", display: "flex", alignItems: "center", gap: 12 }}>
+                <Zap size={24} style={{ color: "var(--a)" }} /> Technologies & Outils
+              </h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* Supabase */}
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(0,210,182,0.05)", border: "1px solid rgba(0,210,182,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--a)", flexShrink: 0 }}>
+                    <Database size={18} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Supabase (PostgreSQL & Realtime)</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
+                      Base de données sécurisée. Authentification par jeton JWT et RLS (Row Level Security) garantissant la confidentialité absolue des données utilisateur. Abonnements WebSocket Postgres pour la synchronisation des calendriers et messages en temps réel sans latence.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cloudflare */}
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f97316", flexShrink: 0 }}>
+                    <Globe size={18} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Cloudflare Security & CDN</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
+                      Couverture réseau mondiale et résolution DNS ultra-rapide. Protection anti-DDoS robuste, WAF (Web Application Firewall) bloquant le trafic malveillant et chiffrement SSL/TLS de bout en bout pour une sécurité impénétrable.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Multi-LLM Gateway */}
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(89,130,255,0.05)", border: "1px solid rgba(89,130,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--p)", flexShrink: 0 }}>
+                    <Bot size={18} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Passerelle Multi-LLM Hybride</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
+                      Intégration dynamique des modèles Claude 3.5 Sonnet (Anthropic), Gemini 2.5 Flash (Google) et Llama 3.3 (Meta) via des APIs sécurisées et tolérantes aux pannes pour le traitement intelligent des requêtes et l'OCR d'images.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Next.js & Framer Motion */}
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Next.js (App Router) & Framer Motion</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
+                      Architecture moderne avec rendu hybride pour des performances maximales. Animations fluides et transitions d'état animées par Framer Motion à 60 images par seconde pour une expérience utilisateur premium.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
           </div>
         </div>
       </section>

@@ -54,8 +54,8 @@ export async function POST(req) {
         const { userId, updates } = payload;
         if (profile?.role === 'moderator') {
           const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single();
-          if (targetProfile?.role === 'founder' || updates.role === 'founder') {
-            return NextResponse.json({ error: "Les modérateurs ne peuvent pas modifier un compte fondateur ni accorder le statut fondateur." }, { status: 403 });
+          if (targetProfile?.role !== 'normal' || updates.role === 'founder' || updates.role === 'moderator') {
+            return NextResponse.json({ error: "Les modérateurs ne peuvent modifier que les comptes utilisateurs normaux, et ne peuvent pas attribuer de grades modérateurs ou fondateurs." }, { status: 403 });
           }
         }
         const allowed = ['role', 'tokens', 'first_name', 'last_name'];
@@ -69,8 +69,8 @@ export async function POST(req) {
         const { userId } = payload;
         if (profile?.role === 'moderator') {
           const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single();
-          if (targetProfile?.role === 'founder') {
-            return NextResponse.json({ error: "Les modérateurs ne peuvent pas supprimer un compte fondateur." }, { status: 403 });
+          if (targetProfile?.role !== 'normal') {
+            return NextResponse.json({ error: "Les modérateurs ne peuvent supprimer que les comptes utilisateurs normaux." }, { status: 403 });
           }
         }
         

@@ -57,6 +57,12 @@ export default function AuthPage() {
   useEffect(() => {
     const saved = localStorage.getItem('site_lang');
     if (saved) setLang(saved);
+
+    const params = new URLSearchParams(window.location.search);
+    const queryTab = params.get("tab");
+    if (queryTab === "signup" || queryTab === "login") {
+      setTab(queryTab);
+    }
   }, []);
 
   useEffect(() => {

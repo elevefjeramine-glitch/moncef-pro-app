@@ -36,7 +36,7 @@ function StatCard({ icon: Icon, label, value, sub, color = '#FFD700', delay = 0 
 export default function AlphaPage() {
   const lang = useLanguage();
   const router = useRouter();
-  const [isFounder, setIsFounder] = useState(false);
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [tab, setTab] = useState('dashboard');
@@ -67,7 +67,7 @@ export default function AlphaPage() {
       setAuthToken(session.access_token);
       const { data } = await supabase.from('users').select('role').eq('id', session.user.id).single();
       if (['founder', 'moderator'].includes(data?.role)) {
-        setIsFounder(true);
+        setIsAuthorizedAdmin(true);
         setUserRole(data?.role);
       } else {
         router.push('/app');
@@ -109,21 +109,21 @@ export default function AlphaPage() {
   }, [alphaFetch]);
 
   useEffect(() => {
-    if (isFounder && authToken) {
+    if (isAuthorizedAdmin && authToken) {
       loadStats();
     }
-  }, [isFounder, authToken, loadStats]);
+  }, [isAuthorizedAdmin, authToken, loadStats]);
 
   useEffect(() => {
-    if (tab === 'homework' && isFounder) loadAllHomework();
-  }, [tab, isFounder, loadAllHomework]);
+    if (tab === 'homework' && isAuthorizedAdmin) loadAllHomework();
+  }, [tab, isAuthorizedAdmin, loadAllHomework]);
 
   // Auto-refresh every 30s
   useEffect(() => {
-    if (!isFounder) return;
+    if (!isAuthorizedAdmin) return;
     const interval = setInterval(loadStats, 30000);
     return () => clearInterval(interval);
-  }, [isFounder, loadStats]);
+  }, [isAuthorizedAdmin, loadStats]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -212,7 +212,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
     }
   };
 
-  if (!isFounder) return (
+  if (!isAuthorizedAdmin) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 16 }}>
       <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
         <Crown size={40} color="#FFD700" />
@@ -416,7 +416,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 10, background: rc.bg, color: rc.color, fontWeight: 700 }}>{rc.label}</span>
                     <span style={{ fontSize: 12, color: '#FFD700', fontWeight: 700 }}>⚡ {u.tokens}</span>
-                    {u.role !== 'founder' && (
+                    {((userRole === 'founder' && u.role !== 'founder') || (userRole === 'moderator' && u.role === 'normal')) && (
                       <>
                         <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
                           onClick={() => { setEditingUser(u); setEditRole(u.role); setEditTokens(u.tokens); }}
@@ -444,7 +444,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
                             style={{ width: '100%', padding: '8px 12px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,215,0,0.3)', color: '#fff', fontSize: 13, outline: 'none' }}>
                             <option value="normal">👤 Normal</option>
                             <option value="moderator">🛡️ Modérateur</option>
-                            <option value="founder">👑 Fondateur</option>
+                            {userRole === 'founder' && <option value="founder">👑 Fondateur</option>}
                           </select>
                         </div>
                         <div style={{ flex: '1 1 120px' }}>
