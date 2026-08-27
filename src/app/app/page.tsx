@@ -51,26 +51,36 @@ export default function DashboardPage() {
     queryKey: ['homeworks', user?.id],
     queryFn: async () => {
       const { data } = await supabase.from('homework').select('*').order('created_at', { ascending: false });
-      if (!data) return [];
-      
-      const today = new Date().toISOString().split('T')[0];
-      const expired = data.filter(hw => hw.due_date && hw.due_date < today && (hw.status === 'done' || hw.is_done));
-      
-      if (expired.length > 0) {
-        for (const hw of expired) {
-          await supabase.from('homework').delete().eq('id', hw.id);
-        }
-        setCleanedCount(expired.length);
-        setTimeout(() => setCleanedCount(0), 5000);
-        
-        // Re-fetch clean data
-        const { data: fresh } = await supabase.from('homework').select('*').order('created_at', { ascending: false });
-        return fresh || [];
-      }
-      return data;
+      return data || [];
     },
     enabled: !!user?.id, // Ne lance la requête que si l'utilisateur est connu
   });
+
+  // Defect #8 fix: separate expired homework cleanup into its own useEffect
+  useEffect(() => {
+    if (homeworks.length === 0) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const expired = homeworks.filter(hw => hw.due_date && hw.due_date < today && (hw.status === 'done' || hw.is_done));
+
+    if (expired.length === 0) return;
+
+    let cancelled = false;
+    const cleanExpired = async () => {
+      for (const hw of expired) {
+        if (cancelled) return;
+        await supabase.from('homework').delete().eq('id', hw.id);
+      }
+      if (!cancelled) {
+        setCleanedCount(expired.length);
+        setTimeout(() => setCleanedCount(0), 5000);
+        queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
+      }
+    };
+
+    cleanExpired();
+    return () => { cancelled = true; };
+  }, [homeworks, user?.id, queryClient]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -82,7 +92,7 @@ export default function DashboardPage() {
         table: 'homework',
         filter: `user_id=eq.${user.id}`
       }, () => {
-        queryClient.invalidateQueries(['homeworks', user.id]);
+        queryClient.invalidateQueries({ queryKey: ['homeworks', user.id] });
       })
       .subscribe();
 
@@ -111,7 +121,7 @@ export default function DashboardPage() {
     setNewSubj(""); setNewTask(""); setNewTeacher(""); 
     setNewDueDate(""); setNewPriority("normal"); setNewStatus("todo"); 
     setNewProgression(0); setShowForm(false);
-    queryClient.invalidateQueries(['homeworks', user.id]);
+    queryClient.invalidateQueries({ queryKey: ['homeworks', user.id] });
   };
 
   const updateHomework = async (id, updates) => {
@@ -123,13 +133,13 @@ export default function DashboardPage() {
       updates.is_done = false;
     }
     await supabase.from('homework').update(updates).eq('id', id);
-    queryClient.invalidateQueries(['homeworks', user?.id]);
+    queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
   };
 
   const deleteHomework = async (id) => {
     if (!window.confirm(t(lang, 'hw_confirm_delete'))) return;
     await supabase.from('homework').delete().eq('id', id);
-    queryClient.invalidateQueries(['homeworks', user?.id]);
+    queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
   };
 
   const getDaysRemaining = (dueDate) => {

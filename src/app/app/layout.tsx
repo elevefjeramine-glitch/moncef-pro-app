@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,6 +15,7 @@ export default function AppLayout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
+  const channelRef = useRef(null);
 
   const loadUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -27,10 +28,17 @@ export default function AppLayout({ children }) {
       if (data.theme_color) setThemeColor(data.theme_color);
       if (data.language) setLanguage(data.language);
     } else { setUser(session.user); }
+  };
 
-    // 🚀 Écoute temps réel des changements sur le profil utilisateur (Grade, Tokens, Thème...)
-    supabase.channel(`user_updates_${session.user.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${session.user.id}` }, (payload) => {
+  useEffect(() => {
+    if (!user?.id) return;
+
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    channelRef.current = supabase.channel(`user_updates_${user.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, (payload) => {
         if (payload.new) {
           setUser(payload.new);
           if (payload.new.tokens !== undefined) setTokens(payload.new.tokens);
@@ -39,7 +47,14 @@ export default function AppLayout({ children }) {
         }
       })
       .subscribe();
-  };
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [user?.id, setUser, setThemeColor, setLanguage, setTokens]);
 
   useEffect(() => { 
     loadUser(); 

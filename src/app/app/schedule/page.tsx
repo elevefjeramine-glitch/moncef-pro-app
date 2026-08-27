@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { Plus, Trash2, Calendar, Clock, BookOpen, Printer } from "lucide-react";
 import { useLanguage, t } from "@/utils/i18n";
@@ -11,6 +11,8 @@ export default function SchedulePage() {
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState('A');
+  const selectedWeekRef = useRef(selectedWeek);
+  const channelRef = useRef<any>(null);
   
   const DAYS = [t(lang, 'd0'), t(lang, 'd1'), t(lang, 'd2'), t(lang, 'd3'), t(lang, 'd4'), t(lang, 'd5'), t(lang, 'd6')];
   
@@ -19,7 +21,12 @@ export default function SchedulePage() {
   const [newSubj, setNewSubj] = useState("");
   const [newTime, setNewTime] = useState("");
 
-  const loadSchedule = async () => {
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedWeekRef.current = selectedWeek;
+  }, [selectedWeek]);
+
+  const loadScheduleForWeek = async (week: string) => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -27,29 +34,35 @@ export default function SchedulePage() {
     const { data } = await supabase
       .from('schedule')
       .select('*')
-      .eq('week', selectedWeek)
+      .eq('week', week)
       .order('time_slot', { ascending: true });
       
     if (data) setSchedule(data);
     setLoading(false);
   };
 
+  // Effect #1: Load data when selectedWeek changes
   useEffect(() => { 
-    loadSchedule(); 
+    loadScheduleForWeek(selectedWeek); 
+  }, [selectedWeek]);
 
-    let channel: any;
+  // Effect #2: Realtime subscription — runs once on mount, cleaned up on unmount
+  useEffect(() => {
+    let cancelled = false;
+
     const subscribeRealtime = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || cancelled) return;
 
-      channel = supabase.channel(`schedule_changes_${user.id}`)
+      channelRef.current = supabase.channel(`schedule_changes_${user.id}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'schedule',
           filter: `user_id=eq.${user.id}`
         }, () => {
-          loadSchedule();
+          // Use ref to always read the latest selectedWeek
+          loadScheduleForWeek(selectedWeekRef.current);
         })
         .subscribe();
     };
@@ -57,11 +70,13 @@ export default function SchedulePage() {
     subscribeRealtime();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
+      cancelled = true;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
-  }, [selectedWeek]);
+  }, []);
 
   const addSlot = async () => {
     if (!newSubj || !newTime) return;
@@ -86,13 +101,13 @@ export default function SchedulePage() {
     
     setNewSubj("");
     setNewTime("");
-    loadSchedule();
+    loadScheduleForWeek(selectedWeek);
   };
 
   const deleteSlot = async (id) => {
     if (!window.confirm(t(lang, 'sch_confirm_delete'))) return;
     await supabase.from('schedule').delete().eq('id', id);
-    loadSchedule();
+    loadScheduleForWeek(selectedWeek);
   };
 
   const handlePrint = () => {

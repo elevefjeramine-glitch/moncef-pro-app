@@ -192,29 +192,51 @@ export default function CommPage() {
           }
         }
       });
+
+      // Defect #5 fix: msgChannel is now created AFTER myIdRef is populated by loadCurrentUser()
+      const existingMsg = supabase.getChannels().find(c => c.topic === 'realtime:realtime:conv_messages' || c.topic === 'realtime:conv_messages');
+      if (existingMsg) supabase.removeChannel(existingMsg);
+
+      msgChannel = supabase.channel('realtime:conv_messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
+          if (ignore) return;
+          const newMessage = payload.new;
+          // Optimistic message append for the active conversation
+          setMessages(prev => {
+            if (prev.length > 0 && prev[0]?.conversation_id === newMessage.conversation_id) {
+              if (prev.find(m => m.id === newMessage.id)) return prev;
+              return [...prev, newMessage];
+            }
+            return prev;
+          });
+          // Defect #6 fix: optimistic UI update for conversation list instead of full re-fetch
+          setConversations(prev => {
+            const updated = prev.map(conv => {
+              if (conv.id === newMessage.conversation_id) {
+                return {
+                  ...conv,
+                  lastMessage: {
+                    content: newMessage.content,
+                    sender_id: newMessage.sender_id,
+                    created_at: newMessage.created_at
+                  }
+                };
+              }
+              return conv;
+            });
+            // Re-sort so the conversation with the new message bubbles to top
+            updated.sort((a, b) => {
+              const aDate = a.lastMessage?.created_at || a.created_at;
+              const bDate = b.lastMessage?.created_at || b.created_at;
+              return new Date(bDate).getTime() - new Date(aDate).getTime();
+            });
+            return updated;
+          });
+          scrollToBottom();
+        })
+        .subscribe();
     };
     init();
-
-    const existingMsg = supabase.getChannels().find(c => c.topic === 'realtime:realtime:conv_messages' || c.topic === 'realtime:conv_messages');
-    if (existingMsg) supabase.removeChannel(existingMsg);
-
-    // Realtime for new messages — Bug #4 fix: use myIdRef.current instead of closure var
-    msgChannel = supabase.channel('realtime:conv_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
-        if (ignore) return;
-        const newMessage = payload.new;
-        setMessages(prev => {
-          if (prev.length > 0 && prev[0]?.conversation_id === newMessage.conversation_id) {
-            if (prev.find(m => m.id === newMessage.id)) return prev;
-            return [...prev, newMessage];
-          }
-          return prev;
-        });
-        // Use ref — always has the correct userId even if init() hasn't resolved yet
-        if (myIdRef.current) loadConversations(myIdRef.current);
-        scrollToBottom();
-      })
-      .subscribe();
 
     return () => { 
       ignore = true;

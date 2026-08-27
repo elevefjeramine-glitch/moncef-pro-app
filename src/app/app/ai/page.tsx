@@ -49,7 +49,53 @@ export default function AIPage() {
     if (data) setExistingHomework(data);
   };
 
-  useEffect(() => { loadExistingHomework(); loadExistingSchedule(); }, []);
+  // Defect #7 fix: realtime subscriptions for homework and schedule tables
+  useEffect(() => {
+    let hwChannel: any = null;
+    let schedChannel: any = null;
+    let cancelled = false;
+
+    const initRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      // Initial load
+      loadExistingHomework();
+      loadExistingSchedule();
+
+      // Realtime subscription for homework changes
+      hwChannel = supabase.channel(`ai_homework_${user.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'homework',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          loadExistingHomework();
+        })
+        .subscribe();
+
+      // Realtime subscription for schedule changes
+      schedChannel = supabase.channel(`ai_schedule_${user.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'schedule',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          loadExistingSchedule();
+        })
+        .subscribe();
+    };
+
+    initRealtime();
+
+    return () => {
+      cancelled = true;
+      if (hwChannel) supabase.removeChannel(hwChannel);
+      if (schedChannel) supabase.removeChannel(schedChannel);
+    };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
