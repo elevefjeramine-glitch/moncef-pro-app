@@ -33,15 +33,22 @@ export async function POST(req) {
       return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
     }
 
-    // Vérifier les crédits
-    const { data: userData, error: userError } = await supabase
+    // Vérifier les crédits ou créer l'utilisateur
+    let { data: userData, error: userError } = await supabase
       .from('users')
       .select('tokens, role')
       .eq('id', user.id)
       .single();
 
     if (userError || !userData) {
-      return NextResponse.json({ error: "Utilisateur non trouvé en base." }, { status: 404 });
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert([{ id: user.id, email: user.email, first_name: 'Utilisateur', last_name: '', tokens: 100, role: 'normal' }])
+        .select()
+        .single();
+      
+      if (createError) return NextResponse.json({ error: "Impossible de créer le profil utilisateur." }, { status: 500 });
+      userData = newUser;
     }
 
     const isUnlimited = ['founder', 'moderator'].includes(userData.role);
@@ -68,10 +75,13 @@ export async function POST(req) {
     let assistantMessage = "";
 
     if (GROQ_KEY) {
-      // 🚀 Utilisation de Groq (Llama 3)
+      // 🚀 Utilisation de Groq (Llama 3.3)
       const aiMessages = [
         { role: 'system', content: enhancedSystem },
-        ...messages.map(m => ({ role: m.role, content: m.content }))
+        ...messages.map(m => ({ 
+            role: m.role, 
+            content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) 
+        }))
       ];
 
       const response = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
@@ -81,7 +91,7 @@ export async function POST(req) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile", // Modèle ultra-rapide et intelligent
+          model: "llama-3.1-70b-versatile", // Active model (3.3-70b-versatile was deprecated Aug 2026)
           messages: aiMessages
         })
       });
@@ -95,7 +105,7 @@ export async function POST(req) {
       // 🚀 Utilisation de Google Gemini
       const geminiContents = messages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
+        parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
       }));
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
