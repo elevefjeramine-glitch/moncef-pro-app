@@ -43,7 +43,7 @@ export default function CommPage() {
   }, []);
 
   const loadAllUsers = useCallback(async (myId) => {
-    const { data } = await supabase.from('users').select('*').neq('id', myId);
+    const { data } = await supabase.from('users_public_profile').select('*').neq('id', myId);
     if (data) setAllUsers(data);
   }, []);
 
@@ -87,7 +87,7 @@ export default function CommPage() {
       if (conv.type === 'dm' && members) {
         const otherMember = members.find(m => m.user_id !== myId);
         if (otherMember) {
-          const { data: partner } = await supabase.from('users').select('*').eq('id', otherMember.user_id).single();
+          const { data: partner } = await supabase.from('users_public_profile').select('*').eq('id', otherMember.user_id).single();
           dmPartner = partner;
         }
       }
@@ -96,7 +96,7 @@ export default function CommPage() {
       let memberDetails = [];
       if (members) {
         const memberIds = members.map(m => m.user_id);
-        const { data: memberUsers } = await supabase.from('users').select('*').in('id', memberIds);
+        const { data: memberUsers } = await supabase.from('users_public_profile').select('*').in('id', memberIds);
         memberDetails = (memberUsers || []).map(u => ({
           ...u,
           groupRole: members.find(m => m.user_id === u.id)?.role || 'member'

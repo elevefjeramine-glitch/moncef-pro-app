@@ -115,17 +115,13 @@ export default function AuthPage() {
         setErrorMsg(error.message);
       } else if (data.user) {
         // Save extended profile to users table
-        await supabase.from('users').upsert({
-          id: data.user.id,
-          email: cleanEmail,
+        // Le trigger on_auth_user_created a déjà créé la ligne (role 'normal',
+        // tokens 700) : on ne fait que compléter le profil avec les colonnes
+        // qui existent réellement dans public.users.
+        await supabase.from('users').update({
           first_name: firstName,
           last_name: lastName,
-          phone: phone || null,
-          address: address || null,
-          city: city || null,
-          postal_code: postal || null,
-          role: 'normal'
-        });
+        }).eq('id', data.user.id);
         setSuccessMsg(t(lang, 'auth_success'));
       }
     } else {

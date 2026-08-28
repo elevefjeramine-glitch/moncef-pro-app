@@ -21,3 +21,17 @@ CREATE POLICY "Users are readable by everyone" ON public.users FOR SELECT USING 
 Tout compte connecté peut donc lire `email`, `role` et `tokens` de tous les
 utilisateurs. Corriger côté base (restreindre le SELECT + vue `users_public_profile`)
 **et** côté app (faire lire la vue là où l'affichage est public) — sinon l'app casse.
+
+
+## Historique des correctifs appliqués (base de données)
+- 28/08/2026 — trigger `trg_guard_privileged_columns`, politique UPDATE avec
+  `WITH CHECK`, SELECT restreint à sa propre ligne, vue
+  `users_public_profile` (`security_invoker`), `REVOKE DELETE/TRUNCATE/
+  REFERENCES/INSERT`. Détail + preuves de contrôle : `supabase/security-fix-rls.sql`.
+- Code adapté dans le même commit : `comm/page.tsx` (3 lectures via la vue),
+  `auth/page.tsx` (fin de l'upsert sur des colonnes inexistantes).
+
+## Ce qui reste à faire (hors base de données)
+- Changer le mot de passe du compte fondateur (publié dans l'historique git
+  via le commit 32abf5f) ou passer le dépôt en privé.
+- Régénérer les clés Gemini / Groq / Anthropic qui ont circulé en clair.
