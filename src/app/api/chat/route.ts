@@ -167,6 +167,24 @@ export async function POST(req: Request) {
             }))
           ];
 
+          // Le palier GRATUIT de Groq limite à 8 000 tokens par MINUTE et compte
+          // `prompt + max_tokens` là-dessus (message mesuré : « Request too large for
+          // model openai/gpt-oss-20b ... on tokens per minute (TPM): Limit 8000,
+          // Requested 8308 »). Un max_tokens fixe de 8192 faisait donc échouer le
+          // secours à COUP SÛR, quelle que soit la question posée. On estime la taille
+          // du prompt (~4 caractères par token), on rogne sur les tours les plus anciens
+          // si ça dépasse, puis on donne au modèle tout le reste.
+          const GROQ_TPM_BUDGET = 7600; // marge sous la limite de 8000
+          const estTokens = (arr: any[]) => JSON.stringify(arr).length / 4;
+          let groqMessages = aiMessages;
+          while (estTokens(groqMessages) + 700 > GROQ_TPM_BUDGET && groqMessages.length > 2) {
+            groqMessages = [groqMessages[0], ...groqMessages.slice(2)];
+          }
+          const groqMaxTokens = Math.max(
+            700,
+            Math.min(4096, Math.floor(GROQ_TPM_BUDGET - estTokens(groqMessages)))
+          );
+
           const response = await fetchWithTimeout(`https://api.groq.com/openai/v1/chat/completions`, {
             method: "POST",
             headers: {
@@ -176,11 +194,11 @@ export async function POST(req: Request) {
             body: JSON.stringify({
               // FIX: "llama-3.1-8b-instant" n'existe plus chez Groq (model_not_found).
               // gpt-oss-20b est le modèle de chat rapide encore joignable ; il consomme
-              // des reasoning_tokens, d'où 8192 (à 2048 la réponse était tronquée,
-              // finish=length mesuré sur un vrai prompt).
+              // des reasoning_tokens, d'où un budget calculé ci-dessus (à 2048 la
+              // réponse était tronquée : finish=length mesuré sur un vrai prompt).
               model: "openai/gpt-oss-20b",
-              messages: aiMessages,
-              max_tokens: 8192,
+              messages: groqMessages,
+              max_tokens: groqMaxTokens,
               temperature: 0.7
             })
           });
