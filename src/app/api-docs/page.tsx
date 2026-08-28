@@ -279,7 +279,7 @@ const content = {
     alpha_body: "Ce n'est pas une API publique : elle sert le panneau d'administration de l'application. Elle exige un compte dont le rôle est founder ou moderator, relu côté serveur — un compte normal reçoit 403 Accès refusé, quel que soit l'en-tête envoyé. Actions admises :",
     limits_title: "Limites réelles et zones fragiles",
     limits: [
-      "Taille du corps plafonnée dans l'application : 5 Mo sur /api/chat, 1 Mo sur les trois imports et /api/alpha, 64 Ko sur /api/account/delete ; au-delà un 413 donne le nombre d'octets. La plateforme coupe elle à 6 Mo par requête (4,5 Mo effectifs pour une charge binaire à cause du base64). Toujours aucun limite de débit : 5 Mo, autant de fois qu'on veut.",
+      "Taille du corps plafonnée dans l'application : 5 Mo sur /api/chat, 1 Mo sur les trois imports et /api/alpha, 64 Ko sur /api/account/delete ; au-delà un 413 donne le nombre d'octets. La plateforme coupe elle à 6 Mo par requête (4,5 Mo effectifs pour une charge binaire à cause du base64) : mesuré le 28/08/2026, un corps de 8 Mo reçoit un 413 de la plateforme au corps vide, sans que la fonction tourne. Toujours aucun limite de débit : 5 Mo, autant de fois qu'on veut.",
       "Aucune versionnement d'API : le chemin est le chemin. Une modification future cassera les clients, sans dépréciation annoncée.",
       "Les routes d'import ne valident pas le type des champs : une date invalide remonte sous forme d'erreur Postgres en 500, pas sous forme de 400 pédagogique.",
       "Pas de webhook ni de streaming : une réponse IA arrive d'un bloc.",
@@ -330,7 +330,7 @@ const content = {
     alpha_body: "Not a public API: it powers the app's admin panel. It requires an account whose role is founder or moderator, re-read on the server — a normal account gets 403 Accès refusé whatever header is sent. Accepted actions:",
     limits_title: "Limits and rough edges",
     limits: [
-      "Request size is capped in the app: 5 MB on /api/chat, 1 MB on the three import routes and /api/alpha, 64 KB on /api/account/delete; above that a 413 gives the byte count. The platform itself cuts at 6 MB per request (4.5 MB effective for a binary payload because of base64). Still no rate limit: 5 MB, as often as you like.",
+      "Request size is capped in the app: 5 MB on /api/chat, 1 MB on the three import routes and /api/alpha, 64 KB on /api/account/delete; above that a 413 gives the byte count. The platform itself cuts at 6 MB per request (4.5 MB effective for a binary payload because of base64): measured on 2026-08-28, an 8 MB body gets a 413 from the platform with an empty body, the function never runs. Still no rate limit: 5 MB, as often as you like.",
       "No API versioning: the path is the path. A future change breaks clients, with no announced deprecation.",
       "The import routes don't type-check fields: a bad date surfaces as a Postgres 500, not as a helpful 400.",
       "No webhooks, no streaming: an AI answer arrives in one block.",
@@ -381,7 +381,7 @@ const content = {
     alpha_body: "No es una API pública: alimenta el panel de administración. Exige una cuenta con rol founder o moderator, comprobado en el servidor — una cuenta normal recibe 403 Accès refusé sea cual sea la cabecera. Acciones admitidas:",
     limits_title: "Límites y zonas frágiles",
     limits: [
-      "El tamaño del cuerpo tiene tope en la aplicación: 5 MB en /api/chat, 1 MB en las tres importaciones y /api/alpha, 64 KB en /api/account/delete; por encima, un 413 indica los bytes. La plataforma corta en 6 MB por petición (4,5 MB efectivos en binario por el base64). Sigue sin haber límite de peticiones: 5 MB, las veces que quieras.",
+      "El tamaño del cuerpo tiene tope en la aplicación: 5 MB en /api/chat, 1 MB en las tres importaciones y /api/alpha, 64 KB en /api/account/delete; por encima, un 413 indica los bytes. La plataforma corta en 6 MB por petición (4,5 MB efectivos en binario por el base64): medido el 28/08/2026, un cuerpo de 8 MB recibe un 413 de la plataforma con el cuerpo vacío, sin ejecutar la función. Sigue sin haber límite de peticiones: 5 MB, las veces que quieras.",
       "Sin versionado de API: la ruta es la ruta. Un cambio futuro romperá a los clientes, sin aviso de obsolescencia.",
       "Las rutas de importación no validan tipos: una fecha inválida llega como error Postgres 500, no como un 400 útil.",
       "Sin webhooks ni streaming: la respuesta de IA llega de golpe.",
@@ -432,7 +432,7 @@ const content = {
     alpha_body: "ليست واجهة عمومية: فهي تشغّل لوحة الإدارة. تشترط حسابًا دوراه founder أو moderator، ويُعاد قراءتهما في الخادم — والحساب العادي receives 403 Accès refusé مهما كانت الترويسة. الإجراءات المقبولة:",
     limits_title: "الحدود والنقاط الحساسة",
     limits: [
-"حجم المتن محدود داخل التطبيق: 5 ميغابايت في /api/chat، وميغابايت واحد في مسارات الاستيراد الثلاثة و/api/alpha، و64 كيلوبايت في /api/account/delete؛ وفوق ذلك يعيد 413 عدد البايتات. المنصة نفسها تقطع عند 6 ميغابايت للطلب (4.5 ميغابايت فعلياً للحمولة الثنائية بسبب base64). لا يزال عدد الطلبات غير محدود.",
+"حجم المتن محدود داخل التطبيق: 5 ميغابايت في /api/chat، وميغابايت واحد في مسارات الاستيراد الثلاثة و/api/alpha، و64 كيلوبايت في /api/account/delete؛ وفوق ذلك يعيد 413 عدد البايتات. المنصة نفسها تقطع عند 6 ميغابايت للطلب (4.5 ميغابايت فعلياً للحمولة الثنائية بسبب base64): القياس بتاريخ 2026-08-28 أظهر أن متن 8 ميغابايت يستقبل 413 من المنصة بجسم فارغ دون تنفيذ الدالة. لا يزال عدد الطلبات غير محدود.",
       "لا ترقيم للواجهة: المسار هو المسار. أي تغيير لاحق سيكسر عملاء الواجهة دون أي إخطار.",
       "مسارات الاستيراد لا تتحقق من الأنواع: تاريخ غير صالح يظهر كخطأ Postgres بكود 500 لا كـ 400 شارح.",
       "لا webhooks ولا بث تدريجي: الجواب يصل دفعة واحدة.",
@@ -483,7 +483,7 @@ const content = {
     alpha_body: "这不是公开 API：它服务于应用的后台面板。要求账户角色为 founder 或 moderator，且在服务器端重新读取——普通账户无论发送什么请求头都会收到 403 Accès refusé。接受的操作：",
     limits_title: "限制与薄弱处",
     limits: [
-      "请求体大小已在应用内限制：/api/chat 为 5 MB，三个导入接口与 /api/alpha 为 1 MB，/api/account/delete 为 64 KB；超过即返回 413 并给出字节数。平台本身在每请求 6 MB 处截断（因 base64，二进制实际为 4.5 MB）。仍然没有限流。",
+      "请求体大小已在应用内限制：/api/chat 为 5 MB，三个导入接口与 /api/alpha 为 1 MB，/api/account/delete 为 64 KB；超过即返回 413 并给出字节数。平台本身在每请求 6 MB 处截断（因 base64，二进制实际为 4.5 MB）：2026-08-28 实测，8 MB 的请求体会收到平台返回的空正文 413，函数根本不会执行。仍然没有限流。",
       "没有版本管理：路径就是路径。日后改动会直接破坏客户端，不会提前宣布弃用。",
       "导入接口不做类型校验：非法日期会以 Postgres 500 的形式冒出来，而不是一个有解释的 400。",
       "没有 webhook，也没有流式输出：AI 的回答一次性到达。",
