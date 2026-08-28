@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/utils/supabase/client";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Lock, Phone, MapPin, Building2, Hash, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { t } from "@/utils/i18n";
@@ -39,7 +39,16 @@ export default function AuthPage() {
   const [lang, setLang] = useState("fr");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(() => {
+    // Un retour OAuth raté arrive ici avec ?error_code / ?error_description (bouton
+    // « Autoriser » refusé, popup bloquée, redirect non déclaré chez le fournisseur).
+    // On le lit à l'initialisation, pas dans un effet : rien à setter après montage,
+    // donc pas de rendu en cascade.
+    if (typeof window === 'undefined') return null;   // la page est prerenderée : pas de window au build
+    const p = new URLSearchParams(window.location.search);
+    const d = p.get('error_description') || p.get('error_code');
+    return d ? decodeURIComponent(d) : null;
+  });
   const [successMsg, setSuccessMsg] = useState("");
 
   // ── Common fields ──────────────────────────────────────────
@@ -132,13 +141,36 @@ export default function AuthPage() {
     setLoading(false);
   };
 
+  // Quels fournisseurs sont réellement activés sur le projet Supabase. Sans cette
+  // vérification, les 4 boutons restaient cliquables alors que Supabase refuse la
+  // demande (aucun fournisseur d'configuré) : l'utilisateur restait bloqué sur
+  // « Chargement… » ou voyait une erreur opaque.
+  const [oauthReady, setOauthReady] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${SUPABASE_URL}/auth/v1/settings`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+    })
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(d => { if (!cancelled) setOauthReady(d?.external || {}); })
+      .catch(() => { if (!cancelled) setOauthReady({}); });
+    return () => { cancelled = true; };
+  }, []);
+
   const handleOAuth = async (provider: any) => {
+    if (!oauthReady[provider]) { setErrorMsg(t(lang, 'auth_oauth_unavailable')); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/app`, queryParams: { prompt: 'select_account' } }
-    });
-    if (error) { setErrorMsg(`Configuration requise: ${error.message}`); setLoading(false); }
+    // `prompt=select_account` n'est compris que de Google et Microsoft : envoyé à Apple
+    // ou GitHub, c'est un paramètre inconnu du protocole de ces fournisseurs.
+    const options: any = { redirectTo: `${window.location.origin}/auth/callback` };
+    if (provider === 'google' || provider === 'azure') options.queryParams = { prompt: 'select_account' };
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options });
+    if (error) {
+      setErrorMsg(`${t(lang, 'auth_oauth_failed')} — ${error.message}`);
+      setLoading(false);
+      return;
+    }
+    // succès : le navigateur part chez le fournisseur, on garde l'écran en chargement
   };
 
   const IconGoogle = () => <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>;
@@ -339,10 +371,10 @@ export default function AuthPage() {
 
             {/* ── OAuth ──────────────────────────────────────── */}
             <div className="oauth-grid" style={{ marginTop: 20 }}>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('google')}><IconGoogle /> Google</motion.button>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('azure')}><IconMicrosoft /> Microsoft</motion.button>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('apple')}><IconApple /> Apple</motion.button>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} className="oauth-btn" onClick={() => handleOAuth('github')}><IconGitHub /> GitHub</motion.button>
+              <motion.button whileHover={oauthReady.google ? { y: -2 } : {}} whileTap={oauthReady.google ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('google')} disabled={!oauthReady.google} title={oauthReady.google ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.google ? 1 : 0.4, cursor: oauthReady.google ? 'pointer' : 'not-allowed', filter: oauthReady.google ? 'none' : 'grayscale(1)' }}><IconGoogle /> Google</motion.button>
+              <motion.button whileHover={oauthReady.azure ? { y: -2 } : {}} whileTap={oauthReady.azure ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('azure')} disabled={!oauthReady.azure} title={oauthReady.azure ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.azure ? 1 : 0.4, cursor: oauthReady.azure ? 'pointer' : 'not-allowed', filter: oauthReady.azure ? 'none' : 'grayscale(1)' }}><IconMicrosoft /> Microsoft</motion.button>
+              <motion.button whileHover={oauthReady.apple ? { y: -2 } : {}} whileTap={oauthReady.apple ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('apple')} disabled={!oauthReady.apple} title={oauthReady.apple ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.apple ? 1 : 0.4, cursor: oauthReady.apple ? 'pointer' : 'not-allowed', filter: oauthReady.apple ? 'none' : 'grayscale(1)' }}><IconApple /> Apple</motion.button>
+              <motion.button whileHover={oauthReady.github ? { y: -2 } : {}} whileTap={oauthReady.github ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('github')} disabled={!oauthReady.github} title={oauthReady.github ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.github ? 1 : 0.4, cursor: oauthReady.github ? 'pointer' : 'not-allowed', filter: oauthReady.github ? 'none' : 'grayscale(1)' }}><IconGitHub /> GitHub</motion.button>
             </div>
 
           </motion.div>

@@ -88,22 +88,55 @@ CREATE POLICY "Users manage own schedule" ON public.schedule
 -- ==========================================
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
-RETURNS TRIGGER AS $$
+  RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  meta      jsonb := NEW.raw_user_meta_data;
+  v_first   text;
+  v_last    text;
+  v_full    text;
+  v_space   int;
 BEGIN
+  v_first := NULLIF(meta->>'first_name', '');
+  v_last  := NULLIF(meta->>'last_name', '');
+  IF v_first IS NULL THEN v_first := NULLIF(meta->>'given_name', '');  END IF;
+  IF v_last  IS NULL THEN v_last  := NULLIF(meta->>'family_name', ''); END IF;
+  IF v_last  IS NULL THEN v_last  := NULLIF(meta->>'surname', '');     END IF;
+  v_full := NULLIF(meta->>'full_name', '');
+  IF v_full IS NULL THEN v_full := NULLIF(meta->>'name', ''); END IF;
+
+  IF v_first IS NULL AND v_full IS NOT NULL THEN
+    v_space := position(' ' in v_full);
+    IF v_space > 0 THEN
+      v_first := left(v_full, v_space - 1);
+      IF v_last IS NULL THEN v_last := btrim(substring(v_full from v_space + 1)); END IF;
+    ELSE
+      v_first := v_full;
+    END IF;
+  END IF;
+
+  IF v_first IS NULL THEN
+    v_first := COALESCE(NULLIF(split_part(NEW.email, '@', 1), ''), 'Utilisateur');
+  END IF;
+
   INSERT INTO public.users (id, email, first_name, last_name, role, tokens)
   VALUES (
-    new.id, 
-    new.email, 
-    COALESCE(new.raw_user_meta_data->>'first_name', 'Utilisateur'), 
-    COALESCE(new.raw_user_meta_data->>'last_name', ''), 
-    'normal', 
+    NEW.id,
+    NEW.email,
+    btrim(v_first),
+    COALESCE(btrim(v_last), ''),
+    'normal',
     700
-  );
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+  )
+  ON CONFLICT (id) DO NOTHING;
 
--- Activation du trigger
+  RETURN NEW;
+END;
+$$;
+
+  -- Activation du trigger
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
