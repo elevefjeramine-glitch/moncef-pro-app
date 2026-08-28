@@ -8,14 +8,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
 import { useUserStore } from "@/store/useUserStore";
+import type { ReactNode } from "react";
 
-export default function AppLayout({ children }) {
+export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, setUser, credits: tokens, setCredits: setTokens, themeColor, setThemeColor, language, setLanguage } = useUserStore();
   const [showSettings, setShowSettings] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
-  const channelRef = useRef(null);
+  const channelRef = useRef<any>(null);
 
   const loadUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -65,7 +66,7 @@ export default function AppLayout({ children }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleLogout = async (e) => { e.stopPropagation(); await supabase.auth.signOut(); window.location.href = "/"; };
+  const handleLogout = async (e: any) => { e.stopPropagation(); await supabase.auth.signOut(); window.location.href = "/"; };
 
   if (!user) return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'var(--bg)'}}>
     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--a)', borderRadius: '50%' }} />
@@ -77,7 +78,7 @@ export default function AppLayout({ children }) {
 
   const lang = user.language || 'fr';
 
-  let navItems = [
+  let navItems: { name: string; path: string; icon: any; isAlpha?: boolean }[] = [
     { name: t(lang, 'home'), path: '/app', icon: Home },
     { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
     { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
@@ -216,7 +217,7 @@ export default function AppLayout({ children }) {
 // ----------------------------------------------------
 // COMPOSANT MODALE POUR LES PARAMÈTRES
 // ----------------------------------------------------
-function SettingsModal({ user, lang, close }) {
+function SettingsModal({ user, lang, close }: any) {
   const [tab, setTab] = useState('profil');
   const [firstName, setFirstName] = useState(user.first_name || "");
   const [themeColor, setThemeColor] = useState(user.theme_color || "#00D2B6");

@@ -5,9 +5,9 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import FlagIcon from "./FlagIcon";
 
-export default function LanguageSwitcher({ currentLang, onSwitch }) {
+export default function LanguageSwitcher({ currentLang, onSwitch }: { currentLang?: string; onSwitch: (code: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const dropdownRef = useRef<any>(null);
 
   const languages = [
     { code: 'fr', name: 'Français' },
@@ -16,10 +16,10 @@ export default function LanguageSwitcher({ currentLang, onSwitch }) {
     { code: 'ar', name: 'العربية' },
   ];
 
-  const current = languages.find(l => l.code === currentLang) || languages[0];
+  const current = languages.find(l => l.code === currentLang) ?? languages[0] ?? { code: 'fr', name: 'Français' };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: any) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }

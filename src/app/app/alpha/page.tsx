@@ -9,13 +9,13 @@ import { useRouter } from "next/navigation";
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 
-const ROLE_COLORS = {
+const ROLE_COLORS: Record<string, any> = {
   founder: { color: '#FFD700', bg: 'rgba(255,215,0,0.15)', label: '👑 Fondateur' },
   moderator: { color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', label: '🛡️ Modérateur' },
   normal: { color: 'rgba(255,255,255,0.6)', bg: 'rgba(255,255,255,0.05)', label: '👤 Utilisateur' },
 };
 
-function StatCard({ icon: Icon, label, value, sub, color = '#FFD700', delay = 0 }) {
+function StatCard({ icon: Icon, label, value, sub, color = '#FFD700', delay = 0 }: any) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
@@ -37,18 +37,18 @@ export default function AlphaPage() {
   const lang = useLanguage();
   const router = useRouter();
   const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
+  const [userRole, setUserRole] = useState<any>(null);
+  const [authToken, setAuthToken] = useState<any>(null);
   const [tab, setTab] = useState('dashboard');
-  const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [allHomework, setAllHomework] = useState([]);
+  const [stats, setStats] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [allHomework, setAllHomework] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [editRole, setEditRole] = useState('');
   const [editTokens, setEditTokens] = useState(0);
   const [actionMsg, setActionMsg] = useState('');
-  const [lastRefresh, setLastRefresh] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState<any>(null);
   const [serviceKeyMissing, setServiceKeyMissing] = useState(false); // Bug #9 fix
 
   // AI Console
@@ -57,7 +57,7 @@ export default function AlphaPage() {
   ]);
   const [input, setInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<any>(null);
 
   // Auth check
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function AlphaPage() {
     init();
   }, [router]);
 
-  const alphaFetch = useCallback(async (action, payload = {}) => {
+  const alphaFetch = useCallback(async (action: string, payload: any = {}) => {
     if (!authToken) return null;
     const res = await fetch('/api/alpha', {
       method: 'POST',
@@ -143,7 +143,7 @@ export default function AlphaPage() {
     setTimeout(() => setActionMsg(''), 3000);
   };
 
-  const handleDeleteUser = async (userId, name) => {
+  const handleDeleteUser = async (userId: any, name: any) => {
     if (!confirm(`Supprimer ${name} ? Cette action est irréversible.`)) return;
     const res = await alphaFetch('DELETE_USER', { userId });
     if (res?.success) {
@@ -156,11 +156,11 @@ export default function AlphaPage() {
     setTimeout(() => setActionMsg(''), 3000);
   };
 
-  const handleDeleteHomework = async (hwId, subject) => {
+  const handleDeleteHomework = async (hwId: any, subject: any) => {
     const res = await alphaFetch('DELETE_HOMEWORK', { hwId });
     if (res?.success) {
       setActionMsg(`✅ Devoir "${subject}" supprimé`);
-      setAllHomework(prev => prev.filter(h => h.id !== hwId));
+      setAllHomework(prev => prev.filter((h: any) => h.id !== hwId));
     } else setActionMsg(`❌ ${res?.error}`);
     setTimeout(() => setActionMsg(''), 3000);
   };
@@ -180,8 +180,8 @@ DONNÉES EN TEMPS RÉEL:
 - Devoirs total: ${stats.homework?.count}
 - Messages total: ${stats.messages?.count}
 - Cours emploi du temps: ${stats.schedule?.count}
-- Liste utilisateurs: ${JSON.stringify(stats.users?.data?.map(u => ({ id: u.id, email: u.email, nom: u.first_name, role: u.role, tokens: u.tokens, inscrit: u.created_at })))}
-- Devoirs par statut: todo=${stats.homework?.data?.filter(h => h.status === 'todo').length}, en_cours=${stats.homework?.data?.filter(h => h.status === 'in_progress').length}, fait=${stats.homework?.data?.filter(h => h.status === 'done').length}
+- Liste utilisateurs: ${JSON.stringify(stats.users?.data?.map((u: any) => ({ id: u.id, email: u.email, nom: u.first_name, role: u.role, tokens: u.tokens, inscrit: u.created_at })))}
+- Devoirs par statut: todo=${stats.homework?.data?.filter((h: any) => h.status === 'todo').length}, en_cours=${stats.homework?.data?.filter((h: any) => h.status === 'in_progress').length}, fait=${stats.homework?.data?.filter((h: any) => h.status === 'done').length}
 ` : 'Statistiques en cours de chargement.';
 
     try {
@@ -223,9 +223,9 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
   );
 
   const hwByStatus = {
-    todo: stats?.homework?.data?.filter(h => h.status === 'todo').length ?? 0,
-    in_progress: stats?.homework?.data?.filter(h => h.status === 'in_progress').length ?? 0,
-    done: stats?.homework?.data?.filter(h => h.status === 'done').length ?? 0,
+    todo: stats?.homework?.data?.filter((h: any) => h.status === 'todo').length ?? 0,
+    in_progress: stats?.homework?.data?.filter((h: any) => h.status === 'in_progress').length ?? 0,
+    done: stats?.homework?.data?.filter((h: any) => h.status === 'done').length ?? 0,
   };
 
   const TABS = [
@@ -359,7 +359,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {users.slice(0, 5).map(u => {
-                  const rc = ROLE_COLORS[u.role] || ROLE_COLORS.normal;
+                  const rc = ROLE_COLORS[u.role as string] || ROLE_COLORS.normal || {};
                   return (
                     <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                       <div style={{ width: 34, height: 34, borderRadius: 10, background: rc.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
@@ -400,7 +400,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{users.length} utilisateurs enregistrés</div>
           {users.map(u => {
-            const rc = ROLE_COLORS[u.role] || ROLE_COLORS.normal;
+            const rc = ROLE_COLORS[u.role as string] || ROLE_COLORS.normal || {};
             const isEditing = editingUser?.id === u.id;
             return (
               <motion.div key={u.id} layout
@@ -450,7 +450,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
                         </div>
                         <div style={{ flex: '1 1 120px' }}>
                           <label style={{ fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, display: 'block', marginBottom: 6 }}>TOKENS</label>
-                          <input type="number" value={editTokens} onChange={e => setEditTokens(e.target.value)} min={0} max={999999}
+                          <input type="number" value={editTokens} onChange={e => setEditTokens(Math.max(0, Math.min(999999, Number(e.target.value) || 0)))} min={0} max={999999}
                             style={{ width: '100%', padding: '8px 12px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,215,0,0.3)', color: '#fff', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                         </div>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', paddingBottom: 1 }}>
@@ -528,7 +528,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
                     style={{ alignSelf: isAi ? 'flex-start' : 'flex-end', maxWidth: '85%', display: 'flex', gap: 10 }}>
                     {isAi && <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,215,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', flexShrink: 0, border: '1px solid rgba(255,215,0,0.25)' }}><Crown size={18} /></div>}
                     <div className={isAi ? "alpha-markdown" : ""} style={{ padding: '14px 18px', borderRadius: 18, borderTopLeftRadius: isAi ? 4 : 18, borderTopRightRadius: isAi ? 18 : 4, background: isAi ? 'rgba(255,215,0,0.04)' : 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))', border: `1px solid ${isAi ? 'rgba(255,215,0,0.12)' : 'rgba(255,215,0,0.3)'}`, color: isAi ? '#EEDD88' : '#fff', fontSize: 14, lineHeight: 1.65, whiteSpace: 'normal', wordBreak: 'break-word' }}
-                      dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '')) : msg.content }}
+                      dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '') as string) : msg.content }}
                     />
                   </motion.div>
                 );

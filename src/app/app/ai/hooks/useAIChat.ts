@@ -5,7 +5,7 @@ import { useUserStore } from "@/store/useUserStore";
 import { useLanguage } from "@/utils/i18n";
 
 export interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   images?: string[];
 }
@@ -35,10 +35,10 @@ function parseAIResponse(raw: string): { cleanReply: string; actions: ParsedAIAc
     const m = reply.match(re);
     if (!m) return null;
     try {
-      const parsed = JSON.parse(m[1].trim());
+      const parsed = JSON.parse((m[1] ?? "").trim());
       reply = reply.replace(re, '').trim();
       return Array.isArray(parsed) ? parsed : [parsed];
-    } catch (e) {
+    } catch (e: any) {
       console.warn(`[useAIChat] Failed to parse <${tag}>:`, e);
       return null;
     }

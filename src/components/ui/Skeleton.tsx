@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-export function Skeleton({ className, style }) {
+export function Skeleton({ className, style }: { className?: string; style?: Record<string, unknown> }) {
   return (
     <motion.div
       className={className}

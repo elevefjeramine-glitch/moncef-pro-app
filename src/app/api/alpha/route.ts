@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 // Admin client with service role (bypasses RLS)
 function getAdminClient() {
@@ -12,12 +12,12 @@ function getAdminClient() {
   });
 }
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const { action, authToken, payload } = await req.json();
 
     // Verify the requesting user is a founder using their session
-    const anonClient = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    const anonClient = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
       global: { headers: { Authorization: `Bearer ${authToken}` } }
     });
     const { data: { user } } = await anonClient.auth.getUser();
@@ -31,10 +31,10 @@ export async function POST(req) {
       const adminClient = getAdminClient();
       const res = await adminClient.from('users').select('role').eq('id', user.id).single();
       profile = res.data;
-    } catch (adminErr) {
+    } catch (adminErr: any) {
       return NextResponse.json({ error: 'Configuration serveur incomplète' }, { status: 503 });
     }
-    if (!['founder', 'moderator'].includes(profile?.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+    if (!['founder', 'moderator'].includes(profile?.role ?? '')) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
 
     const admin = getAdminClient();
 
@@ -129,7 +129,7 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Action inconnue' }, { status: 400 });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Alpha API error:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

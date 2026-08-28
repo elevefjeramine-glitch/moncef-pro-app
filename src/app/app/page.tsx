@@ -17,12 +17,12 @@ export default function DashboardPage() {
   const { user } = useUserStore();
 
   // Translation-aware configs (must live inside component to use t())
-  const PRIORITY_CONFIG = {
+  const PRIORITY_CONFIG: Record<string, any> = {
     urgent: { label: t(lang,'hw_urgent'), color: '#ff4757', bg: 'rgba(255,71,87,0.15)', border: 'rgba(255,71,87,0.4)' },
     normal: { label: t(lang,'hw_normal'), color: '#ffa502', bg: 'rgba(255,165,2,0.1)',  border: 'rgba(255,165,2,0.25)' },
     low:    { label: t(lang,'hw_low'),    color: '#2ed573', bg: 'rgba(46,213,115,0.1)', border: 'rgba(46,213,115,0.25)' }
   };
-  const STATUS_CONFIG = {
+  const STATUS_CONFIG: Record<string, any> = {
     todo:        { label: t(lang,'hw_todo'),        icon: '📋', color: 'rgba(255,255,255,0.6)' },
     in_progress: { label: t(lang,'hw_in_progress'), icon: '⏳', color: 'var(--a)' },
     done:        { label: t(lang,'hw_done'),         icon: '✅', color: 'var(--ok)' },
@@ -34,8 +34,8 @@ export default function DashboardPage() {
   const [cleanedCount, setCleanedCount] = useState(0);
 
   // Inline edit states
-  const [editingDateId, setEditingDateId] = useState(null);
-  const [editingProgId, setEditingProgId] = useState(null);
+  const [editingDateId, setEditingDateId] = useState<any>(null);
+  const [editingProgId, setEditingProgId] = useState<any>(null);
 
   // Form states
   const [newSubj, setNewSubj] = useState("");
@@ -60,7 +60,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (homeworks.length === 0) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().slice(0, 10);
     const expired = homeworks.filter(hw => hw.due_date && hw.due_date < today && (hw.status === 'done' || hw.is_done));
 
     if (expired.length === 0) return;
@@ -124,7 +124,7 @@ export default function DashboardPage() {
     queryClient.invalidateQueries({ queryKey: ['homeworks', user.id] });
   };
 
-  const updateHomework = async (id, updates) => {
+  const updateHomework = async (id: any, updates: any) => {
     if (updates.status === 'done') {
       updates.is_done = true;
       updates.progression = 100;
@@ -136,18 +136,18 @@ export default function DashboardPage() {
     queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
   };
 
-  const deleteHomework = async (id) => {
+  const deleteHomework = async (id: any) => {
     if (!window.confirm(t(lang, 'hw_confirm_delete'))) return;
     await supabase.from('homework').delete().eq('id', id);
     queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
   };
 
-  const getDaysRemaining = (dueDate) => {
+  const getDaysRemaining = (dueDate: any) => {
     if (!dueDate) return null;
     const today = new Date();
     today.setHours(0,0,0,0);
     const due = new Date(dueDate);
-    const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return diff;
   };
 
@@ -155,7 +155,7 @@ export default function DashboardPage() {
   const remaining = homeworks.filter(h => !h.is_done && h.status !== 'done').length;
   const urgentCount = homeworks.filter(h => h.priority === 'urgent' && h.status !== 'done').length;
 
-  const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+  const containerVariants: Record<string, any> = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
   const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
   return (
@@ -294,7 +294,7 @@ export default function DashboardPage() {
                   <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${newProgression}%`, background: 'linear-gradient(90deg, var(--p), var(--a))', borderRadius: 10, transition: 'width 0.3s' }} />
                   </div>
-                  <input type="range" min="0" max="100" step="5" value={newProgression} onChange={e => setNewProgression(Number(e.target.value))} style={{ width: '100%', marginTop: 8, accentColor: 'var(--a)' }} />
+                  <input type="range" min="0" max="100" step="5" value={newProgression} onChange={e => setNewProgression(Number((e.target as HTMLInputElement).value))} style={{ width: '100%', marginTop: 8, accentColor: 'var(--a)' }} />
                 </div>
 
                 {/* Submit */}
@@ -328,8 +328,8 @@ export default function DashboardPage() {
           ) : (
             <AnimatePresence>
               {homeworks.map(hw => {
-                const pConfig = PRIORITY_CONFIG[hw.priority] || PRIORITY_CONFIG.normal;
-                const sConfig = STATUS_CONFIG[hw.status] || STATUS_CONFIG.todo;
+                const pConfig = PRIORITY_CONFIG[hw.priority as string] || PRIORITY_CONFIG.normal;
+                const sConfig = STATUS_CONFIG[hw.status as string] || STATUS_CONFIG.todo;
                 const daysRemaining = getDaysRemaining(hw.due_date);
                 const isOverdue = daysRemaining !== null && daysRemaining < 0;
                 const isDueSoon = daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 2;
@@ -410,7 +410,7 @@ export default function DashboardPage() {
                               defaultValue={hw.due_date || ''}
                               autoFocus
                               onBlur={e => { updateHomework(hw.id, { due_date: e.target.value || null }); setEditingDateId(null); }}
-                              onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditingDateId(null); }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); if (e.key === 'Escape') setEditingDateId(null); }}
                               style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid var(--a)', colorScheme: 'dark', outline: 'none' }}
                             />
                           ) : (
@@ -468,8 +468,8 @@ export default function DashboardPage() {
                               <input
                                 type="range" min="0" max="100" step="5"
                                 defaultValue={prog}
-                                onMouseUp={e => { updateHomework(hw.id, { progression: Number(e.target.value) }); setEditingProgId(null); }}
-                                onTouchEnd={e => { updateHomework(hw.id, { progression: Number(e.target.value) }); setEditingProgId(null); }}
+                                onMouseUp={e => { updateHomework(hw.id, { progression: Number((e.target as HTMLInputElement).value) }); setEditingProgId(null); }}
+                                onTouchEnd={e => { updateHomework(hw.id, { progression: Number((e.target as HTMLInputElement).value) }); setEditingProgId(null); }}
                                 style={{ width: '100%', accentColor: 'var(--a)', cursor: 'pointer' }}
                               />
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>

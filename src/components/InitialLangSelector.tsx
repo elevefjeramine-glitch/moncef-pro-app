@@ -12,7 +12,7 @@ const languages = [
   { code: 'ar', name: 'العربية', desc: 'الدخول بالعربية' },
 ];
 
-export default function InitialLangSelector({ onSelect }) {
+export default function InitialLangSelector({ onSelect }: { onSelect: (code: string) => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -64,7 +64,7 @@ export default function InitialLangSelector({ onSelect }) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        style={{ textAlign: 'center', mb: 60, position: 'relative', zIndex: 10, marginBottom: '60px' }}
+        style={{ textAlign: 'center', position: 'relative', zIndex: 10, marginBottom: '60px' }}
       >
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 12,

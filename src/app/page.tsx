@@ -46,8 +46,8 @@ export default function Home() {
   const [lang, setLang] = useState("fr");
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [loading, setLoading] = useState(true);
-  const heroRef = useRef(null);
-  const featuresRef = useRef(null);
+  const heroRef = useRef<any>(null);
+  const featuresRef = useRef<any>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   
   const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
@@ -58,10 +58,7 @@ export default function Home() {
       gsap.from(".card-gsap", {
         scrollTrigger: {
           trigger: ".features-container",
-          start: "top bottom-=100px",
-          stagger: 0.15,
-        },
-        y: 100,
+          start: "top bottom-=100px",        },        stagger: 0.15,        y: 100,
         opacity: 0,
         duration: 0.8,
         ease: "power3.out"
@@ -90,7 +87,7 @@ export default function Home() {
             setCredits(profile.tokens);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error loading user:", err);
       } finally {
         setLoading(false);
@@ -99,7 +96,7 @@ export default function Home() {
     loadUser();
   }, [setUser, setCredits]);
 
-  const switchLang = (l) => {
+  const switchLang = (l: any) => {
     setLang(l);
     localStorage.setItem("site_lang", l);
     document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
@@ -234,7 +231,7 @@ export default function Home() {
               fontFamily: "var(--font2)", fontWeight: 800, letterSpacing: "-0.051em"
             }}>
               <span style={{ color: "#fff", display: "inline-block" }}>
-                {firstWords.split(" ").map((word, i) => (
+                {firstWords.split(" ").map((word: any, i: any) => (
                   <span key={i} style={{ display: "inline-block" }}>
                     <motion.span custom={i} variants={letterAnim} style={{ display: "inline-block" }}>{word}</motion.span>
                     {" "}

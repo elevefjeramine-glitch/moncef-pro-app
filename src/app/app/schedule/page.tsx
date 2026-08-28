@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function SchedulePage() {
   const lang = useLanguage();
-  const [schedule, setSchedule] = useState([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState('A');
   const selectedWeekRef = useRef(selectedWeek);
@@ -104,7 +104,7 @@ export default function SchedulePage() {
     loadScheduleForWeek(selectedWeek);
   };
 
-  const deleteSlot = async (id) => {
+  const deleteSlot = async (id: any) => {
     if (!window.confirm(t(lang, 'sch_confirm_delete'))) return;
     await supabase.from('schedule').delete().eq('id', id);
     loadScheduleForWeek(selectedWeek);

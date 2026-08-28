@@ -4,8 +4,10 @@
  * SVG flag icons to replace emoji flags (which don't render on Windows).
  * Usage: <FlagIcon code="fr" size={20} />
  */
+import type { ReactElement } from "react";
+
 export default function FlagIcon({ code, size = 20 }: { code: string; size?: number }) {
-  const flags: Record<string, JSX.Element> = {
+  const flags: Record<string, ReactElement> = {
     fr: (
       <svg viewBox="0 0 640 480" width={size} height={size * 0.75} style={{ borderRadius: 3, display: 'block' }}>
         <rect width="213.3" height="480" fill="#002395" />

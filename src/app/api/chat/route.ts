@@ -8,7 +8,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ggnwtszeitr
 let supabaseAdmin: any = null;
 function getSupabaseAdmin() {
   if (supabaseAdmin) return supabaseAdmin;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
   if (!key) {
     console.warn("SUPABASE_SERVICE_ROLE_KEY is missing. Using anon client (build mode).");
     return createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "");
@@ -30,7 +30,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, attempts = 2): P
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(AI_TIMEOUT_MS) });
       const retriable = res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
       if (!retriable || i === attempts - 1) return res;
-    } catch (e) {
+    } catch (e: any) {
       lastErr = e;
       if (i === attempts - 1) throw e;
     }
@@ -91,8 +91,8 @@ export async function POST(req: Request) {
     }
 
     // === PRIORITÉ : GOOGLE GEMINI (confirmé actif) → FALLBACK : GROQ ===
-    const GEMINI_KEY = process.env.GEMINI_API_KEY;
-    const GROQ_KEY = process.env.GROQ_API_KEY;
+    const GEMINI_KEY = process.env.GEMINI_API_KEY ?? '';
+    const GROQ_KEY = process.env.GROQ_API_KEY ?? '';
 
     if (!GEMINI_KEY && !GROQ_KEY) {
       return NextResponse.json({
@@ -102,91 +102,128 @@ export async function POST(req: Request) {
 
     const currentDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const enhancedSystem = `${system || ""}\n\n[INFO] La date d'aujourd'hui est le ${currentDate}. Tu es Moncef IA.`;
-
-    let assistantMessage = "";
+    // FIX: avant, l'enchaînement était `if (GEMINI_KEY) { ... } else if (GROQ_KEY) {...}`
+    // → Groq n'était appelé QUE si GEMINI_API_KEY était absente de Netlify. Comme la
+    // clé Gemini est en place, le secours ne s'exécutait jamais : un timeout ou un 429
+    // de Google faisait `throw`, on sautait directement au catch, et l'utilisateur
+    // avait une erreur alors qu'un second fournisseur était payé et disponible.
+    // Les fournisseurs sont maintenant essayés en ordre jusqu'au premier qui répond.
+    const providers: { name: string; run: () => Promise<string> }[] = [];
 
     if (GEMINI_KEY) {
-      // ✅ Google Gemini 3.6 Flash — modèle actif et confirmé fonctionnel
-      const geminiContents = messages.map((m: any) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: Array.isArray(m.content)
-          ? m.content.map((p: any) => {
-              if (p.type === 'text') return { text: p.text };
-              if (p.type === 'image_url') {
-                const dataUrl: string = p.image_url?.url || '';
-                const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
-                const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-                const base64Data = dataUrl.split(',')[1] || '';
-                return { inlineData: { mimeType, data: base64Data } };
-              }
-              return { text: '' };
-            })
-          : [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
-      }));
+      providers.push({
+        name: 'Gemini',
+        run: async () => {
+          const geminiContents = messages.map((m: any) => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: Array.isArray(m.content)
+              ? m.content.map((p: any) => {
+                  if (p.type === 'text') return { text: p.text };
+                  if (p.type === 'image_url') {
+                    const dataUrl: string = p.image_url?.url || '';
+                    const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+                    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+                    const base64Data = dataUrl.split(',')[1] || '';
+                    return { inlineData: { mimeType, data: base64Data } };
+                  }
+                  return { text: '' };
+                })
+              : [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+          }));
 
-      const response = await fetchWithTimeout(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: enhancedSystem }] },
-            contents: geminiContents
-          })
-        }
-      );
+          const response = await fetchWithTimeout(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: enhancedSystem }] },
+                contents: geminiContents
+              })
+            }
+          );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Gemini API Error:", JSON.stringify(data));
-        throw new Error(data.error?.message || `Erreur Gemini (${response.status})`);
-      }
-
-      assistantMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu générer une réponse.";
-
-    } else if (GROQ_KEY) {
-      // Fallback Groq — utiliser un modèle stable
-      const aiMessages = [
-        { role: 'system', content: enhancedSystem },
-        ...messages.map((m: any) => ({
-          role: m.role,
-          content: Array.isArray(m.content)
-            ? m.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') || '(image envoyée)'
-            : (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
-        }))
-      ];
-
-      const response = await fetchWithTimeout(`https://api.groq.com/openai/v1/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${GROQ_KEY}`,
-          "Content-Type": "application/json"
+          const data = await response.json();
+          if (!response.ok) {
+            console.error("Gemini API Error:", JSON.stringify(data));
+            throw new Error(data.error?.message || `Erreur Gemini (${response.status})`);
+          }
+          return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         },
-        body: JSON.stringify({
-          // FIX: "llama-3.1-8b-instant" n'existe plus chez Groq (l'API répond
-          // model_not_found) → le secours était mort en silence. gpt-oss-20b est
-          // le seul modèle de chat rapide encore accessible à cette clé, et il
-          // consomme des reasoning_tokens : 2048 tronquait la réponse (finish=length
-          // mesuré), d'où 8192.
-          model: "openai/gpt-oss-20b",
-          messages: aiMessages,
-          max_tokens: 8192,
-          temperature: 0.7
-        })
       });
+    }
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error?.message || `Erreur Groq (${response.status})`);
-      }
-      assistantMessage = data.choices?.[0]?.message?.content || "Désolé, je n'ai pas pu générer une réponse.";
-    } else {
+    if (GROQ_KEY) {
+      providers.push({
+        name: 'Groq',
+        run: async () => {
+          const aiMessages = [
+            { role: 'system', content: enhancedSystem },
+            ...messages.map((m: any) => ({
+              role: m.role,
+              content: Array.isArray(m.content)
+                ? m.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') || '(image envoyée)'
+                : (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
+            }))
+          ];
+
+          const response = await fetchWithTimeout(`https://api.groq.com/openai/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${GROQ_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              // FIX: "llama-3.1-8b-instant" n'existe plus chez Groq (model_not_found).
+              // gpt-oss-20b est le modèle de chat rapide encore joignable ; il consomme
+              // des reasoning_tokens, d'où 8192 (à 2048 la réponse était tronquée,
+              // finish=length mesuré sur un vrai prompt).
+              model: "openai/gpt-oss-20b",
+              messages: aiMessages,
+              max_tokens: 8192,
+              temperature: 0.7
+            })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error?.message || `Erreur Groq (${response.status})`);
+          }
+          return data.choices?.[0]?.message?.content || "";
+        },
+      });
+    }
+
+    if (providers.length === 0) {
       // FIX: sans clé IA configurée, la fonction renvoyait 200 avec une réponse
       // VIDE tout en débitant 10 crédits. On refuse explicitement la requête.
       return NextResponse.json(
         { error: "Aucun fournisseur d'IA n'est configuré (GEMINI_API_KEY / GROQ_API_KEY manquants)." },
         { status: 503 }
+      );
+    }
+
+    let assistantMessage = "";
+    const failures: string[] = [];
+    for (const provider of providers) {
+      try {
+        const text = (await provider.run()).trim();
+        if (text) {
+          assistantMessage = text;
+          break;
+        }
+        failures.push(`${provider.name}: réponse vide`);
+      } catch (e: any) {
+        failures.push(`${provider.name}: ${e?.message || 'erreur inconnue'}`);
+        console.error(`[chat] ${provider.name} a échoué, tentative du fournisseur suivant:`, e?.message);
+      }
+    }
+
+    if (!assistantMessage) {
+      // Aucun fournisseur n'a répondu : on ne débite PAS les crédits.
+      return NextResponse.json(
+        { error: "Les modèles d'IA sont momentanément indisponibles.", details: failures.join(' | ') },
+        { status: 502 }
       );
     }
 

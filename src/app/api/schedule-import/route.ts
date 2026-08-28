@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const { entries, action, authToken } = await req.json();
 
@@ -20,7 +20,7 @@ export async function POST(req) {
       if (!entries || entries.length === 0)
         return NextResponse.json({ error: "Aucune entrée à importer" }, { status: 400 });
 
-      const rows = entries.map(e => ({
+      const rows = entries.map((e: any) => ({
         user_id: user.id,
         week: e.week || 'A',
         day_index: e.day_index,
@@ -35,7 +35,7 @@ export async function POST(req) {
 
     // ---- DELETE ----
     if (action === 'delete') {
-      const ids = entries.map(e => e.id).filter(Boolean);
+      const ids = entries.map((e: any) => e.id).filter(Boolean);
       if (ids.length === 0) return NextResponse.json({ error: "Aucun ID à supprimer" }, { status: 400 });
 
       let deleted = 0;
@@ -54,7 +54,7 @@ export async function POST(req) {
       let updated = 0;
       for (const e of entries) {
         if (!e.id) continue;
-        const updates = {};
+        const updates: Record<string, any> = {};
         if (e.subj !== undefined) updates.subj = e.subj;
         if (e.time_slot !== undefined) updates.time_slot = e.time_slot;
         if (e.day_index !== undefined) updates.day_index = e.day_index;
@@ -69,7 +69,7 @@ export async function POST(req) {
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Schedule import error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

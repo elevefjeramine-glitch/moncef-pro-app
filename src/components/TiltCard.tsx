@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useState, CSSProperties, ReactNode } from "react";
+import React, { useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useSpring, animated, to } from "@react-spring/web";
 import { cn } from "@/lib/utils";
 

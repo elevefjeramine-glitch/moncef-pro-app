@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const { entries, authToken } = await req.json();
 
@@ -21,15 +21,15 @@ export async function POST(req) {
       return NextResponse.json({ error: "Utilisateur non authentifié" }, { status: 401 });
     }
 
-    const toInsert = entries.filter(e => !e.id);
-    const toUpdate = entries.filter(e => !!e.id);
+    const toInsert = entries.filter((e: any) => !e.id);
+    const toUpdate = entries.filter((e: any) => !!e.id);
 
     let inserted = 0;
     let updated = 0;
 
     // Insert new homework
     if (toInsert.length > 0) {
-      const rows = toInsert.map(e => ({
+      const rows = toInsert.map((e: any) => ({
         user_id: user.id,
         subject: e.subject,
         task: e.task,
@@ -47,7 +47,7 @@ export async function POST(req) {
 
     // Update existing homework (due_date, progression, status)
     for (const e of toUpdate) {
-      const updates = {};
+      const updates: Record<string, any> = {};
       if (e.due_date !== undefined) updates.due_date = e.due_date || null;
       if (e.progression !== undefined) updates.progression = e.progression;
       if (e.status !== undefined) {
@@ -63,7 +63,7 @@ export async function POST(req) {
 
     return NextResponse.json({ success: true, inserted, updated });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Homework import error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

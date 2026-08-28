@@ -10,11 +10,11 @@ import { marked } from "marked";
 
 export default function CommPage() {
   const lang = useLanguage();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [allUsers, setAllUsers] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [activeConv, setActiveConv] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [activeConv, setActiveConv] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMsg, setNewMsg] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -22,12 +22,12 @@ export default function CommPage() {
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [groupName, setGroupName] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [onlineUsers, setOnlineUsers] = useState({});
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
-  const myIdRef = useRef(null); // Bug #4 fix: stable ref for realtime callback closure
+  const [onlineUsers, setOnlineUsers] = useState<Record<string, any>>({});
+  const messagesEndRef = useRef<any>(null);
+  const inputRef = useRef<any>(null);
+  const myIdRef = useRef<any>(null); // Bug #4 fix: stable ref for realtime callback closure
 
   // ─── Load initial data ────────────────────────────────────
   const loadCurrentUser = useCallback(async () => {
@@ -43,12 +43,12 @@ export default function CommPage() {
     return null;
   }, []);
 
-  const loadAllUsers = useCallback(async (myId) => {
+  const loadAllUsers = useCallback(async (myId: any) => {
     const { data } = await supabase.from('users_public_profile').select('*').neq('id', myId);
     if (data) setAllUsers(data);
   }, []);
 
-  const loadConversations = useCallback(async (myId) => {
+  const loadConversations = useCallback(async (myId: any) => {
     if (!myId) return;
     
     // Load conversations through membership
@@ -84,7 +84,7 @@ export default function CommPage() {
         .limit(1);
       
       // For DMs, get the other person's info
-      let dmPartner = null;
+      let dmPartner: any = null;
       if (conv.type === 'dm' && members) {
         const otherMember = members.find(m => m.user_id !== myId);
         if (otherMember) {
@@ -94,7 +94,7 @@ export default function CommPage() {
       }
       
       // For groups, load all member user details
-      let memberDetails = [];
+      let memberDetails: any[] = [];
       if (members) {
         const memberIds = members.map(m => m.user_id);
         const { data: memberUsers } = await supabase.from('users_public_profile').select('*').in('id', memberIds);
@@ -114,14 +114,14 @@ export default function CommPage() {
     }));
     
     // Deduplicate DMs: hide duplicate empty DMs caused by previous bug
-    const uniqueEnriched = [];
+    const uniqueEnriched: any[] = [];
     const dmPartners = new Set();
     
     // We sort first so that conversations with messages (or newer ones) come first
     enriched.sort((a, b) => {
       const aDate = a.lastMessage?.created_at || a.created_at;
       const bDate = b.lastMessage?.created_at || b.created_at;
-      return new Date(bDate) - new Date(aDate);
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
     
     for (const conv of enriched) {
@@ -139,7 +139,7 @@ export default function CommPage() {
     setLoading(false);
   }, []);
 
-  const loadMessages = useCallback(async (convId) => {
+  const loadMessages = useCallback(async (convId: any) => {
     const { data } = await supabase
       .from('conversation_messages')
       .select('*')
@@ -152,9 +152,9 @@ export default function CommPage() {
 
   // ─── Init & Realtime ────────────────────────────────────
   useEffect(() => {
-    let myUserData = null;
-    let presenceChannel = null;
-    let msgChannel = null;
+    let myUserData: any = null;
+    let presenceChannel: any = null;
+    let msgChannel: any = null;
     let ignore = false;
 
     const init = async () => {
@@ -179,14 +179,14 @@ export default function CommPage() {
       presenceChannel.on('presence', { event: 'sync' }, () => {
         if (ignore) return;
         const state = presenceChannel.presenceState();
-        const online = {};
+        const online: Record<string, any> = {};
         for (const id in state) {
           online[id] = state[id][0]; // Store the full payload
         }
         setOnlineUsers(online);
       });
 
-      presenceChannel.subscribe(async (status) => {
+      presenceChannel.subscribe(async (status: any) => {
         if (status === 'SUBSCRIBED' && !ignore) {
           if (myUserData.status !== 'invisible') {
             await presenceChannel.track({ online_at: new Date().toISOString(), user_id: myUserData.id, status: myUserData.status });
@@ -303,7 +303,7 @@ export default function CommPage() {
   };
 
   // ─── Delete Message ───────────────────────────────────────
-  const deleteMessage = async (msgId) => {
+  const deleteMessage = async (msgId: any) => {
     if (!window.confirm("Supprimer ce message définitivement ?")) return;
     
     // Optimistic remove
@@ -319,7 +319,7 @@ export default function CommPage() {
   };
 
   // ─── Create DM ────────────────────────────────────────────
-  const createDM = async (targetUser) => {
+  const createDM = async (targetUser: any) => {
     if (!currentUser) return;
     
     // Check if DM already exists
@@ -409,7 +409,7 @@ export default function CommPage() {
   };
 
   // ─── Leave Group ──────────────────────────────────────────
-  const leaveGroup = async (convId) => {
+  const leaveGroup = async (convId: any) => {
     if (!currentUser) return;
     await supabase.from('conversation_members').delete()
       .eq('conversation_id', convId)
@@ -420,7 +420,7 @@ export default function CommPage() {
   };
 
   // ─── Delete Conversation ──────────────────────────────────
-  const deleteConversation = async (convId) => {
+  const deleteConversation = async (convId: any) => {
     if (!currentUser) return;
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette conversation définitivement ? Cette action est irréversible pour tous les membres.")) return;
     
@@ -436,12 +436,12 @@ export default function CommPage() {
   };
 
   // ─── Helpers ──────────────────────────────────────────────
-  const getConvName = (conv) => {
+  const getConvName = (conv: any) => {
     if (conv.type === 'dm') return conv.dmPartner ? `${conv.dmPartner.first_name || ''} ${conv.dmPartner.last_name || ''}`.trim() || 'Utilisateur' : 'Utilisateur';
     return conv.name || 'Groupe';
   };
 
-  const getConvAvatar = (conv) => {
+  const getConvAvatar = (conv: any) => {
     if (conv.type === 'dm' && conv.dmPartner) {
       if (conv.dmPartner.avatar_url) return <img src={conv.dmPartner.avatar_url} alt="" />;
       return conv.dmPartner.first_name?.[0] || '?';
@@ -449,7 +449,7 @@ export default function CommPage() {
     return conv.name?.[0] || '#';
   };
 
-  const getLastMsgPreview = (conv) => {
+  const getLastMsgPreview = (conv: any) => {
     if (!conv.lastMessage) return t(lang, 'comm_no_msgs');
     const sender = allUsers.find(u => u.id === conv.lastMessage.sender_id);
     const senderName = conv.lastMessage.sender_id === currentUser?.id 
@@ -461,35 +461,35 @@ export default function CommPage() {
     return `${senderName}: ${content}`;
   };
 
-  const formatTime = (dateStr) => {
+  const formatTime = (dateStr: any) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     const now = new Date();
-    const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     if (diffDays === 1) return t(lang, 'comm_yesterday');
     if (diffDays < 7) return d.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { weekday: 'short' });
     return d.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: '2-digit', month: '2-digit' });
   };
 
-  const formatMsgTime = (dateStr) => {
+  const formatMsgTime = (dateStr: any) => {
     const d = new Date(dateStr);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getDateLabel = (dateStr) => {
+  const getDateLabel = (dateStr: any) => {
     // Bug #7 fix: don't mutate Date objects — create new ones for comparison
     const d = new Date(dateStr);
     const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const now = new Date();
     const nDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffDays = Math.floor((nDay - dDay) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((nDay.getTime() - dDay.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return t(lang, 'comm_today');
     if (diffDays === 1) return t(lang, 'comm_yesterday');
     return new Date(dateStr).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  const getSenderName = (senderId) => {
+  const getSenderName = (senderId: any) => {
     if (senderId === currentUser?.id) return t(lang, 'comm_you');
     const user = allUsers.find(u => u.id === senderId);
     return user?.first_name || 'Utilisateur';
@@ -501,7 +501,7 @@ export default function CommPage() {
     return name.includes(searchQuery.toLowerCase());
   });
 
-  const toggleUserSelection = (user) => {
+  const toggleUserSelection = (user: any) => {
     setSelectedUsers(prev => {
       const alreadySelected = prev.find(u => u.id === user.id);
       if (alreadySelected) return prev.filter(u => u.id !== user.id);
@@ -509,7 +509,7 @@ export default function CommPage() {
     });
   };
 
-  const isUserOnline = (userId) => !!onlineUsers[userId];
+  const isUserOnline = (userId: any) => !!onlineUsers[userId];
 
   // ─── Render Helpers ───────────────────────────────────────
   const renderMessages = () => {
@@ -524,7 +524,7 @@ export default function CommPage() {
       );
     }
 
-    let lastDate = null;
+    let lastDate: any = null;
     return messages.map((msg, idx) => {
       const isMe = msg.sender_id === currentUser?.id;
       const msgDate = new Date(msg.created_at).toDateString();
@@ -555,7 +555,7 @@ export default function CommPage() {
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row' }}>
               <div className="msg-bubble ai-markdown" 
-                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.content || '')) }} 
+                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.content || '') as string) }} 
               />
               {(isMe || currentUser?.role === 'founder' || currentUser?.role === 'moderator') && !msg.id.toString().startsWith('temp-') && (
                 <motion.button 
@@ -835,7 +835,7 @@ export default function CommPage() {
             {activeConv.type === 'group' && (
               <div className="info-section">
                 <div className="info-section-title">{t(lang, 'comm_members')} ({activeConv.members?.length || 0})</div>
-                {activeConv.members?.map(member => (
+                {activeConv.members?.map((member: any) => (
                   <div key={member.id} className="info-member-item">
                     <div className="info-member-av">
                       {member.avatar_url ? <img src={member.avatar_url} alt="" /> : (member.first_name?.[0] || '?')}

@@ -11,24 +11,24 @@ import { marked } from "marked";
 
 export default function AIPage() {
   const lang = useLanguage();
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<any[]>([
     { role: 'assistant', content: '👋 Bonjour ! Je suis **Moncef IA**, votre assistant pédagogique tout-en-un.\n\nVoici ce que je peux faire :\n📚 **Devoirs** — Ajouter, modifier la progression, changer les dates, marquer comme terminé\n🗓️ **Emploi du temps** — Ajouter, supprimer ou déplacer des cours par simple description\n📅 **Événements** — Créer des rappels et événements dans votre calendrier\n📸 **Image EDT** — Analysez une photo de votre emploi du temps\n\nComment puis-je vous aider ?' }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [attachedImages, setAttachedImages] = useState([]);
-  const [scheduleData, setScheduleData] = useState(null);
-  const [homeworkData, setHomeworkData] = useState(null);
-  const [homeworkUpdateData, setHomeworkUpdateData] = useState(null);
+  const [attachedImages, setAttachedImages] = useState<any[]>([]);
+  const [scheduleData, setScheduleData] = useState<any>(null);
+  const [homeworkData, setHomeworkData] = useState<any>(null);
+  const [homeworkUpdateData, setHomeworkUpdateData] = useState<any>(null);
   const [importing, setImporting] = useState(false);
-  const [existingHomework, setExistingHomework] = useState([]);
-  const [eventData, setEventData] = useState(null);
-  const [existingSchedule, setExistingSchedule] = useState([]);
-  const [scheduleAddData, setScheduleAddData] = useState(null);
-  const [scheduleDeleteData, setScheduleDeleteData] = useState(null);
-  const [scheduleUpdateData, setScheduleUpdateData] = useState(null);
-  const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const [existingHomework, setExistingHomework] = useState<any[]>([]);
+  const [eventData, setEventData] = useState<any>(null);
+  const [existingSchedule, setExistingSchedule] = useState<any[]>([]);
+  const [scheduleAddData, setScheduleAddData] = useState<any>(null);
+  const [scheduleDeleteData, setScheduleDeleteData] = useState<any>(null);
+  const [scheduleUpdateData, setScheduleUpdateData] = useState<any>(null);
+  const messagesEndRef = useRef<any>(null);
+  const fileInputRef = useRef<any>(null);
 
   // Build localized day names from i18n keys d0..d6
   const DAYS_FR = ['d0','d1','d2','d3','d4','d5','d6'].map(k => t(lang, k));
@@ -105,12 +105,16 @@ export default function AIPage() {
     scrollToBottom();
   }, [messages, loading]);
 
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target?.files ?? []);
+    files.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        const base64 = ev.target.result;
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
+        // `result` est `string | ArrayBuffer` : on ne manipule que le cas base64 string,
+        // sinon `base64.split` plantait silencieusement sur un ArrayBuffer.
+        const raw = ev.target?.result;
+        const base64 = typeof raw === 'string' ? raw : '';
+        if (!base64.includes(',')) return;
         setAttachedImages(prev => [...prev, { 
           base64Data: base64.split(',')[1], 
           mediaType: file.type, 
@@ -123,12 +127,12 @@ export default function AIPage() {
     e.target.value = '';
   };
 
-  const removeImage = (idx) => {
+  const removeImage = (idx: any) => {
     setAttachedImages(prev => prev.filter((_, i) => i !== idx));
   };
 
   // Unified schedule operation (insert / delete / update)
-  const scheduleOp = async (entries, action, successMsg, clearFn) => {
+  const scheduleOp = async (entries: any, action: any, successMsg: any, clearFn: any) => {
     setImporting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -150,15 +154,15 @@ export default function AIPage() {
     finally { setImporting(false); }
   };
 
-  const importSchedule = async (entries) => {
+  const importSchedule = async (entries: any) => {
     await scheduleOp(
       entries, 'insert',
-      d => `✅ ${d.inserted} cours ajouté(s) ! Consultez votre Emploi du Temps. 🎉`,
+      (d: any) => `✅ ${d.inserted} cours ajouté(s) ! Consultez votre Emploi du Temps. 🎉`,
       () => setScheduleData(null)
     );
   };
 
-  const importHomework = async (entries, isUpdate = false) => {
+  const importHomework = async (entries: any, isUpdate: boolean = false) => {
     setImporting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -192,7 +196,7 @@ export default function AIPage() {
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: `❌ Erreur : ${data.error}` }]);
       }
-    } catch (err) {
+    } catch (err: any) {
       setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erreur technique lors de la mise à jour des devoirs." }]);
     } finally {
       setImporting(false);
@@ -206,7 +210,7 @@ export default function AIPage() {
     setInput("");
     
     // Build content array for OpenAI vision API (Pollinations uses OpenAI)
-    const contentParts = [];
+    const contentParts: any[] = [];
     const imagesCopy = [...attachedImages];
     
     // Add text
@@ -363,7 +367,7 @@ Exemples :
           const parsedSchedule = JSON.parse(jsonMatch[1].trim());
           setScheduleData(parsedSchedule);
           aiReply = aiReply.replace(/<SCHEDULE_JSON>[\s\S]*?<\/SCHEDULE_JSON>/, '').trim();
-        } catch (parseErr) {
+        } catch (parseErr: any) {
           console.error("Failed to parse schedule JSON:", parseErr);
         }
       }
@@ -375,7 +379,7 @@ Exemples :
           const parsedHomework = JSON.parse(hwMatch[1].trim());
           setHomeworkData(parsedHomework);
           aiReply = aiReply.replace(/<HOMEWORK_JSON>[\s\S]*?<\/HOMEWORK_JSON>/, '').trim();
-        } catch (parseErr) {
+        } catch (parseErr: any) {
           console.error("Failed to parse homework JSON:", parseErr);
         }
       }
@@ -387,7 +391,7 @@ Exemples :
           const parsedUpdate = JSON.parse(hwUpdateMatch[1].trim());
           setHomeworkUpdateData(parsedUpdate);
           aiReply = aiReply.replace(/<HOMEWORK_UPDATE_JSON>[\s\S]*?<\/HOMEWORK_UPDATE_JSON>/, '').trim();
-        } catch (parseErr) {
+        } catch (parseErr: any) {
           console.error("Failed to parse homework update JSON:", parseErr);
         }
       }
@@ -399,7 +403,7 @@ Exemples :
           const parsedEvents = JSON.parse(eventMatch[1].trim());
           setEventData(parsedEvents);
           aiReply = aiReply.replace(/<EVENT_JSON>[\s\S]*?<\/EVENT_JSON>/, '').trim();
-        } catch (parseErr) {
+        } catch (parseErr: any) {
           console.error("Failed to parse event JSON:", parseErr);
         }
       }
@@ -410,7 +414,7 @@ Exemples :
         try {
           setScheduleAddData(JSON.parse(schedAddMatch[1].trim()));
           aiReply = aiReply.replace(/<SCHEDULE_ADD_JSON>[\s\S]*?<\/SCHEDULE_ADD_JSON>/, '').trim();
-        } catch (e) { console.error('SCHEDULE_ADD_JSON parse error', e); }
+        } catch (e: any) { console.error('SCHEDULE_ADD_JSON parse error', e); }
       }
 
       // Schedule DELETE
@@ -419,7 +423,7 @@ Exemples :
         try {
           setScheduleDeleteData(JSON.parse(schedDelMatch[1].trim()));
           aiReply = aiReply.replace(/<SCHEDULE_DELETE_JSON>[\s\S]*?<\/SCHEDULE_DELETE_JSON>/, '').trim();
-        } catch (e) { console.error('SCHEDULE_DELETE_JSON parse error', e); }
+        } catch (e: any) { console.error('SCHEDULE_DELETE_JSON parse error', e); }
       }
 
       // Schedule UPDATE
@@ -428,11 +432,11 @@ Exemples :
         try {
           setScheduleUpdateData(JSON.parse(schedUpdMatch[1].trim()));
           aiReply = aiReply.replace(/<SCHEDULE_UPDATE_JSON>[\s\S]*?<\/SCHEDULE_UPDATE_JSON>/, '').trim();
-        } catch (e) { console.error('SCHEDULE_UPDATE_JSON parse error', e); }
+        } catch (e: any) { console.error('SCHEDULE_UPDATE_JSON parse error', e); }
       }
       
       setMessages(prev => [...prev, { role: 'assistant', content: aiReply }]);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: "Désolé, une erreur technique est survenue." }]);
     } finally {
@@ -499,7 +503,7 @@ Exemples :
                     {/* Display attached images */}
                     {msg.images && msg.images.length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {msg.images.map((img, imgIdx) => (
+                        {msg.images.map((img: any, imgIdx: any) => (
                           <img key={imgIdx} src={img} alt="attached" style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', objectFit: 'cover' }} />
                         ))}
                       </div>
@@ -518,7 +522,7 @@ Exemples :
                       whiteSpace: 'normal',
                       wordBreak: 'break-word'
                     }}
-                    dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '')) : msg.content }}
+                    dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '') as string) : msg.content }}
                   />
                   </div>
 
@@ -560,7 +564,7 @@ Exemples :
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', marginBottom: '16px' }}>
-              {scheduleData.map((entry, idx) => (
+              {scheduleData.map((entry: any, idx: any) => (
                 <div key={idx} style={{ display: 'flex', gap: '12px', padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', fontSize: '13px', color: '#fff' }}>
                   <span style={{ color: 'var(--a)', fontWeight: 600, minWidth: '80px' }}>{DAYS_FR[entry.day_index]}</span>
                   <span style={{ color: 'rgba(255,255,255,0.6)', minWidth: '110px' }}>{entry.time_slot}</span>
@@ -606,7 +610,7 @@ Exemples :
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', marginBottom: '16px' }}>
-              {homeworkData.map((entry, idx) => (
+              {homeworkData.map((entry: any, idx: any) => (
                 <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', fontSize: '13px', color: '#fff', alignItems: 'center' }}>
                   <span style={{ 
                     color: entry.priority === 'urgent' ? '#ff4757' : entry.priority === 'low' ? '#2ed573' : '#ffa502', 
@@ -656,7 +660,7 @@ Exemples :
               <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginLeft: 'auto' }}>{homeworkUpdateData.length} {t(lang,'ai_modifications')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '160px', overflowY: 'auto', marginBottom: '16px' }}>
-              {homeworkUpdateData.map((entry, idx) => (
+              {homeworkUpdateData.map((entry: any, idx: any) => (
                 <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', fontSize: '13px', color: '#fff', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ color: 'var(--a)', fontWeight: 700, fontSize: '12px' }}>
                     {existingHomework.find(h => h.id === entry.id)?.subject || 'Devoir'}
@@ -697,7 +701,7 @@ Exemples :
               <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginLeft: 'auto' }}>{scheduleAddData.length} {t(lang,'ai_courses')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto', marginBottom: '14px' }}>
-              {scheduleAddData.map((s, i) => (
+              {scheduleAddData.map((s: any, i: any) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', padding: '8px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: '10px', fontSize: '13px', color: '#fff', alignItems: 'center' }}>
                   <span style={{ color: 'var(--a)', fontWeight: 700, minWidth: 60 }}>Sem. {s.week}</span>
                   <span style={{ color: 'rgba(255,255,255,0.6)', minWidth: 70 }}>{DAYS_FR[s.day_index]}</span>
@@ -708,7 +712,7 @@ Exemples :
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={importing}
-                onClick={() => scheduleOp(scheduleAddData, 'insert', d => `✅ ${d.inserted} cours ajouté(s) à l'EDT !`, () => setScheduleAddData(null))}
+                onClick={() => scheduleOp(scheduleAddData, 'insert', (d: any) => `✅ ${d.inserted} cours ajouté(s) à l'EDT !`, () => setScheduleAddData(null))}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'var(--a)', color: '#000', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}>
                 <Check size={18} /> {importing ? t(lang,'ai_sch_adding') : t(lang,'btn_confirm')}
               </motion.button>
@@ -730,7 +734,7 @@ Exemples :
               <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginLeft: 'auto' }}>{scheduleDeleteData.length} {t(lang,'ai_courses')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto', marginBottom: '14px' }}>
-              {scheduleDeleteData.map((s, i) => {
+              {scheduleDeleteData.map((s: any, i: any) => {
                 const slot = existingSchedule.find(e => e.id === s.id);
                 return (
                   <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,71,87,0.08)', borderRadius: '10px', fontSize: '13px', color: '#fff', border: '1px solid rgba(255,71,87,0.2)' }}>
@@ -741,7 +745,7 @@ Exemples :
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={importing}
-                onClick={() => scheduleOp(scheduleDeleteData, 'delete', d => `✅ ${d.deleted} cours supprimé(s) de l'EDT !`, () => setScheduleDeleteData(null))}
+                onClick={() => scheduleOp(scheduleDeleteData, 'delete', (d: any) => `✅ ${d.deleted} cours supprimé(s) de l'EDT !`, () => setScheduleDeleteData(null))}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4757', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}>
                 <Check size={18} /> {importing ? t(lang,'ai_sch_deleting') : t(lang,'ai_sch_confirm_delete')}
               </motion.button>
@@ -763,7 +767,7 @@ Exemples :
               <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginLeft: 'auto' }}>{scheduleUpdateData.length} {t(lang,'ai_modifications')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto', marginBottom: '14px' }}>
-              {scheduleUpdateData.map((s, i) => {
+              {scheduleUpdateData.map((s: any, i: any) => {
                 const slot = existingSchedule.find(e => e.id === s.id);
                 return (
                   <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,165,2,0.06)', borderRadius: '10px', fontSize: '13px', color: '#fff', border: '1px solid rgba(255,165,2,0.2)' }}>
@@ -778,7 +782,7 @@ Exemples :
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={importing}
-                onClick={() => scheduleOp(scheduleUpdateData, 'update', d => `✅ ${d.updated} cours modifié(s) dans l'EDT !`, () => setScheduleUpdateData(null))}
+                onClick={() => scheduleOp(scheduleUpdateData, 'update', (d: any) => `✅ ${d.updated} cours modifié(s) dans l'EDT !`, () => setScheduleUpdateData(null))}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ffa502', color: '#000', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}>
                 <Check size={18} /> {importing ? t(lang,'ai_sch_updating') : t(lang,'ai_sch_confirm_update')}
               </motion.button>
@@ -802,11 +806,11 @@ Exemples :
               <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginLeft: 'auto' }}>{eventData.length} {t(lang,'ai_events')}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '160px', overflowY: 'auto', marginBottom: '16px' }}>
-              {eventData.map((ev, idx) => {
-                const catIcons = { exam: '📝', homework: '📚', meeting: '🤝', trip: '🚌', sport: '⚽', reminder: '🔔', general: '📌' };
+              {eventData.map((ev: any, idx: any) => {
+                const catIcons: Record<string, string> = { exam: '📝', homework: '📚', meeting: '🤝', trip: '🚌', sport: '⚽', reminder: '🔔', general: '📌' };
                 return (
                   <div key={idx} style={{ display: 'flex', gap: '12px', padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', fontSize: '13px', color: '#fff', alignItems: 'center' }}>
-                    <span style={{ fontSize: '18px' }}>{catIcons[ev.category] || '📌'}</span>
+                    <span style={{ fontSize: '18px' }}>{catIcons[ev.category as string] || '📌'}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700 }}>{ev.title}</div>
                       {ev.description && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{ev.description}</div>}

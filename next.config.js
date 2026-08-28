@@ -1,18 +1,11 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  typescript: {
-    // Choix ASSUMÉ, pas un oubli. `npm run typecheck` remonte 457 erreurs de
-    // typage héritées du projet (dont ~250 propagées par des useState([]) non
-    // typés qui deviennent `never`). Faire échouer le build Netlify pour ça
-    // serait un risque direct en production ; le chantier est donc tracé à part.
-    //
-    // Ce qui a changé quand même, et qui compte : `next.config.mjs` — un fichier
-    // VIDE — masquait ce fichier (Next résout .mjs AVANT .js). Tout réglage placé
-    // ici était donc peut-être jamais lu. Le doublon est supprimé : ce réglage est
-    // désormais réellement appliqué. `npm run typecheck` et `npm run check:i18n`
-    // sont les garde-fous, à brancher en CI plutôt qu'au build.
-    ignoreBuildErrors: true,
-  },
-}
+// Aucun réglage `typescript.ignoreBuildErrors` ici, VOLONTAIREMENT (retiré le 28/08/2026
+// après la fin du chantier de typage : 457 erreurs héritées -> 0). Next typecheck donc le
+// projet à chaque build — si une erreur de type revient, le déploiement échoue, c'est le but.
+//
+// Piège historique à connaître : un `next.config.mjs` VIDE masquait ce fichier (Next résout
+// .mjs AVANT .js), donc tout réglage placé ici n'était peut-être jamais lu. Le doublon est
+// supprimé. Garde-fous locaux : `npm run typecheck` et `npm run check:i18n`.
+const nextConfig = {}
 
 module.exports = nextConfig

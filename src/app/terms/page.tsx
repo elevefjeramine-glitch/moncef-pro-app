@@ -131,7 +131,7 @@ export default function TermsPage() {
               { icon: AlertOctagon, title: t.section4_title, desc: t.section4_desc }
             ].map((section, idx) => (
               <div key={idx} className="glass-card" style={{ padding: "30px", border: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: "20px", alignItems: "flex-start", borderRadius: "20px" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyValue: "center", justifyContent: "center", color: "var(--p)", flexShrink: 0 }}>
+                <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--p)", flexShrink: 0 }}>
                   <section.icon size={22} />
                 </div>
                 <div>

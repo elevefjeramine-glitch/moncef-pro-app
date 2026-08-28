@@ -20,7 +20,7 @@ const SECTION_STYLE = {
 
 const DIVIDER = { height: '1px', background: 'rgba(255,255,255,0.06)', margin: '20px 0' };
 
-function Field({ icon: Icon, label, badge, children }) {
+function Field({ icon: Icon, label, badge, children }: any) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
@@ -71,7 +71,7 @@ export default function AuthPage() {
   }, [lang]);
 
   // Reset form on tab switch
-  const switchTab = (next) => {
+  const switchTab = (next: any) => {
     setTab(next);
     setErrorMsg("");
     setSuccessMsg("");
@@ -132,7 +132,7 @@ export default function AuthPage() {
     setLoading(false);
   };
 
-  const handleOAuth = async (provider) => {
+  const handleOAuth = async (provider: any) => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
