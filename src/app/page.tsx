@@ -24,6 +24,257 @@ if (typeof window !== "undefined") {
 }
 
 /* ─── Variants Framer Motion ─── */
+// Les deux sections basses de la vitrine (rôles, pile technique) et le pied de page étaient écrits en dur en français, alors que la grille de fonctionnalités, elle, était déjà déclinée en cinq langues. Même régime que les pages publiques : dictionnaire local, repli sur le français si la langue manque.
+//
+// Trois affirmations retirées au passage, parce qu'elles ne tenaient pas devant le code :
+//  - « messagerie cryptée » : les messages partent en HTTPS, pas chiffrés de bout en bout ;
+//  - « confidentialité absolue des données utilisateur » : la RLS cloisonne par compte, l'opérateur du service peut quand même lire ;
+//  - « Crédits rechargés périodiquement » : remplacé par le chiffre que le code applique (700 au premier appel d'une journée UTC, jamais de baisse).
+type VitrineTexte = { title: string; desc: string };
+type VitrineRole = VitrineTexte & { badge: string };
+// Tuples et non tableaux : le projet compile avec noUncheckedIndexedAccess, donc
+// `roles[0]` sur un tableau serait « possibly undefined ». Or ces trois rôles et ces
+// quatre blocs sont exactement ce que la page affiche — s'il en manque un, le build
+// doit échouer plutôt que rendre un `undefined` à l'écran.
+const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
+  roles_title: string;
+  stack_title: string;
+  roles: [VitrineRole, VitrineRole, VitrineRole];
+  stack: [VitrineTexte, VitrineTexte, VitrineTexte, VitrineTexte];
+  tagline: string;
+  links: [string, string, string, string];
+}> = {
+  fr: {
+    "roles_title": "Grades & Privilèges",
+    "stack_title": "Technologies & Outils",
+    "roles": [
+      {
+        "title": "Utilisateur Normal",
+        "badge": "700 cr.",
+        "desc": "Accès à l'IA pédagogique, gestion de l'emploi du temps individuel (Semaines A/B), messagerie interne et suivi des devoirs. Le solde remonte à 700 crédits au premier appel de chaque journée UTC ; il n'est jamais réduit quand il est plus haut."
+      },
+      {
+        "title": "Modérateur",
+        "badge": "Illimité",
+        "desc": "Accès à la console d'administration ALPHA. Privilèges de modération : modification des profils utilisateurs (sauf Fondateur) et suppression des devoirs/contenus abusifs pour maintenir l'intégrité de la communauté."
+      },
+      {
+        "title": "Fondateur Alpha",
+        "badge": "Propriétaire",
+        "desc": "Contrôle absolu sur l'écosystème. Privilèges d'administration globaux, consultation des statistiques de base de données en temps réel, réinitialisation de tokens et édition de rôles (promotions de modérateurs)."
+      }
+    ],
+    "stack": [
+      {
+        "title": "Supabase (PostgreSQL & Realtime)",
+        "desc": "Base de données PostgreSQL protégée par des politiques de niveau de ligne (RLS) : chaque compte ne lit que ses propres lignes. Pas de chiffrement de bout en bout pour autant — le contenu reste lisible par l'opérateur du service, comme l'écrit la politique de confidentialité. Abonnements WebSocket Postgres pour synchroniser calendriers et messages en temps réel."
+      },
+      {
+        "title": "Netlify — hébergement et CDN",
+        "desc": "Le site est servi et distribué par Netlify (en-tête `server: Netlify`, mesuré le 28 août 2026), avec HTTPS/TLS sur chaque route et les variables d'environnement conservées côté serveur. Aucune couche Cloudflare n'est en place sur ce domaine : la protection anti-DDoS et le WAF sont ceux de Netlify, pas les nôtres."
+      },
+      {
+        "title": "Deux fournisseurs, un secours",
+        "desc": "Le serveur appelle `gemini-3.6-flash` (Google AI) et bascule sur `openai/gpt-oss-20b` via Groq si le premier ne répond pas. Aucun autre modèle n'est branché : Claude 3.5 Sonnet, Gemini 2.5 Flash et Llama 3.3, cités ici auparavant, n'ont jamais été appelés par le code."
+      },
+      {
+        "title": "Next.js (App Router) & Framer Motion",
+        "desc": "Architecture moderne avec rendu hybride pour des performances maximales. Animations fluides et transitions d'état animées par Framer Motion à 60 images par seconde pour une expérience utilisateur premium."
+      }
+    ],
+    "tagline": "Propulsé par les dernières avancées en Intelligence Artificielle pour une éducation sans frontière.",
+    "links": [
+      "Confidentialité",
+      "Termes",
+      "API",
+      "Status"
+    ]
+  },
+  en: {
+    "roles_title": "Grades & Privileges",
+    "stack_title": "Technologies & Tools",
+    "roles": [
+      {
+        "title": "Standard User",
+        "badge": "700 cr.",
+        "desc": "Access to the teaching AI, personal timetable (A/B weeks), internal messaging and homework tracking. The balance returns to 700 credits on the first call of each UTC day, and is never lowered when it is higher."
+      },
+      {
+        "title": "Moderator",
+        "badge": "Unlimited",
+        "desc": "Access to the ALPHA administration console. Moderation privileges: editing user profiles (except the Founder's) and deleting abusive homework or content to keep the community sound."
+      },
+      {
+        "title": "Alpha Founder",
+        "badge": "Owner",
+        "desc": "Full control of the ecosystem: global administration, real-time database statistics, credit resets and role editing (moderator promotions)."
+      }
+    ],
+    "stack": [
+      {
+        "title": "Supabase (PostgreSQL & Realtime)",
+        "desc": "PostgreSQL database guarded by row-level security (RLS): each account reads only its own rows. That is not end-to-end encryption — the service operator can still read the content, as the privacy policy says. Postgres WebSocket subscriptions sync timetables and messages in real time."
+      },
+      {
+        "title": "Netlify — hosting and CDN",
+        "desc": "The site is served and distributed by Netlify (`server: Netlify` header, measured 2026-08-28), with HTTPS/TLS on every route and environment variables kept server-side. There is no Cloudflare layer on this domain: the anti-DDoS and WAF protection is Netlify's, not ours."
+      },
+      {
+        "title": "Two providers, one fallback",
+        "desc": "The server calls `gemini-3.6-flash` (Google AI) and falls back to `openai/gpt-oss-20b` via Groq when the first one fails to answer. No other model is wired: Claude 3.5 Sonnet, Gemini 2.5 Flash and Llama 3.3, listed here before, were never called by the code."
+      },
+      {
+        "title": "Next.js (App Router) & Framer Motion",
+        "desc": "Modern architecture with hybrid rendering for maximum performance. Smooth animations and state transitions driven by Framer Motion at 60 frames per second."
+      }
+    ],
+    "tagline": "Built on current AI models so that schooling need not stop at a border.",
+    "links": [
+      "Privacy",
+      "Terms",
+      "API",
+      "Status"
+    ]
+  },
+  es: {
+    "roles_title": "Grados y privilegios",
+    "stack_title": "Tecnologías y herramientas",
+    "roles": [
+      {
+        "title": "Usuario normal",
+        "badge": "700 cr.",
+        "desc": "Acceso a la IA pedagógica, gestión del horario personal (semanas A/B), mensajería interna y seguimiento de deberes. El saldo vuelve a 700 créditos con la primera llamada de cada día UTC y nunca se reduce si es mayor."
+      },
+      {
+        "title": "Moderador",
+        "badge": "Ilimitado",
+        "desc": "Acceso a la consola de administración ALPHA. Privilegios de moderación: editar perfiles de usuario (excepto el del Fundador) y borrar deberes o contenidos abusivos para cuidar la comunidad."
+      },
+      {
+        "title": "Fundador Alpha",
+        "badge": "Propietario",
+        "desc": "Control total del ecosistema: administración global, estadísticas de la base de datos en tiempo real, reinicio de créditos y edición de roles (promociones a moderador)."
+      }
+    ],
+    "stack": [
+      {
+        "title": "Supabase (PostgreSQL y Realtime)",
+        "desc": "Base de datos PostgreSQL protegida por políticas de nivel de fila (RLS): cada cuenta sólo lee sus propias filas. Eso no es cifrado de extremo a extremo — quien opera el servicio puede leer el contenido, como dice la política de privacidad. Suscripciones WebSocket de Postgres para sincronizar horarios y mensajes en tiempo real."
+      },
+      {
+        "title": "Netlify — alojamiento y CDN",
+        "desc": "El sitio lo sirve y distribuye Netlify (cabecera `server: Netlify`, medida el 28/08/2026), con HTTPS/TLS en cada ruta y variables de entorno en el servidor. No hay capa de Cloudflare en este dominio: la protección anti-DDoS y el WAF son los de Netlify, no los nuestros."
+      },
+      {
+        "title": "Dos proveedores, un respaldo",
+        "desc": "El servidor llama a `gemini-3.6-flash` (Google AI) y cambia a `openai/gpt-oss-20b` vía Groq si el primero no responde. Ningún otro modelo está conectado: Claude 3.5 Sonnet, Gemini 2.5 Flash y Llama 3.3, citados aquí antes, nunca fueron llamados por el código."
+      },
+      {
+        "title": "Next.js (App Router) y Framer Motion",
+        "desc": "Arquitectura moderna con renderizado híbrido para máximo rendimiento. Animaciones y transiciones de estado movidas por Framer Motion a 60 fotogramas por segundo."
+      }
+    ],
+    "tagline": "Impulsado por los modelos actuales para que estudiar no dependa de una frontera.",
+    "links": [
+      "Privacidad",
+      "Términos",
+      "API",
+      "Estado"
+    ]
+  },
+  ar: {
+    "roles_title": "الرُتب والصلاحيات",
+    "stack_title": "التقنيات والأدوات",
+    "roles": [
+      {
+        "title": "مستخدم عادي",
+        "badge": "700 اعتماد",
+        "desc": "الوصول إلى الذكاء التعليمي، وإدارة جدول الحصص الشخصي (أسابيع أ/ب)، والمراسلة الداخلية، وتتبع الواجبات. يعود الرصيد إلى 700 اعتماد عند أول استدعاء في كل يوم بتوقيت UTC، ولا يُنقص إذا كان أعلى."
+      },
+      {
+        "title": "مشرف",
+        "badge": "غير محدود",
+        "desc": "الوصول إلى وحدة التحكم ALPHA وصلاحيات الإشراف: تعديل ملفات المستخدمين (باستثناء المؤسس) وحذف الواجبات أو المحتوى المسيء لحماية المجتمع."
+      },
+      {
+        "title": "المؤسس ألفا",
+        "badge": "مالك",
+        "desc": "تحكم كامل في النظام: إدارة عامة، وإحصاءات قاعدة البيانات في الوقت الفعلي، وإعادة ضبط الاعتمادات وتعديل الأدوار."
+      }
+    ],
+    "stack": [
+      {
+        "title": "Supabase (PostgreSQL و Realtime)",
+        "desc": "قاعدة بيانات PostgreSQL محمية بسياسات مستوى الصف (RLS): كل حساب لا يقرأ إلا صفوفه. هذا ليس تشفيراً من الطرف إلى الطرف — ما زال مشغّل الخدمة يستطيع قراءة المحتوى، كما تقول سياسة الخصوصية. اشتراكات WebSocket لمزامنة الجداول والرسائل فوراً."
+      },
+      {
+        "title": "Netlify — الاستضافة وشبكة التوصيل",
+        "desc": "الموقع يقدّمه ويوزّعه Netlify (الترويسة `server: Netlify`، مقيسة في 2026-08-28)، مع HTTPS/TLS على كل مسار ومتغيّرات البيئة محفوظة في الخادم. لا توجد طبقة Cloudflare على هذا النطاق: حماية DDoS وجدار WAF هما الخاصان بـ Netlify."
+      },
+      {
+        "title": "مزوّدان وملاذ واحد",
+        "desc": "الخادم يستدعي `gemini-3.6-flash` (Google AI) ويتحوّل إلى `openai/gpt-oss-20b` عبر Groq إذا لم يجب الأول. لا يوجد نموذج آخر موصول: Claude 3.5 Sonnet وGemini 2.5 Flash وLlama 3.3 التي ذُكرت هنا سابقاً لم يستدعها الكود أبداً."
+      },
+      {
+        "title": "Next.js (App Router) و Framer Motion",
+        "desc": "بنية حديثة بتحويل هجين لأداء أقصى، وحركات وانتقالات الحالة يحرّكها Framer Motion بستّين صورة في الثانية."
+      }
+    ],
+    "tagline": "مدعوم بنماذج الذكاء الحالية حتى لا يتوقّف التعلّم عند حدّ جغرافي.",
+    "links": [
+      "الخصوصية",
+      "الشروط",
+      "API",
+      "الحالة"
+    ]
+  },
+  zh: {
+    "roles_title": "等级与权限",
+    "stack_title": "技术与工具",
+    "roles": [
+      {
+        "title": "普通用户",
+        "badge": "700 额度",
+        "desc": "使用教学 AI、管理个人课表（A/B 周）、站内消息与作业记录。每个 UTC 日的首次调用会把余额补足到 700 额度；若余额更高则不会被削减。"
+      },
+      {
+        "title": "管理员",
+        "badge": "无限",
+        "desc": "可进入 ALPHA 管理台，拥有监督权限：修改用户资料（创始人除外）、删除违规作业或内容，以维护社区秩序。"
+      },
+      {
+        "title": "Alpha 创始人",
+        "badge": "所有者",
+        "desc": "对整个系统的完全控制：全局管理、实时数据库统计、额度重置、角色调整（晋升管理员）以及直连 AI 控制台。"
+      }
+    ],
+    "stack": [
+      {
+        "title": "Supabase（PostgreSQL 与 Realtime）",
+        "desc": "PostgreSQL 数据库由行级安全策略（RLS）保护：每个账户只能读取自己的数据行。这不是端到端加密——服务运营方仍可读取内容，隐私政策已写明。Postgres 的 WebSocket 订阅用于实时同步课表与消息。"
+      },
+      {
+        "title": "Netlify — 托管与 CDN",
+        "desc": "站点由 Netlify 提供并分发（响应头 `server: Netlify`，2026-08-28 实测），每条路由都走 HTTPS/TLS，环境变量保存在服务端。此域名没有 Cloudflare 层：DDoS 防护与 WAF 属于 Netlify，而不是我们。"
+      },
+      {
+        "title": "两个供应商，一个备援",
+        "desc": "服务器调用 `gemini-3.6-flash`（Google AI），若其未响应则改用 Groq 上的 `openai/gpt-oss-20b`。没有接入其他模型：此前写在这里的 Claude 3.5 Sonnet、Gemini 2.5 Flash 与 Llama 3.3 从未被代码调用。"
+      },
+      {
+        "title": "Next.js（App Router）与 Framer Motion",
+        "desc": "采用混合渲染的现代架构以取得最佳性能；过渡与状态动画由 Framer Motion 驱动，每秒 60 帧。"
+      }
+    ],
+    "tagline": "由当前的 AI 模型驱动，让学习不受地理边界限制。",
+    "links": [
+      "隐私",
+      "条款",
+      "API",
+      "状态"
+    ]
+  }
+};
 const stagger: any = {
   hidden: { opacity: 0 },
   show:   { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.4 } }
@@ -116,6 +367,7 @@ export default function Home() {
     setShowLangSelector(false);
   };
 
+  const v = VITRINE[lang as keyof typeof VITRINE] ?? VITRINE.fr;
   const heroTitle = t(lang, "hero_title");
   const titleWords = heroTitle.split(" ");
   const lastTwoWords = titleWords.slice(-2).join(" ");
@@ -315,43 +567,43 @@ export default function Home() {
             {(() => {
               const featuresData = {
                 fr: [
-                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir. Une IA capable de comprendre vos cours, corriger vos travaux et expliquer les concepts les plus denses.", list: ["Analyse Sémantique", "Correction Prédictive", "Révisions Adaptatives"] },
-                  { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Ton emploi du temps s'importe en une fois — semaines A/B, jours, matières, horaires — et se retrouve sur tous tes appareils.", list: ["Semaines A/B", "Sync Cloud temps réel", "Alertes d'Échéance"] },
-                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que la route d'import enregistre. Priorité et échéance trient la suite.", list: ["Analyse d'image par l'IA", "Score de Priorité", "Rappels d'Échéance"] },
+                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir : une IA à qui tu soumets un cours, un devoir ou un concept dense, et qui répond.", list: ["Conversation libre sur tes cours", "Analyse de la photo d’un énoncé", "10 crédits par réponse"] },
+                  { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Ton emploi du temps s'importe en une fois — semaines A/B, jours, matières, horaires — et se retrouve sur tous tes appareils.", list: ["Semaines A/B", "Sync Cloud temps réel", "Aucune alerte envoyée"] },
+                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que la route d'import enregistre.", list: ["Photo de l'énoncé analysée", "priority et status rangés tels quels", "Aucun tri, aucun rappel"] },
                   { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Une messagerie interne pour le travail en groupe : salons, messages privés et pièces jointes, cloisonnés par compte.", list: ["Salons de Travail", "Messages Privés", "Partage de Fichiers"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Console IA Directe", "Analytics Avancés", "Gestion Globale"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Statistiques et comptes en direct", "Analytics avancés", "Aucune console IA dans ce panneau"] },
                   { icon: <Star size={28} />, title: "Modération 2.0", desc: "Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA.", list: ["Gestion des Rôles", "Recharge et suppression de comptes", "Accès founder et moderator seulement"] }
                 ],
                 en: [
-                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge. An AI capable of understanding your courses, correcting your work and explaining the densest concepts.", list: ["Semantic Analysis", "Predictive Correction", "Adaptive Revisions"] },
-                  { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Your timetable is imported in one pass — A/B weeks, days, subjects, time slots — and shows up on all your devices.", list: ["A/B Weeks", "Real-time Cloud Sync", "Due-Date Alerts"] },
-                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import route stores. Priority and due date sort what comes next.", list: ["AI Image Analysis", "Priority Score", "Due-Date Reminders"] },
+                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge: an AI you hand a course, a piece of work or a dense concept, and that answers.", list: ["Open conversation about your courses", "Analysis of a question photo", "10 credits per answer"] },
+                  { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Your timetable is imported in one pass — A/B weeks, days, subjects, time slots — and shows up on all your devices.", list: ["A/B Weeks", "Real-time cloud sync", "No alert is sent"] },
+                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import route stores.", list: ["Question photo analysed", "priority and status stored as given", "No sorting, no reminders"] },
                   { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Internal messaging for group work: rooms, private messages and attachments, separated per account.", list: ["Work Rooms", "Private DMs", "File Sharing"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Direct AI Console", "Advanced Analytics", "Global Management"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Live stats and accounts", "Advanced analytics", "No AI console in this panel"] },
                   { icon: <Star size={28} />, title: "Moderation 2.0", desc: "Sophisticated tools to maintain the integrity and security of the Moncef IA community.", list: ["Role Management", "Top-up and account deletion", "founder and moderator access only"] }
                 ],
                 es: [
-                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento. Una IA capaz de entender tus cursos, corregir tus trabajos y explicar los conceptos más densos.", list: ["Análisis Semántico", "Corrección Predictiva", "Revisiones Adaptativas"] },
-                  { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Olvida la gestión manual. Tu horario se auto-optimiza según tus prioridades y ciclos de concentración.", list: ["Semanas A/B Dinámicas", "Sincronización en la Nube", "Alertas Neuronales"] },
-                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de tareas que la ruta de importación guarda. Prioridad y fecha ordenan lo demás.", list: ["Análisis de Imagen por IA", "Puntuación de Prioridad", "Recordatorios de Fecha"] },
+                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento: una IA a la que entregas un curso, un trabajo o un concepto denso, y responde.", list: ["Conversación libre sobre tus cursos", "Análisis de la foto de un enunciado", "10 créditos por respuesta"] },
+                  { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Tu horario se importa de una vez — semanas A/B, días, materias y franjas — y aparece en todos tus dispositivos.", list: ["Semanas A/B", "Sincronización en la nube", "No se envía ninguna alerta"] },
+                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de deberes que la ruta de importación guarda.", list: ["Foto del enunciado analizada", "priority y status guardados tal cual", "Sin orden ni recordatorios"] },
                   { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Mensajería interna para trabajar en grupo: salas, mensajes privados y adjuntos, separados por cuenta.", list: ["Salas de Trabajo", "Mensajes Privados", "Compartir Archivos"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Consola IA Directa", "Analíticas Avanzadas", "Gestión Global"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Estadísticas y cuentas en vivo", "Analítica avanzada", "Ninguna consola de IA aquí"] },
                   { icon: <Star size={28} />, title: "Moderación 2.0", desc: "Herramientas sofisticadas para mantener la integridad y seguridad de la comunidad Moncef IA.", list: ["Gestión de Roles", "Recarga y borrado de cuentas", "Solo acceso founder y moderator"] }
                 ],
                 ar: [
-                  { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك. ذكاء اصطناعي قادر على فهم دروسك وتصحيح أعمالك وشرح أعقد المفاهيم.", list: ["تحليل دلالي", "تصحيح تنبؤي", "مراجعات تكيفية"] },
-                  { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "يُستورد جدولك دفعة واحدة — أسابيع أ/ب، الأيام، المواد والتوقيتات — ويظهر على كل أجهزتك.", list: ["أسابيع أ/ب", "مزامنة سحابية فورية", "تنبيهات الأجل"] },
-                  { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات تحفظها مسار الاستيراد. الأهمية والأجل يرتّبان الباقي.", list: ["تحليل الصور بالذكاء الاصطناعي", "نقاط الأولوية", "تذكيرات الأجل"] },
+                  { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك: ذكاء اصطناعي تمنحه درساً أو عملاً أو مفهوماً معقداً فيجيب.", list: ["محادثة حرة حول دروسك", "تحليل صورة نصّ التمرين", "10 اعتمادات لكل ردّ"] },
+                  { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "يُستورد جدولك دفعة واحدة — أسابيع أ/ب، الأيام، المواد والتوقيتات — ويظهر على كل أجهزتك.", list: ["أسابيع أ/ب", "مزامنة سحابية فورية", "لا تُرسل أي تنبيهات"] },
+                  { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات تحفظها مسار الاستيراد.", list: ["تحليل صورة نصّ التمرين", "priority وstatus يُحفظان كما هما", "بلا ترتيب ولا تذكيرات"] },
                   { icon: <MessageSquare size={28} />, title: "اتصالات كورتيكس", desc: "مراسلة داخلية للعمل الجماعي: غرف ورسائل خاصة ومرفقات، مفصولة لكل حساب.", list: ["غرف عمل", "رسائل خاصة", "مشاركة الملفات"] },
-                  { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["وحدة تحكم ذكاء مباشر", "تحليلات متقدمة", "إدارة شاملة"] },
+                  { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["إحصاءات وحسابات مباشرة", "تحليلات متقدمة", "لا توجد وحدة تحكم IA هنا"] },
                   { icon: <Star size={28} />, title: "إشراف 2.0", desc: "أدوات متطورة للحفاظ على نزاهة وأمان مجتمع ذكاء منصف.", list: ["إدارة الأدوار", "إعادة تعبئة وحذف الحسابات", "الوصول founder و moderator فقط"] }
                 ],
                 zh: [
-                  { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心。能够理解您的课程、批改作业并解释最复杂的概念的AI。", list: ["语义分析", "预测性批改", "适应性复习"] },
-                  { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "课程表一次性导入——A/B 周、星期、科目与时间——并在你的所有设备上同步显示。", list: ["A/B 周", "实时云同步", "截止提醒"] },
-                  { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入接口写入；再按优先级与截止日期排序。", list: ["AI 图像分析", "优先级得分", "截止提醒"] },
+                  { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心：把课程、作业或复杂概念交给它，它来回答。", list: ["围绕课程自由对话", "分析题目照片", "每次回答 10 额度"] },
+                  { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "课程表一次性导入——A/B 周、星期、科目与时间——并在你的所有设备上同步显示。", list: ["A/B 周", "实时云同步", "不发送任何提醒"] },
+                  { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入接口写入。", list: ["题目照片分析", "priority 与 status 原样写入", "不排序、不提醒"] },
                   { icon: <MessageSquare size={28} />, title: "Cortex 通信", desc: "面向课堂协作的内部消息：讨论区、私信与附件，按账户隔离。", list: ["讨论区", "私信", "文件分享"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["直接 AI 控制台", "高级分析", "全局管理"] },
+                  { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["实时统计与账户", "高级分析", "此处没有 AI 控制台"] },
                   { icon: <Star size={28} />, title: "审核 2.0", desc: "维护 Moncef IA 社区完整性和安全性的高级工具。", list: ["角色管理", "充值与删除账户", "仅 founder 与 moderator 可访问"] }
                 ]
               };
@@ -410,36 +662,30 @@ export default function Home() {
                 <div style={{ background: "rgba(255,255,255,0.02)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,255,255,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                     <span style={{ fontSize: 18 }}>👤</span>
-                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Utilisateur Normal</h4>
-                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>700 cr.</span>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{v.roles[0].title}</h4>
+                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{v.roles[0].badge}</span>
                   </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>
-                    Accès à l'IA pédagogique, gestion de l'emploi du temps individuel (Semaines A/B), messagerie cryptée et suivi des devoirs. Crédits rechargés périodiquement.
-                  </p>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>{v.roles[0].desc}</p>
                 </div>
 
                 {/* Modérateur */}
                 <div style={{ background: "rgba(167,139,250,0.03)", padding: 20, borderRadius: 16, border: "1px solid rgba(167,139,250,0.15)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                     <span style={{ fontSize: 18 }}>🛡️</span>
-                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#a78bfa" }}>Modérateur</h4>
-                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(167,139,250,0.15)", color: "#c084fc", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>Illimité</span>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#a78bfa" }}>{v.roles[1].title}</h4>
+                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(167,139,250,0.15)", color: "#c084fc", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{v.roles[1].badge}</span>
                   </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>
-                    Accès à la console d'administration ALPHA. Privilèges de modération : modification des profils utilisateurs (sauf Fondateur) et suppression des devoirs/contenus abusifs pour maintenir l'intégrité de la communauté.
-                  </p>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>{v.roles[1].desc}</p>
                 </div>
 
                 {/* Fondateur */}
                 <div style={{ background: "rgba(255,215,0,0.03)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,215,0,0.15)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                     <span style={{ fontSize: 18 }}>👑</span>
-                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--gold)" }}>Fondateur Alpha</h4>
-                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,215,0,0.15)", color: "var(--gold)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>Propriétaire</span>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--gold)" }}>{v.roles[2].title}</h4>
+                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,215,0,0.15)", color: "var(--gold)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{v.roles[2].badge}</span>
                   </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>
-                    Contrôle absolu sur l'écosystème. Privilèges d'administration globaux, consultation des statistiques de base de données en temps réel, réinitialisation de tokens, édition de rôles (promotions de modérateurs) et console de commande IA directe.
-                  </p>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>{v.roles[2].desc}</p>
                 </div>
               </div>
             </motion.div>
@@ -463,10 +709,8 @@ export default function Home() {
                     <Database size={18} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Supabase (PostgreSQL & Realtime)</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
-                      Base de données sécurisée. Authentification par jeton JWT et RLS (Row Level Security) garantissant la confidentialité absolue des données utilisateur. Abonnements WebSocket Postgres pour la synchronisation des calendriers et messages en temps réel sans latence.
-                    </p>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[0].title}</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[0].desc}</p>
                   </div>
                 </div>
 
@@ -476,10 +720,8 @@ export default function Home() {
                     <Globe size={18} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Netlify — hébergement et CDN</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
-                      {"Le site est servi et distribué par Netlify (en-tête `server: Netlify`, mesuré le 28 août 2026), avec HTTPS/TLS sur chaque route et les variables d'environnement conservées côté serveur. Aucune couche Cloudflare n'est en place sur ce domaine : la protection anti-DDoS et le WAF sont ceux de Netlify, pas les nôtres."}
-                    </p>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[1].title}</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[1].desc}</p>
                   </div>
                 </div>
 
@@ -489,10 +731,8 @@ export default function Home() {
                     <Bot size={18} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Deux fournisseurs, un secours</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
-                      {"Le serveur appelle `gemini-3.6-flash` (Google AI) et bascule sur `openai/gpt-oss-20b` via Groq si le premier ne répond pas. Aucun autre modèle n'est branché : Claude 3.5 Sonnet, Gemini 2.5 Flash et Llama 3.3, cités ici auparavant, n'ont jamais été appelés par le code."}
-                    </p>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[2].title}</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[2].desc}</p>
                   </div>
                 </div>
 
@@ -502,10 +742,8 @@ export default function Home() {
                     <Lock size={18} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>Next.js (App Router) & Framer Motion</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
-                      Architecture moderne avec rendu hybride pour des performances maximales. Animations fluides et transitions d'état animées par Framer Motion à 60 images par seconde pour une expérience utilisateur premium.
-                    </p>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[3].title}</h4>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[3].desc}</p>
                   </div>
                 </div>
               </div>
@@ -522,13 +760,13 @@ export default function Home() {
             <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--p-g)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 24 }}>🎓</span></div>
             <span style={{ fontSize: 28, fontWeight: 900, fontFamily: "var(--font2)", letterSpacing: "-0.04em" }}>Moncef <span style={{ color: "var(--a)" }}>IA</span></span>
           </div>
-          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, maxWidth: 400, margin: "0 auto 40px" }}>Propulsé par les dernières avancées en Intelligence Artificielle pour une éducation sans frontière.</p>
+          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, maxWidth: 400, margin: "0 auto 40px" }}>{v.tagline}</p>
           <div style={{ display: "flex", justifyContent: "center", gap: 32, marginBottom: 40 }}>
             {[
-              { name: "Confidentialité", href: "/privacy" },
-              { name: "Termes", href: "/terms" },
-              { name: "API", href: "/api-docs" },
-              { name: "Status", href: "/status" }
+              { name: v.links[0], href: "/privacy" },
+              { name: v.links[1], href: "/terms" },
+              { name: v.links[2], href: "/api-docs" },
+              { name: v.links[3], href: "/status" }
             ].map(item => (
               <Link key={item.name} href={item.href} style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 13, textDecoration: "none", transition: "color 0.2s" }} className="footer-link-hover">
                 {item.name}
