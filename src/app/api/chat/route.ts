@@ -40,15 +40,34 @@ async function fetchWithTimeout(url: string, init: RequestInit, attempts = 2): P
 }
 
 export async function POST(req: Request) {
-  try {
-    const { messages, system } = await req.json();
-    const supabase = getSupabaseAdmin();
+  // Deux garde-fous avant le travail, dans cet ordre :
+  //  1) l'authentification d'abord — un appel sans jeton doit finir en 401 ;
+  //  2) le corps ensuite, dans son propre try — `req.json()` LEVE si le corps est vide
+  //     ou malformé, et cette exception tombait dans le catch général : un client
+  //     envoyant du JSON invalide recevait un 500 (« erreur de communication avec
+  //     l'IA ») au lieu d'un 400 qui dit quoi réparer. Mesuré en prod avant ce
+  //     correctif : POST corps vide -> 500.
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader) {
+    return NextResponse.json({ error: "Authentification requise pour utiliser l'IA." }, { status: 401 });
+  }
 
-    // Identification de l'utilisateur
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: "Authentification requise pour utiliser l'IA." }, { status: 401 });
-    }
+  let messages: any;
+  let system: any;
+  try {
+    const body = await req.json();
+    messages = body?.messages;
+    system = body?.system;
+  } catch {
+    return NextResponse.json({ error: "Corps de requête illisible : du JSON est attendu." }, { status: 400 });
+  }
+
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return NextResponse.json({ error: "Champ `messages` attendu : une liste non vide." }, { status: 400 });
+  }
+
+  try {
+    const supabase = getSupabaseAdmin();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
     if (authError || !user) {
@@ -176,7 +195,9 @@ export async function POST(req: Request) {
           // si ça dépasse, puis on donne au modèle tout le reste.
           const GROQ_TPM_BUDGET = 7600; // marge sous la limite de 8000
           const estTokens = (arr: any[]) => JSON.stringify(arr).length / 4;
-          let groqMessages = aiMessages;
+          // `any[]` explicite : sous `noUncheckedIndexedAccess`, retirer le premier tour
+          // de conversation (groqMessages[0]) aurait été typé `{…} | undefined`.
+          let groqMessages: any[] = aiMessages;
           while (estTokens(groqMessages) + 700 > GROQ_TPM_BUDGET && groqMessages.length > 2) {
             groqMessages = [groqMessages[0], ...groqMessages.slice(2)];
           }
