@@ -21,7 +21,8 @@ export default function AppLayout({ children }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = "/auth"; return; }
     
-    const { data } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+    const { data: meRows } = await supabase.rpc('get_me');
+    const data = meRows?.[0] ?? null;
     if (data) { 
       setUser(data); 
       setTokens(data.tokens || 700);

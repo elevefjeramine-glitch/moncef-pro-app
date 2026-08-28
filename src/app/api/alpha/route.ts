@@ -23,7 +23,17 @@ export async function POST(req) {
     const { data: { user } } = await anonClient.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    const { data: profile } = await anonClient.from('users').select('role').eq('id', user.id).single();
+        // Vérification du rôle côté serveur : la colonne `role` n'est plus lisible
+    // par le rôle `authenticated`, donc on lit avec le client admin (service_role),
+    // après avoir validé la session ci-dessus. Échec fermé si la clé manque.
+    let profile: { role: string } | null = null;
+    try {
+      const adminClient = getAdminClient();
+      const res = await adminClient.from('users').select('role').eq('id', user.id).single();
+      profile = res.data;
+    } catch (adminErr) {
+      return NextResponse.json({ error: 'Configuration serveur incomplète' }, { status: 503 });
+    }
     if (!['founder', 'moderator'].includes(profile?.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
 
     const admin = getAdminClient();

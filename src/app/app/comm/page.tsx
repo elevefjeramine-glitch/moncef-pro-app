@@ -33,7 +33,8 @@ export default function CommPage() {
   const loadCurrentUser = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
+    const { data: meRows } = await supabase.rpc('get_me');
+      const data = meRows?.[0] ?? null;
     if (data) {
       myIdRef.current = user.id; // Bug #4 fix: store in ref so realtime callbacks see it
       setCurrentUser({ ...data, id: user.id });

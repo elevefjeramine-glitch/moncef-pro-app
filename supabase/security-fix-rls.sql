@@ -1,41 +1,43 @@
 -- =====================================================================
---  SÉCURITÉ — politiques RLS de public.users
---  ⚠️ CE FICHIER A DÉJÀ ÉTÉ EXÉCUTÉ sur le projet ggnwtszeitrrfhedgipv
---     le 28/08/2026 via l'API de gestion Supabase. Il sert de référence :
---     c'est l'état réel de la base, pas une suggestion.
+--  SÉCURITÉ — verrouillage de public.users  (état RÉEL de la base)
 --
---  Ce qui a été trouvé (prouvé en prod, avec la seule clé publique du site) :
---   1. PATCH /rest/v1/users  {"role":"founder"} → HTTP 200 : n'importe quel
---      compte connecté se promouvait founder et ouvrait /api/alpha
---      (liste de tous les utilisateurs, emails, devoirs, modif/suppression
---      de comptes).
---      Cause : "Users can update own profile" = USING (auth.uid() = id)
---      SANS WITH CHECK et sans trigger → aucune colonne protégée.
---   2. "Users are readable by everyone" = USING (true) en SELECT : tout
---      compte connecté lisait email / role / tokens de tout le monde.
+--  ⚠️ Déjà appliqué le 28/08/2026 sur le projet ggnwtszeitrrfhedgipv,
+--     via l'API de gestion Supabase. Ce fichier est la reproduction exacte
+--     de l'état courant (pour reconstruire un environnement ou auditer).
 --
---  Ce que ces objets corrigent :
---   - trigger BEFORE UPDATE : bloque role et tokens pour les rôles
---     anon/authenticated UNIQUEMENT. current_user = 'service_role' (nos
---     API routes, décrément de crédits) et 'postgres' (Dashboard) passent.
---     → vérifié : /api/chat décrémente toujours 700 → 690 → 680.
---   - politique UPDATE avec WITH CHECK (défense en profondeur).
---   - vue security_invoker qui n'expose AUCUNE colonne sensible ; elle
---     relance la politique SELECT de `users` côté appelant, donc chaque
---     lecteur voit autrui sans jamais voir email/role/tokens.
---   - politique SELECT sur users restreinte à sa propre ligne.
---   - REVOKE : un client ne peut plus supprimer/tronquer/insérer dans users.
---     La création de la ligne reste assurée par le trigger existant
---     on_auth_user_created → public.handle_new_user() (SECURITY DEFINER,
---     donc non affecté).
+--  ---------------------------------------------------------------------
+--  CE QUI A ÉTÉ TROUVÉ (prouvé en prod avec la seule clé publique du site)
 --
---  Côté app : src/app/app/comm/page.tsx lit `users_public_profile` au lieu
---  de `users` pour les autres utilisateurs ; src/app/auth/page.tsx ne fait
---  plus d'upsert de colonnes inexistantes (phone/address/city/postal_code
---  n'existent pas dans public.users — l'appel échouait en silence).
+--  1. Auto-promotion au rôle admin :
+--       PATCH /rest/v1/users?role=eq.normal   {"role":"founder","tokens":999999}
+--       → HTTP 200, role effectivement changé, puis POST /api/alpha
+--         (GET_STATS) → HTTP 200 avec la liste de tous les utilisateurs.
+--     Cause : la politique "Users can update own profile" avait un
+--     USING (auth.uid() = id) sans WITH CHECK, et AUCUN trigger ne
+--     protégeait les colonnes. PostgREST autorise donc à écrire n'importe
+--     quelle colonne de sa propre ligne.
+--
+--  2. Fuite de données personnelles :
+--     CREATE POLICY "Users are readable by everyone" ... USING (true)
+--     + GRANT SELECT (table entière) → tout compte connecté lisait
+--     email / role / tokens de tout le monde.
+--
+--  ---------------------------------------------------------------------
+--  CE QUI EST EN PLACE MAINTENANT
+--
+--  Principe : RLS décide DES LIGNES, pas des colonnes. Pour les colonnes,
+--  on utilise les PRIVILÈGES PAR COLONNE (has_column_privilege). Une vue
+--  ne peut pas porter de politique RLS (erreur 42809, même avec
+--  security_invoker), et une vue security_invoker hérite des droits du
+--  client → elle ne peut donc pas révéler plus que ce que le client peut
+--  déjà lire. D'où : une vue publique qui ne SÉLECTIONNE que le non-sensible,
+--  et une fonction SECURITY DEFINER pour « mes données à moi ».
 -- =====================================================================
 
--- ---------------------------------------------------------------- 1) garde-fou
+-- ---------------------------------------------------------------- 1) GARDE-FOU
+-- role et tokens ne sont plus modifiables par un client. current_user est
+-- 'service_role' dans nos API routes et 'postgres' dans le SQL Editor : ils
+-- passent (le décrément de crédits de /api/chat est vérifié fonctionnel).
 CREATE OR REPLACE FUNCTION public.guard_privileged_columns()
 RETURNS trigger LANGUAGE plpgsql AS $fn$
 BEGIN
@@ -55,57 +57,93 @@ CREATE TRIGGER trg_guard_privileged_columns
   BEFORE UPDATE ON public.users
   FOR EACH ROW EXECUTE FUNCTION public.guard_privileged_columns();
 
--- ---------------------------------------------------------------- 2) UPDATE
+-- ---------------------------------------------------------------- 2) POLITIQUES
+DROP POLICY IF EXISTS "Users are readable by everyone" ON public.users;
+
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 CREATE POLICY "Users can update own profile"
   ON public.users FOR UPDATE TO authenticated
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
--- ---------------------------------------------------------------- 3) SELECT
--- `users` : chacun ne voit que sa propre ligne (email, tokens, role = privés)
-DROP POLICY IF EXISTS "Users are readable by everyone" ON public.users;
-CREATE POLICY "own row readable"
-  ON public.users FOR SELECT TO anon, authenticated
-  USING (auth.uid() = id);
+-- ---------------------------------------------------------------- 3) PRIVILÈGES
+-- ⚠️ Ordre important : un REVOKE sur la table révoque AUSSI les privilèges
+--    par colonne. Les GRANT (colonne) doivent donc venir APRÈS le REVOKE.
+REVOKE ALL ON public.users FROM anon, authenticated;
+GRANT SELECT (id, first_name, last_name, avatar_url, app_lang, theme_color, language, status)
+  ON public.users TO anon, authenticated;
+GRANT UPDATE (first_name, last_name, avatar_url, theme_color, language, status, app_lang)
+  ON public.users TO authenticated;
+-- pas d'INSERT : la ligne est créée par on_auth_user_created → handle_new_user()
+-- (SECURITY DEFINER, non affecté par ces REVOKE).
 
--- Les identités publiques (pseudo, avatar, statut) restent lisibles par tous,
--- pour la messagerie et les listes de membres.
--- security_invoker = true est INDISPENSABLE : sans cette option la vue lit avec
--- les droits du propriétaire (postgres) et contourne RLS → elle ne protège rien.
--- NB : une vue simple ne peut PAS avoir de politique RLS (erreur 42809).
-CREATE OR REPLACE VIEW public.users_public_profile
-WITH (security_invoker = true) AS
+-- le service_role garde l'accès complet : c'est lui qui porte /api/chat et /api/alpha
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO service_role;
+
+-- ---------------------------------------------------------------- 4) VUE PUBLIQUE
+-- Liste des membres / avatars dans la messagerie. Contient par construction
+-- uniquement des colonnes non sensibles.
+CREATE OR REPLACE VIEW public.users_public_profile AS
 SELECT id, first_name, last_name, avatar_url, app_lang, theme_color, language, status
 FROM public.users;
+GRANT SELECT ON public.users_public_profile TO anon, authenticated;
 
-GRANT SELECT ON public.users_public_profile TO anon, authenticated, service_role;
+-- ---------------------------------------------------------------- 5) RPC
+-- "mes données complètes" : le filtre est dans la fonction, pas dans RLS.
+CREATE OR REPLACE FUNCTION public.get_me()
+RETURNS SETOF public.users LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$ SELECT * FROM public.users WHERE id = auth.uid(); $$;
+REVOKE EXECUTE ON FUNCTION public.get_me() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_me() TO anon, authenticated, service_role;
 
--- ---------------------------------------------------------------- 4) privilèges
-REVOKE DELETE, TRUNCATE, REFERENCES ON public.users FROM anon, authenticated;
-REVOKE INSERT ON public.users FROM anon, authenticated;
+-- Reserved pour un éventuel accès admin direct par RPC (le panneau utilise
+-- aujourd'hui le client service_role, ces fonctions ne sont pas appelées) :
+CREATE OR REPLACE FUNCTION public.admin_get_users()
+RETURNS SETOF public.users LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$ SELECT * FROM public.users ORDER BY created_at DESC; $$;
+REVOKE EXECUTE ON FUNCTION public.admin_get_users() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_get_users() TO service_role;
+
+CREATE OR REPLACE FUNCTION public.admin_update_user(patch jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  UPDATE public.users
+     SET role   = COALESCE(patch->>'role', role),
+         tokens = COALESCE((patch->>'tokens')::int, tokens),
+         email  = COALESCE(patch->>'email', email)
+   WHERE id = (patch->>'id')::uuid;
+END $$;
+REVOKE EXECUTE ON FUNCTION public.admin_update_user(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_update_user(jsonb) TO service_role;
 
 -- =====================================================================
---  CONTRÔLES (relancés le 28/08/2026, tous concluants)
+--  CODE ADAPTÉ EN MÊME TEMPS (sinon l'app cassait)
+--   * src/app/page.tsx, src/app/app/layout.tsx, src/app/app/comm/page.tsx,
+--     src/app/app/alpha/page.tsx : les lectures `from('users').select('*')`
+--     deviennent `rpc('get_me')`.
+--   * src/app/app/comm/page.tsx : les 3 lectures des AUTRES utilisateurs
+--     passent de `users` à `users_public_profile`.
+--   * src/app/auth/page.tsx : l'upsert d'inscription écrivait phone, address,
+--     city, postal_code — 4 colonnes qui n'existent pas dans public.users
+--     (l'appel échouait silencieusement, `error` n'était jamais regardé).
+--     Remplacé par une update ciblée sur first_name/last_name.
+--   * src/app/api/alpha/route.ts : le contrôle de rôle lisait `role` avec le
+--     client anon (désormais refusé) → lecture via le client admin, avec
+--     échec fermé en 503 si la clé service_role manque.
 --
---  A. Auto-promotion → bloquée
---     PATCH /rest/v1/users?role=eq.normal  {"role":"founder","tokens":999999}
---     HTTP 400 {"code":"P0001","message":"Modification du champ role interdite
---               depuis un client"}      et la base garde role='normal'
---
---  B. Panneau admin → 403 pour un compte normal
---     POST /api/alpha {"action":"GET_STATS"}  → HTTP 403 {"error":"Accès refusé"}
---
---  C. Lecture des emails d'autrui → vide
---     GET /rest/v1/users?select=email,role,tokens        → 1 ligne (la sienne)
---     GET /rest/v1/users?id=eq.<uuid_d_un_autre>         → []
---     GET /rest/v1/users_public_profile?id=eq.<autre>   → first_name seulement
---
---  D. Non-régression
---     PATCH /rest/v1/users (first_name, theme_color)     → HTTP 204  ✅
---     POST /api/chat                                      → HTTP 200, tokens
---                                                          700→690→680 ✅
---     service_role : SELECT count(*) on public.users     → 5        ✅
---     trigger handle_new_user : toujours fonctionnel (profil créé à
---     l'inscription avec role='normal', tokens=700)       ✅
+--  CONTRÔLES EFFECTUÉS (28/08/2026)
+--   has_column_privilege('authenticated','users','email','SELECT')   = false
+--   has_column_privilege('authenticated','users','role','UPDATE')    = false
+--   has_column_privilege('service_role','users','tokens','UPDATE')   = true
+--   PATCH {"role":"founder"} par un client  → HTTP 400 P0001 "Modification du
+--                                             champ role interdite depuis un client"
+--   GET /users?select=email  par un client  → HTTP 403 42501
+--   GET /users_public_profile               → HTTP 200, 8 colonnes, sans email
+--   POST /api/alpha (compte normal)         → HTTP 403 {"error":"Accès refusé"}
+--   POST /api/chat                          → HTTP 200, tokens 700 → 690
+--   Formulaire d'inscription                → update 204, profil correct
 -- =====================================================================

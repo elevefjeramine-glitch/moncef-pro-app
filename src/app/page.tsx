@@ -83,7 +83,8 @@ export default function Home() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+          const { data: meRows } = await supabase.rpc('get_me');
+            const profile = meRows?.[0] ?? null;
           if (profile) {
             setUser(profile);
             setCredits(profile.tokens);

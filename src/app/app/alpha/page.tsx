@@ -65,7 +65,8 @@ export default function AlphaPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/auth'); return; }
       setAuthToken(session.access_token);
-      const { data } = await supabase.from('users').select('role').eq('id', session.user.id).single();
+      const { data: meRows } = await supabase.rpc('get_me');
+        const data = meRows?.[0] ? { role: meRows[0].role } : null;
       if (['founder', 'moderator'].includes(data?.role)) {
         setIsAuthorizedAdmin(true);
         setUserRole(data?.role);
