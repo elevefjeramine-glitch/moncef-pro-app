@@ -14,6 +14,10 @@ export default function LanguageSwitcher({ currentLang, onSwitch }: { currentLan
     { code: 'en', name: 'English' },
     { code: 'es', name: 'Español' },
     { code: 'ar', name: 'العربية' },
+    // Le drapeau zh existait déjà dans FlagIcon mais n'était jamais proposé :
+    // l'application, elle, accepte 5 langues (réglages), les pages publiques
+    // restaient donc muettes en chinois.
+    { code: 'zh', name: '中文' },
   ];
 
   const current = languages.find(l => l.code === currentLang) ?? languages[0] ?? { code: 'fr', name: 'Français' };

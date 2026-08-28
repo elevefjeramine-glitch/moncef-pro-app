@@ -446,6 +446,57 @@ const content = {
     required_word: "نعم",
     optional_word: "لا",
   },
+  zh: {
+    title: "API 文档",
+    subtitle: "编写于 2026-08-28，依据已部署的代码，以及对生产环境实际发起的调用。",
+    intro: "六个公开接口、一种鉴权方式、没有任何臆造的格式：以下所有内容都是调用服务器后记录下来的。报错信息逐字引用，字段说明保留法语——因为服务器返回的字符串本身就是法语。",
+    base: "基础地址",
+    base_hint: "所有接口与站点同源。下方示例已使用该地址。",
+    auth_title: "鉴权",
+    auth_1: "HTTP 请求头：",
+    auth_2: "历史形式，三个导入接口同样接受：",
+    auth_3: "获取令牌（用密码登录，实测响应：expires_in = 3600 秒）：",
+    auth_note: "令牌即 Supabase 颁发的 access_token。不存在独立的 API 密钥；令牌过期返回 401，需重新登录。",
+    credits_title: "额度",
+    credits: [
+      ["每日下限", "每个 UTC 日的首次调用会把余额补足到 700。余额更高时不会被削减。"],
+      ["一次 AI 调用的成本", "10 个额度，仅在收到回复后扣除。"],
+      ["founder 与 moderator 账户", "不扣费（界面显示为无限额度）。"],
+      ["为账户充值", "由管理员手动执行：Alpha 的 RESET_TOKENS 操作。"],
+    ],
+    endpoints_title: "接口",
+    request: "请求体",
+    response: "生产环境实测响应",
+    response2: "更新操作的响应",
+    fields: "字段说明",
+    field: "字段",
+    type: "类型",
+    required: "必填",
+    comment: "备注",
+    errors_title: "错误响应",
+    code: "状态码",
+    message: "返回的消息",
+    notes_title: "需要知道的事",
+    variant: "变体",
+    alpha_title: "管理接口（受限）",
+    alpha_body: "这不是公开 API：它服务于应用的后台面板。要求账户角色为 founder 或 moderator，且在服务器端重新读取——普通账户无论发送什么请求头都会收到 403 Accès refusé。接受的操作：",
+    limits_title: "限制与薄弱处",
+    limits: [
+      "代码中没有限流，也不校验请求体大小：真正的上限是 AI 供应商的配额。",
+      "没有版本管理：路径就是路径。日后改动会直接破坏客户端，不会提前宣布弃用。",
+      "导入接口不做类型校验：非法日期会以 Postgres 500 的形式冒出来，而不是一个有解释的 400。",
+      "没有 webhook，也没有流式输出：AI 的回答一次性到达。",
+      "任何学生都读不到其他学生的数据：数据库策略是 auth.uid() = user_id。导入接口始终为所出示令牌对应的账户写入，绝不按请求体里的 user_id 写入。",
+    ],
+    back: "返回首页",
+    status: "服务状态",
+    privacy: "隐私政策",
+    copied: "已复制！",
+    copy: "复制",
+    try_it: "响应体是实测记录，不是模板：AI 的回答每次不同，但 JSON 的结构不变。",
+    required_word: "必填",
+    optional_word: "可选",
+  },
 };
 
 function CodeBlock({ id, title, text, copyState, onCopy, copiedLabel, copyLabel }: {
@@ -611,7 +662,7 @@ export default function ApiDocsPage() {
                       <tr key={f[0]} style={{ borderTop: "1px solid rgba(255,255,255,0.07)", verticalAlign: "top" }}>
                         <td style={{ padding: "8px 10px", fontFamily: "ui-monospace, monospace", color: "#a5f3fc", whiteSpace: "nowrap" as const }}>{f[0]}</td>
                         <td style={{ padding: "8px 10px", color: "rgba(255,255,255,0.5)", whiteSpace: "nowrap" as const }}>{f[1]}</td>
-                        <td style={{ padding: "8px 10px", color: f[2] === "oui" || f[2].startsWith("oui ") ? "var(--a)" : "rgba(255,255,255,0.35)" }}>{f[2]}</td>
+                        <td style={{ padding: "8px 10px", color: f[2].startsWith("oui") ? "var(--a)" : "rgba(255,255,255,0.35)" }}>{f[2] === "oui" ? t.required_word : f[2] === "non" ? t.optional_word : f[2]}</td>
                         <td style={{ padding: "8px 10px", color: "rgba(255,255,255,0.62)", lineHeight: 1.6 }}>{f[3]}</td>
                       </tr>
                     ))}
