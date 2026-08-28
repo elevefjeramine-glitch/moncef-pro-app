@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/utils/supabase/client";
+import { oauthErrorMessage } from "@/utils/oauth-errors";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Lock, Phone, MapPin, Building2, Hash, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { t } from "@/utils/i18n";
@@ -45,9 +46,9 @@ export default function AuthPage() {
     // On le lit à l'initialisation, pas dans un effet : rien à setter après montage,
     // donc pas de rendu en cascade.
     if (typeof window === 'undefined') return null;   // la page est prerenderée : pas de window au build
-    const p = new URLSearchParams(window.location.search);
-    const d = p.get('error_description') || p.get('error_code');
-    return d ? decodeURIComponent(d) : null;
+    // message construit par le module partagé (il connaît les 3 paramètres de Supabase,
+    // y compris `error`, et décode les '+' et %20 de l'URL)
+    return oauthErrorMessage(window.location.search, t('fr', 'auth_oauth_failed'));
   });
   const [successMsg, setSuccessMsg] = useState("");
 
