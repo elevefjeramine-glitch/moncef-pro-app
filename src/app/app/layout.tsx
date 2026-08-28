@@ -246,8 +246,12 @@ function SettingsModal({ user, lang, close }) {
         setMsg(t(lang, 'settings_saved') + " ✅");
         setTimeout(() => close(), 1500);
       }
-    } catch(err) {
-      setMsg(t(lang, 'settings_error') + ": " + err.message);
+    } catch(err: any) {
+      // FIX (auto-correction du patch précédent) : en rendant l'erreur visible, on a
+      // exposé `err.message` à un objet sans `.message` (reseau coupé, erreur
+      // PostgREST brute). On affiche le texte de façon défensive.
+      const msg = err?.message || (typeof err === 'string' ? err : JSON.stringify(err));
+      setMsg(t(lang, 'settings_error') + ": " + msg);
     } finally {
       setLoading(false);
     }
