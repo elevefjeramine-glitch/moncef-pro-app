@@ -81,7 +81,7 @@ const content = {
         title: "Supprimer ses données",
         body: [
           "Réglages → onglet « Compte et données » → « Demander la suppression ». Une demande en cours reste annulable pendant 7 jours, d'un clic, au même endroit.",
-          "À l'échéance, la suppression porte sur le profil, les devoirs, l'emploi du temps, les événements, les messages envoyés et reçus, les conversations créées, les sessions ouvertes, les identités Google ou Microsoft et les facteurs d'authentification à deux facteurs.",
+          "À l'échéance, la suppression porte sur le profil, les devoirs, l'emploi du temps, les événements, les messages que tu as envoyés et reçus, tes affiliations aux salons de messagerie, les sessions ouvertes, les identités Google ou Microsoft et les facteurs d'authentification à deux facteurs. Un salon de groupe que tu as créé n'est pas effacé avec toi : il reste aux autres membres, ton nom de créateur étant simplement détaché (la contrainte de la base porte ON DELETE SET NULL).",
           "Quand elle est exécutée : au premier appel que ton compte déclenche après l'échéance, ou sur demande par un modérateur, qui traite alors toute la file d'attente. Il n'y a pas de cron dans l'infrastructure qui tournerait pendant que tu ne viens pas.",
           "Avant de demander, tu peux exporter toi-même ce qui t'intéresse : les pages Devoirs et Emploi du temps sont consultables et copiables. Une suppression exécutée n'est pas réversible ; recréer un compte avec la même adresse ne retrouve rien.",
         ],
@@ -139,7 +139,7 @@ const content = {
       ]},
       { icon: "Trash2", title: "Deleting your data", body: [
         "Settings → “Account and data” tab → “Request deletion”. A pending request stays cancellable for 7 days, in one click, in the same place.",
-        "At the deadline, deletion covers the profile, homework, timetable, events, messages sent and received, conversations created, open sessions, Google or Microsoft identities and two-factor factors.",
+        "At the deadline, deletion covers the profile, homework, timetable, events, messages you sent and received, your memberships in messaging rooms, open sessions, Google or Microsoft identities and two-factor factors. A group room you created is not erased with you: it stays for the other members, with your creator reference simply detached (the database constraint is ON DELETE SET NULL).",
         "When it runs: on the first call your account makes after the deadline, or on demand by a moderator, who then processes the whole queue. There is no cron in the infrastructure running while you are away.",
         "Before requesting, export whatever matters to you: the Homework and Timetable pages are readable and copyable. A finished deletion is not reversible; re-creating an account with the same address recovers nothing.",
       ]},
@@ -188,7 +188,7 @@ const content = {
       ]},
       { icon: "Trash2", title: "Borrar tus datos", body: [
         "Ajustes → pestaña «Cuenta y datos» → «Solicitar la eliminación». Una solicitud en curso se puede anular durante 7 días, con un clic, en el mismo sitio.",
-        "Al vencer el plazo, la eliminación afecta al perfil, los deberes, el horario, los eventos, los mensajes enviados y recibidos, las conversaciones creadas, las sesiones abiertas, las identidades Google o Microsoft y los factores de verificación en dos pasos.",
+        "Al vencer el plazo, la eliminación afecta al perfil, los deberes, el horario, los eventos, los mensajes que enviaste y recibiste, tus afiliaciones a las salas de mensajería, las sesiones abiertas, las identidades Google o Microsoft y los factores de verificación en dos pasos. Una sala de grupo que creaste no borra contigo: sigue para los demás miembros, quedando simplemente desvinculado tu nombre de creador (la restricción de la base es ON DELETE SET NULL).",
         "Cuándo se ejecuta: en la primera llamada que haga tu cuenta tras el plazo, o a petición de un moderador, que entonces procesa toda la cola. No existe ningún cron en la infraestructura que trabaje mientras no vienes.",
         "Antes de solicitarla, exporta lo que te interese: las páginas Deberes y Horario se pueden leer y copiar. Una eliminación ejecutada no es reversible; crear de nuevo una cuenta con la misma dirección no recupera nada.",
       ]},
@@ -237,7 +237,7 @@ const content = {
       ]},
       { icon: "Trash2", title: "حذف بياناتك", body: [
         "الإعدادات ← تبويب «الحساب والبيانات» ← «طلب الحذف». الطلب الجاري يبقى قابلاً للإلغاء طوال 7 أيام بنقرة واحدة في المكان نفسه.",
-        "عند انقضاء الأجل يشمل الحذف: الملف الشخصي، الواجبات، جدول الحصص، الأحداث، الرسائل المرسلة والمستقبلة، المحادثات التي أنشأتها، الجلسات المفتوحة، هويات Google أو Microsoft وعوامل التحقق بخطوتين.",
+        "عند انقضاء الأجل يشمل الحذف: الملف الشخصي، الواجبات، جدول الحصص، الأحداث، الرسائل التي أرسلتها وتلقّيتها، انتماؤك إلى غرف المراسلة، الجلسات المفتوحة، هويات Google أو Microsoft وعوامل التحقق بخطوتين. أما غرفة جماعية أنشأتها فلا تُمحى معك: تبقى لبقية الأعضاء، ويُفصل اسمك كمنشئ فقط (القيد في القاعدة هو ON DELETE SET NULL).",
         "متى يُنفَّذ؟ عند أول طلب يُصدره حسابك بعد الأجل، أو بطلب من معتدل يعالج حينها قائمة الانتظار كلها. لا يوجد أي cron في البنية يعمل وأنت غائب.",
         "قبل الطلب، صدّر بنفسك ما يهمّك: صفحتا الواجبات وجدول الحصص قابلتان للقراءة والنسخ. والحذف المنفَّذ لا يُتراجَع فيه؛ وإنشاء حساب جديد بنفس البريد لا يسترجع شيئًا.",
       ]},

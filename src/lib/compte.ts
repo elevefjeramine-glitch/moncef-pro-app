@@ -62,10 +62,17 @@ export async function applyDailyCreditFloor(
 /**
  * Supprime réellement un compte et tout ce qui lui appartient.
  *
- * L'ordre compte : `conversations.created_by` est la seule référence sans
- * CASCADE vers public.users (mesuré via pg_constraint, confdeltype = 'a'), donc
- * si on ne vide pas les conversations créées par l'utilisateur, la suppression
- * de sa ligne `users` échoue et nothing is deleted.
+ * Ce qui est mesuré sur cette base (pg_constraint, 2026-08-28) :
+ *   users.id             -> auth.users  ON DELETE CASCADE
+ *   homework/schedule/events/user_messages/conversation_* -> users  ON DELETE CASCADE
+ *   conversations.created_by -> users   ON DELETE SET NULL
+ *
+ * Donc la ligne `users` peut être supprimée sans vider les conversations : Postgres
+ * détache le créateur (NULL). On exploite ce comportement volontairement ici, pour
+ * la suppression *volontaire* : effacer un salon de groupe détruirait les messages
+ * des autres membres, qui ne sont pas nos données à nous. (Le DELETE_USER de l'Alpha,
+ * lui, supprime les salons créés — c'est un contexte de modération, pas un choix de
+ * l'élève ; les deux politiques diffèrent donc délibérément.)
  */
 export async function purgeAccount(admin: any, userId: string): Promise<{ ok: boolean; failed: string[] }> {
   const failed: string[] = [];
@@ -73,8 +80,6 @@ export async function purgeAccount(admin: any, userId: string): Promise<{ ok: bo
   const steps: Array<[string, () => Promise<{ error: { message: string } | null }>]> = [
     ['conversation_messages', () => admin.from('conversation_messages').delete().eq('sender_id', userId)],
     ['conversation_members', () => admin.from('conversation_members').delete().eq('user_id', userId)],
-    // Créées par ce compte mais potentiellement partagées : à supprimer pour lever le NO ACTION.
-    ['conversations', () => admin.from('conversations').delete().eq('created_by', userId)],
     ['homework', () => admin.from('homework').delete().eq('user_id', userId)],
     ['schedule', () => admin.from('schedule').delete().eq('user_id', userId)],
     ['events', () => admin.from('events').delete().eq('user_id', userId)],

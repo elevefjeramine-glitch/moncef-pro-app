@@ -70,8 +70,11 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Format normalisé à l'ISO `...Z` : sans ça, le GET renvoyait `+00:00` (sérialisation
+  // PostgREST) là où le POST renvoyait `Z` (JS) — deux écritures pour la même échéance.
+  const raw = data?.deletion_scheduled_at ?? null;
   return NextResponse.json({
-    deletionScheduledAt: data?.deletion_scheduled_at ?? null,
+    deletionScheduledAt: raw ? new Date(raw).toISOString() : null,
     graceDays: DELETION_GRACE_DAYS,
     role: data?.role ?? null,
   });
@@ -138,7 +141,7 @@ export async function POST(req: Request) {
       'emploi du temps (schedule)',
       'événements (events)',
       'messages envoyés et reçus (user_messages)',
-      'conversations et messages de messagerie',
+      'messages de messagerie envoyés et reçus, et tes affiliations aux salons',
       'identités OAuth, sessions et facteurs MFA (auth.*)',
     ],
     warnings,

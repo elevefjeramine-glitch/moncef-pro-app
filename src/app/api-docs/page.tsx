@@ -201,7 +201,7 @@ const ROUTES: RouteDoc[] = [
     ],
     notes: [
       "GET sur le même chemin renvoie l'état : { deletionScheduledAt, graceDays, role }. null = aucune demande en cours.",
-      "La réponse à une demande enumerate aussi les tables touchées (champ willDelete) et, pour un compte founder ou moderator, un avertissement (champ warnings).",
+      "La réponse à une demande énumère aussi les tables touchées (champ willDelete) et, pour un compte founder ou moderator, un avertissement (champ warnings).",
       "Quand la purge est-elle exécutée ? Au premier appel de /api/chat après l'échéance, ou sur demande par un modérateur (action Alpha PURGE_DUE_DELETIONS, qui traite toute la file d'attente).",
     ],
   },
