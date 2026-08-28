@@ -70,7 +70,10 @@ CREATE POLICY "Users can update own profile"
 -- ⚠️ Ordre important : un REVOKE sur la table révoque AUSSI les privilèges
 --    par colonne. Les GRANT (colonne) doivent donc venir APRÈS le REVOKE.
 REVOKE ALL ON public.users FROM anon, authenticated;
-GRANT SELECT (id, first_name, last_name, avatar_url, app_lang, theme_color, language, status)
+-- role est en lecture : utile aux badges de la messagerie, et ce n'est pas une
+-- donnée personnelle. L'ÉCRITURE de role/tokens reste interdite (trigger + absence
+-- de privilège UPDATE sur ces colonnes), donc lecture ≠ escalade.
+GRANT SELECT (id, first_name, last_name, avatar_url, app_lang, theme_color, language, status, role)
   ON public.users TO anon, authenticated;
 GRANT UPDATE (first_name, last_name, avatar_url, theme_color, language, status, app_lang)
   ON public.users TO authenticated;
@@ -84,7 +87,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO service_role;
 -- Liste des membres / avatars dans la messagerie. Contient par construction
 -- uniquement des colonnes non sensibles.
 CREATE OR REPLACE VIEW public.users_public_profile AS
-SELECT id, first_name, last_name, avatar_url, app_lang, theme_color, language, status
+SELECT id, first_name, last_name, avatar_url, app_lang, theme_color, language, status, role
 FROM public.users;
 GRANT SELECT ON public.users_public_profile TO anon, authenticated;
 
@@ -99,6 +102,9 @@ GRANT EXECUTE ON FUNCTION public.get_me() TO anon, authenticated, service_role;
 
 -- Reserved pour un éventuel accès admin direct par RPC (le panneau utilise
 -- aujourd'hui le client service_role, ces fonctions ne sont pas appelées) :
+-- ⚠️ Ces deux fonctions admin sont fournies en secours : le panneau /api/alpha
+-- n'en a pas besoin (il passe par le client service_role). Elles ne sont pas
+-- appelées par le code actuel.
 CREATE OR REPLACE FUNCTION public.admin_get_users()
 RETURNS SETOF public.users LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -142,6 +148,7 @@ GRANT EXECUTE ON FUNCTION public.admin_update_user(jsonb) TO service_role;
 --   PATCH {"role":"founder"} par un client  → HTTP 400 P0001 "Modification du
 --                                             champ role interdite depuis un client"
 --   GET /users?select=email  par un client  → HTTP 403 42501
+--   GET /users_public_profile?select=tokens → HTTP 400 42703 (colonne absente de la vue)
 --   GET /users_public_profile               → HTTP 200, 8 colonnes, sans email
 --   POST /api/alpha (compte normal)         → HTTP 403 {"error":"Accès refusé"}
 --   POST /api/chat                          → HTTP 200, tokens 700 → 690

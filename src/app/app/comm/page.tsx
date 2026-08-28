@@ -826,8 +826,8 @@ export default function CommPage() {
             {activeConv.type === 'dm' && activeConv.dmPartner && (
               <div className="info-section">
                 <div className="info-section-title">Email</div>
-                {/* L'email n'est plus exposé aux clients : on affiche le statut à la place */}
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', wordBreak: 'break-all' }}>{activeConv.dmPartner.status === 'online' ? 'En ligne' : 'Hors ligne'}</p>
+                {/* L'email n'est plus exposé aux clients (42501) : on affiche le rôle, disponible via users_public_profile */}
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', wordBreak: 'break-all' }}>{activeConv.dmPartner.role === 'founder' ? 'Fondateur' : activeConv.dmPartner.role === 'moderator' ? 'Modérateur' : t(lang, 'comm_member')}</p>
               </div>
             )}
 
