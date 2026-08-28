@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { purgeDueDeletions } from '@/lib/compte';
+import { LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from '@/lib/corps';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -14,8 +15,13 @@ function getAdminClient() {
 }
 
 export async function POST(req: Request) {
+  // Le corps est annoncé avant d'être lu : le panneau Alpha n'a aucune raison de
+  // recevoir plus qu'un tableau d'identifiants, et le catch du bas renverrait un 500
+  // technique sur un payload démesuré.
+  const tropGrosse = rejeterSiAnnonceTropGrosse(req, LIMITE_CORPS.alpha);
+  if (tropGrosse) return tropGrosse;
   try {
-    const { action, authToken, payload } = await req.json();
+    const { action, authToken, payload } = await lireJson(req, LIMITE_CORPS.alpha);
 
     // Verify the requesting user is a founder using their session
     const anonClient = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
@@ -146,6 +152,8 @@ export async function POST(req: Request) {
     }
 
   } catch (error: any) {
+    const refus = reponse413(error);
+    if (refus) return refus;
     console.error('Alpha API error:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

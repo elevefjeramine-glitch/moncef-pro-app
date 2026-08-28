@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from '@/lib/corps';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -12,8 +13,10 @@ function tokenFrom(req: Request, body: any): string {
 }
 
 export async function POST(req: Request) {
+  const tropGrosse = rejeterSiAnnonceTropGrosse(req, LIMITE_CORPS.import);
+  if (tropGrosse) return tropGrosse;
   try {
-    const { entries, action, authToken } = await req.json();
+    const { entries, action, authToken } = await lireJson(req, LIMITE_CORPS.import);
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: `Bearer ${tokenFrom(req, { authToken })}` } }
@@ -77,6 +80,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
 
   } catch (error: any) {
+  const refus = reponse413(error);
+      if (refus) return refus;
+
     console.error("Schedule import error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

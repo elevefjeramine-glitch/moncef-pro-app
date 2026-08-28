@@ -42,6 +42,16 @@ async function probe(url: string, headers: Record<string, string>): Promise<{ ok
   }
 }
 
+// Une variable peut venir du build (figée par next.config) ou de l'environnement
+// d'exécution ; la première est la seule fiable sur Netlify, d'où l'ordre.
+function pick(...names: string[]): string | undefined {
+  for (const n of names) {
+    const v = process.env[n];
+    if (v) return v;
+  }
+  return undefined;
+}
+
 export async function GET() {
   const checks: Check[] = [];
   const totalStart = Date.now();
@@ -95,10 +105,10 @@ export async function GET() {
       // (injectés par Netlify au build), null sinon. Pas de mystification :
       // la version déployée est identifiable, l'uptime ne l'est pas.
       deployment: {
-        commit: process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 7) : null,
-        branch: process.env.BRANCH ?? null,
-        buildId: process.env.BUILD_ID ?? null,
-        context: process.env.CONTEXT ?? null,
+        commit: pick('NEXT_PUBLIC_BUILD_COMMIT', 'COMMIT_REF')?.slice(0, 7) ?? null,
+        branch: pick('NEXT_PUBLIC_BUILD_BRANCH', 'BRANCH') ?? null,
+        buildId: pick('NEXT_PUBLIC_BUILD_ID', 'BUILD_ID') ?? null,
+        context: pick('NEXT_PUBLIC_BUILD_CONTEXT', 'CONTEXT') ?? null,
       },
     },
     {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { applyDailyCreditFloor, DAILY_CREDIT_FLOOR, purgeAccount } from '@/lib/compte';
+import { LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from '@/lib/corps';
 
 // Configuration Supabase (Côté Serveur)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ggnwtszeitrrfhedgipv.supabase.co';
@@ -40,6 +41,10 @@ async function fetchWithTimeout(url: string, init: RequestInit, attempts = 2): P
   throw lastErr instanceof Error ? lastErr : new Error("Appel IA échoué");
 }
 
+const AIDE_IMAGE =
+  'Les images voyagent en base64 dans le JSON : un fichier de 4 Mo pèse environ 5,3 Mo une fois encodé. ' +
+  'Réduis la photo avant de l\'envoyer.';
+
 export async function POST(req: Request) {
   // Deux garde-fous avant le travail, dans cet ordre :
   //  1) l'authentification d'abord — un appel sans jeton doit finir en 401 ;
@@ -48,6 +53,11 @@ export async function POST(req: Request) {
   //     envoyant du JSON invalide recevait un 500 (« erreur de communication avec
   //     l'IA ») au lieu d'un 400 qui dit quoi réparer. Mesuré en prod avant ce
   //     correctif : POST corps vide -> 500.
+  // Taille vérifiée AVANT l'authentification : lire un jeton, interroger la base ou
+  // bufferiser 40 Mo pour finir à la poubelle serait le pire ordre. L'en-tête suffit.
+  const tropGrosse = rejeterSiAnnonceTropGrosse(req, LIMITE_CORPS.chat, AIDE_IMAGE);
+  if (tropGrosse) return tropGrosse;
+
   const authHeader = req.headers.get('authorization');
   if (!authHeader) {
     return NextResponse.json({ error: "Authentification requise pour utiliser l'IA." }, { status: 401 });
@@ -56,10 +66,12 @@ export async function POST(req: Request) {
   let messages: any;
   let system: any;
   try {
-    const body = await req.json();
+    const body = await lireJson(req, LIMITE_CORPS.chat);
     messages = body?.messages;
     system = body?.system;
-  } catch {
+  } catch (e: unknown) {
+    const refus = reponse413(e, AIDE_IMAGE);
+    if (refus) return refus;
     return NextResponse.json({ error: "Corps de requête illisible : du JSON est attendu." }, { status: 400 });
   }
 

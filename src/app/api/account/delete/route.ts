@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { DELETION_GRACE_DAYS, deletionDeadline, makeAdminClient } from '@/lib/compte';
+import { LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from '@/lib/corps';
 
 // Suppression du compte à la demande de l'utilisateur, avec délai de
 // rétractation (choix produit : 7 jours, annulables).
@@ -23,24 +24,36 @@ async function authenticate(req: Request) {
     // Les routes d'import de l'app passent le jeton dans le corps : on
     // l'accepte ici aussi, pour ne pas casser un client déjà écrit.
     try {
-      const body = await req.json();
+      const body = await lireJson(req, LIMITE_CORPS.compte);
       if (typeof body?.authToken === 'string') token = body.authToken;
       return { token, body: body ?? {} };
-    } catch {
+    } catch (e) {
+      // Corps absent ou malformé : toléré, le handler répondra 400 sur `confirm`.
+      // Refus de taille : remonté, ce n'est pas au client de deviner.
+      if (reponse413(e)) throw e;
       return { token: '', body: {} };
     }
   }
   let body: any = {};
   try {
-    body = await req.json();
-  } catch {
+    body = await lireJson(req, LIMITE_CORPS.compte);
+  } catch (e) {
+    if (reponse413(e)) throw e;
     body = {};
   }
   return { token, body };
 }
 
 async function caller(req: Request) {
-  const { token, body } = await authenticate(req);
+  let auth: { token: string; body: any };
+  try {
+    auth = await authenticate(req);
+  } catch (e) {
+    const refus = reponse413(e);
+    if (refus) return { error: refus };
+    throw e;
+  }
+  const { token, body } = auth;
   if (!token) {
     return { error: NextResponse.json({ error: 'Jeton manquant : en-tête Authorization: Bearer requis.' }, { status: 401 }) };
   }
@@ -81,6 +94,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const tropGrosse = rejeterSiAnnonceTropGrosse(req, LIMITE_CORPS.compte);
+  if (tropGrosse) return tropGrosse;
   const ctx = await caller(req);
   if (ctx.error) return ctx.error;
 
