@@ -14,6 +14,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   general:  '#2e5bff',
 };
 
+// Jeton d'accès : en-tête `Authorization: Bearer <access_token>` en priorité,
+// puis `authToken` dans le corps JSON (la forme historique de l'app est conservée).
+function tokenFrom(req: Request, body: any): string {
+  const h = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+  return h || (typeof body?.authToken === 'string' ? body.authToken : '');
+}
+
 export async function POST(req: Request) {
   try {
     const { entries, authToken } = await req.json();
@@ -23,7 +30,7 @@ export async function POST(req: Request) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${authToken}` } }
+      global: { headers: { Authorization: `Bearer ${tokenFrom(req, { authToken })}` } }
     });
 
     const { data: { user } } = await supabase.auth.getUser();
