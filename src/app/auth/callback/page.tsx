@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/utils/supabase/client";
 import { motion } from "framer-motion";
 import { t } from "@/utils/i18n";
+import { oauthErrorMessage } from "@/utils/oauth-errors";
 
 /**
  * Destination unique des retours OAuth (Google / Microsoft / Apple / GitHub).
@@ -21,7 +22,7 @@ function CallbackInner() {
   const [lang] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('site_lang') || 'fr' : 'fr'));
   // useSearchParams rend un objet vide au prerender : pas besoin de garde window ici,
   // mais on reste défensif car la page peut être rendue côté serveur.
-  const urlErr = (typeof window === 'undefined' || !params) ? "" : (params.get("error_description") || params.get("error_code") || "");
+  const urlErr = (typeof window === 'undefined' || !params) ? "" : (oauthErrorMessage(params.toString()) || "");
   // L'échec vient de l'URL : on le dérive à chaque rendu, aucun setState là-dessus.
   const [exchangeFailed, setExchangeFailed] = useState(false);
 
@@ -54,7 +55,7 @@ function CallbackInner() {
     return () => { clearTimeout(guard); data.subscription.unsubscribe(); };
   }, [urlErr, router, lang]);
 
-  const msg = urlErr ? decodeURIComponent(urlErr) : (exchangeFailed ? t(lang, "auth_oauth_failed") : null);
+  const msg = urlErr || (exchangeFailed ? t(lang, "auth_oauth_failed") : null);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "var(--bg)", gap: 18, padding: 24, textAlign: "center" }}>

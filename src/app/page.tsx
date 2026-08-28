@@ -7,6 +7,8 @@ import { t } from "@/utils/i18n";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useUserStore } from "@/store/useUserStore";
 import { supabase } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import { hasOAuthError, authUrlWithError } from "@/utils/oauth-errors";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
@@ -42,6 +44,17 @@ const letterAnim: any = {
 };
 
 export default function Home() {
+  const router = useRouter();
+
+  // Un échec de connexion OAuth revient ici, sur la racine, avec ?error_code / ?error_description
+  // (Supabase redirige ses erreurs vers `site_url`, pas vers /auth/callback). Sans ce garde,
+  // l'utilisateur restait sur la page vitrine sans aucun message : on le renvoie vers /auth
+  // en conservant la query, où le message est affiché.
+  useEffect(() => {
+    const search = window.location.search;
+    if (hasOAuthError(search)) router.replace(authUrlWithError(search));
+  }, [router]);
+
   const { user, setUser, credits, setCredits } = useUserStore();
   const [lang, setLang] = useState("fr");
   const [showLangSelector, setShowLangSelector] = useState(false);
