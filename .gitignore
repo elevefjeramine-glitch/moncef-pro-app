@@ -42,3 +42,11 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# fichiers locaux / artefacts — ne jamais commiter (fuite de secrets)
+netlify-build.log
+netlify.html
+deploy-list.json
+netlify_key.pub
+setup-founder.mjs
+test-*.js
