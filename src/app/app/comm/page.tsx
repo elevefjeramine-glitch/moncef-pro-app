@@ -437,7 +437,7 @@ export default function CommPage() {
 
   // ─── Helpers ──────────────────────────────────────────────
   const getConvName = (conv) => {
-    if (conv.type === 'dm') return conv.dmPartner ? `${conv.dmPartner.first_name || ''} ${conv.dmPartner.last_name || ''}`.trim() || conv.dmPartner.email : 'Utilisateur';
+    if (conv.type === 'dm') return conv.dmPartner ? `${conv.dmPartner.first_name || ''} ${conv.dmPartner.last_name || ''}`.trim() || 'Utilisateur' : 'Utilisateur';
     return conv.name || 'Groupe';
   };
 
@@ -826,7 +826,8 @@ export default function CommPage() {
             {activeConv.type === 'dm' && activeConv.dmPartner && (
               <div className="info-section">
                 <div className="info-section-title">Email</div>
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', wordBreak: 'break-all' }}>{activeConv.dmPartner.email}</p>
+                {/* L'email n'est plus exposé aux clients : on affiche le statut à la place */}
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', wordBreak: 'break-all' }}>{activeConv.dmPartner.status === 'online' ? 'En ligne' : 'Hors ligne'}</p>
               </div>
             )}
 
@@ -840,7 +841,7 @@ export default function CommPage() {
                       {member.avatar_url ? <img src={member.avatar_url} alt="" /> : (member.first_name?.[0] || '?')}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{member.first_name || member.email}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{member.first_name || 'Utilisateur'}</div>
                       <div style={{ fontSize: 11, color: member.groupRole === 'admin' || member.role === 'founder' ? 'var(--gold)' : member.role === 'moderator' ? '#00D2B6' : 'rgba(255,255,255,0.4)' }}>
                         {member.groupRole === 'admin' ? `👑 ${t(lang, 'comm_admin')}` : (member.role === 'founder' ? '👑 Fondateur' : member.role === 'moderator' ? '🛡️ Modérateur' : t(lang, 'comm_member'))}
                       </div>
@@ -913,7 +914,7 @@ export default function CommPage() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.first_name || 'Utilisateur'} {user.last_name || ''}</div>
                         <div style={{ fontSize: 12, color: user.role === 'founder' ? 'var(--gold)' : user.role === 'moderator' ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>
-                          {user.role === 'founder' ? '👑 Fondateur' : user.role === 'moderator' ? '🛡️ Modérateur' : user.email}
+                          {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Utilisateur'}
                         </div>
                       </div>
                       <Send size={16} color="var(--a)" style={{ opacity: 0.5 }} />
@@ -980,7 +981,7 @@ export default function CommPage() {
                         <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, var(--p), var(--a))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
                           {u.first_name?.[0] || '?'}
                         </div>
-                        <span style={{ fontSize: 12, color: '#fff' }}>{u.first_name || u.email}</span>
+                        <span style={{ fontSize: 12, color: '#fff' }}>{u.first_name || 'Utilisateur'}</span>
                         <X size={12} style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.5)' }} onClick={() => toggleUserSelection(u)} />
                       </motion.div>
                     ))}
@@ -1006,7 +1007,7 @@ export default function CommPage() {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.first_name || 'Utilisateur'} {user.last_name || ''}</div>
                           <div style={{ fontSize: 12, color: user.role === 'founder' ? 'var(--gold)' : user.role === 'moderator' ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>
-                            {user.role === 'founder' ? '👑 Fondateur' : user.role === 'moderator' ? '🛡️ Modérateur' : user.email}
+                            {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Utilisateur'}
                           </div>
                         </div>
                         <div style={{ width: 22, height: 22, borderRadius: 6, border: isSelected ? '2px solid var(--a)' : '2px solid rgba(255,255,255,0.15)', background: isSelected ? 'var(--a)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--tr)' }}>
