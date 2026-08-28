@@ -17,6 +17,28 @@ function getSupabaseAdmin() {
   return supabaseAdmin;
 }
 
+export const maxDuration = 45;
+
+// FIX: les appels IA pouvaient pendre ~30 s et faire tuer la fonction par la
+// plateforme (502). On borne chaque appel a 20 s, on retente une fois sur erreur
+// reseau / timeout / 429 / 5xx, et on refuse de débiter sans réponse.
+const AI_TIMEOUT_MS = 20000;
+async function fetchWithTimeout(url: string, init: RequestInit, attempts = 2): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(AI_TIMEOUT_MS) });
+      const retriable = res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
+      if (!retriable || i === attempts - 1) return res;
+    } catch (e) {
+      lastErr = e;
+      if (i === attempts - 1) throw e;
+    }
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Appel IA échoué");
+}
+
 export async function POST(req: Request) {
   try {
     const { messages, system } = await req.json();
@@ -102,7 +124,7 @@ export async function POST(req: Request) {
           : [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
       }));
 
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_KEY}`,
         {
           method: "POST",
@@ -135,16 +157,21 @@ export async function POST(req: Request) {
         }))
       ];
 
-      const response = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+      const response = await fetchWithTimeout(`https://api.groq.com/openai/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${GROQ_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
+          // FIX: "llama-3.1-8b-instant" n'existe plus chez Groq (l'API répond
+          // model_not_found) → le secours était mort en silence. gpt-oss-20b est
+          // le seul modèle de chat rapide encore accessible à cette clé, et il
+          // consomme des reasoning_tokens : 2048 tronquait la réponse (finish=length
+          // mesuré), d'où 8192.
+          model: "openai/gpt-oss-20b",
           messages: aiMessages,
-          max_tokens: 2048,
+          max_tokens: 8192,
           temperature: 0.7
         })
       });
@@ -154,6 +181,13 @@ export async function POST(req: Request) {
         throw new Error(data.error?.message || `Erreur Groq (${response.status})`);
       }
       assistantMessage = data.choices?.[0]?.message?.content || "Désolé, je n'ai pas pu générer une réponse.";
+    } else {
+      // FIX: sans clé IA configurée, la fonction renvoyait 200 avec une réponse
+      // VIDE tout en débitant 10 crédits. On refuse explicitement la requête.
+      return NextResponse.json(
+        { error: "Aucun fournisseur d'IA n'est configuré (GEMINI_API_KEY / GROQ_API_KEY manquants)." },
+        { status: 503 }
+      );
     }
 
     // Déduction des crédits

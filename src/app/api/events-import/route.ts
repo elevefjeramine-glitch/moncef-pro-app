@@ -45,7 +45,7 @@ export async function POST(req) {
       const isMissingTable = error.message?.includes('relation') && error.message?.includes('does not exist');
       if (isMissingTable) {
         return NextResponse.json({ 
-          error: "La table 'events' n'existe pas encore. Exécutez le fichier migration_events.sql dans votre éditeur SQL Supabase pour activer cette fonctionnalité.", 
+          error: "La table 'events' n'existe pas encore. Exécutez le fichier supabase/migrations/0002_events.sql dans votre éditeur SQL Supabase pour activer cette fonctionnalité.", 
           setupRequired: true 
         }, { status: 503 });
       }

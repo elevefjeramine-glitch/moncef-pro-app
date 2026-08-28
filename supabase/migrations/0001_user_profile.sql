@@ -1,3 +1,7 @@
+-- Déplacé depuis /migration_user_profile.sql sans modifier le contenu — sha256 9dee0a63e1ce
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+
 -- =====================================================================
 -- Migration : Ajout des champs du profil utilisateur étendu
 -- Exécuter dans : Supabase → SQL Editor

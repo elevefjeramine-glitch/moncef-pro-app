@@ -1,3 +1,7 @@
+-- Déplacé depuis /cron_credits.sql sans modifier le contenu — sha256 3c6b44f2719d
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+
 -- ==========================================
 -- FONCTION : Régénération des Crédits
 -- ==========================================

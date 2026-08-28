@@ -1,3 +1,9 @@
+-- Déplacé depuis /fix_rls_policies.sql sans modifier le contenu — sha256 dd7036096305
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+-- REMPLACÉ : ce script rendait tous les emails lisibles et autorisait n'importe
+-- qui à s'auto-promouvoir. Ne pas l'exécuter. Voir ../security-fix-rls.sql.
+
 -- ==========================================
 -- SCRIPT DE CORRECTION: BOUCLE INFINIE RLS
 -- A copier/coller dans l'éditeur SQL de Supabase

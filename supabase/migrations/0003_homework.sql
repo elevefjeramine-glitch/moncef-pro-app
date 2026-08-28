@@ -1,3 +1,7 @@
+-- Déplacé depuis /migration_homework.sql sans modifier le contenu — sha256 9a03e71eb997
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+
 -- ==========================================
 -- MIGRATION : Upgrade table homework
 -- Ajouter ce SQL dans l'éditeur SQL de Supabase

@@ -1,3 +1,7 @@
+-- Déplacé depuis /performance_indexes.sql sans modifier le contenu — sha256 909fed7e349d
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+
 -- ==========================================
 -- OPTIMISATION DE LA BASE DE DONNÉES (ZÉRO DÉFAUT)
 -- A copier/coller dans le SQL Editor de Supabase pour accélérer les requêtes

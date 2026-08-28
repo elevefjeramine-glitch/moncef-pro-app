@@ -1,1 +1,53 @@
-Ly8g4pyFIEZJWCAjNyAjOCDigJQgSG9vayBkw6lkacOpIHBvdXIgbGVzIGRvbm7DqWVzIEVEVCBldCBkZXZvaXJzIGF2ZWMgVGFuU3RhY2sgUXVlcnkKaW1wb3J0IHsgdXNlQ2FsbGJhY2sgfSBmcm9tICJyZWFjdCI7CmltcG9ydCB7IHVzZVF1ZXJ5LCB1c2VRdWVyeUNsaWVudCB9IGZyb20gIkB0YW5zdGFjay9yZWFjdC1xdWVyeSI7CmltcG9ydCB7IHN1cGFiYXNlIH0gZnJvbSAiQC91dGlscy9zdXBhYmFzZS9jbGllbnQiOwppbXBvcnQgeyB1c2VVc2VyU3RvcmUgfSBmcm9tICJAL3N0b3JlL3VzZVVzZXJTdG9yZSI7CgpleHBvcnQgZnVuY3Rpb24gdXNlQUlEYXRhKCkgewogIGNvbnN0IHsgdXNlciB9ID0gdXNlVXNlclN0b3JlKCk7CiAgY29uc3QgcXVlcnlDbGllbnQgPSB1c2VRdWVyeUNsaWVudCgpOwoKICAvLyDinIUgRklYICM2IOKAlCBMaW1pdGUgw6AgMzAgZW50csOpZXMsIHPDqWxlY3Rpb24gbWluaW1hbGUgcG91ciByw6lkdWlyZSBsZSBwcm9tcHQKICBjb25zdCB7IGRhdGE6IGV4aXN0aW5nU2NoZWR1bGUgPSBbXSB9ID0gdXNlUXVlcnkoewogICAgcXVlcnlLZXk6IFsnYWktc2NoZWR1bGUnLCB1c2VyPy5pZF0sCiAgICBxdWVyeUZuOiBhc3luYyAoKSA9PiB7CiAgICAgIGNvbnN0IHsgZGF0YTogeyB1c2VyOiB1IH0gfSA9IGF3YWl0IHN1cGFiYXNlLmF1dGguZ2V0VXNlcigpOwogICAgICBpZiAoIXUpIHJldHVybiBbXTsKICAgICAgY29uc3QgeyBkYXRhIH0gPSBhd2FpdCBzdXBhYmFzZQogICAgICAgIC5mcm9tKCdzY2hlZHVsZScpCiAgICAgICAgLnNlbGVjdCgnaWQsIHdlZWssIGRheV9pbmRleCwgc3ViaiwgdGltZV9zbG90JykKICAgICAgICAub3JkZXIoJ2RheV9pbmRleCcpCiAgICAgICAgLm9yZGVyKCd0aW1lX3Nsb3QnKQogICAgICAgIC5saW1pdCgzMCk7IC8vIOKchSBGSVggIzYg4oCUIE1heCAzMCBlbnRyw6llcwogICAgICByZXR1cm4gZGF0YSB8fCBbXTsKICAgIH0sCiAgICBlbmFibGVkOiAhIXVzZXI/LmlkLAogICAgc3RhbGVUaW1lOiAzMF8wMDAsCiAgfSk7CgogIGNvbnN0IHsgZGF0YTogZXhpc3RpbmdIb21ld29yayA9IFtdIH0gPSB1c2VRdWVyeSh7CiAgICBxdWVyeUtleTogWydhaS1ob21ld29yaycsIHVzZXI/LmlkXSwKICAgIHF1ZXJ5Rm46IGFzeW5jICgpID0+IHsKICAgICAgY29uc3QgeyBkYXRhOiB7IHVzZXI6IHUgfSB9ID0gYXdhaXQgc3VwYWJhc2UuYXV0aC5nZXRVc2VyKCk7CiAgICAgIGlmICghdSkgcmV0dXJuIFtdOwogICAgICBjb25zdCB7IGRhdGEgfSA9IGF3YWl0IHN1cGFiYXNlCiAgICAgICAgLmZyb20oJ2hvbWV3b3JrJykKICAgICAgICAuc2VsZWN0KCdpZCwgc3ViamVjdCwgdGFzaywgZHVlX2RhdGUsIHByb2dyZXNzaW9uLCBzdGF0dXMsIHByaW9yaXR5JykKICAgICAgICAub3JkZXIoJ2NyZWF0ZWRfYXQnLCB7IGFzY2VuZGluZzogZmFsc2UgfSkKICAgICAgICAubGltaXQoMzApOyAvLyDinIUgRklYICM2IOKAlCBNYXggMzAgZW50csOpZXMKICAgICAgcmV0dXJuIGRhdGEgfHwgW107CiAgICB9LAogICAgZW5hYmxlZDogISF1c2VyPy5pZCwKICAgIHN0YWxlVGltZTogMzBfMDAwLAogIH0pOwoKICAvLyDinIUgRklYICM4IOKAlCBJbnZhbGlkYXRpb24gdmlhIFRhblN0YWNrIFF1ZXJ5IChwYXMgZGUgcmVjaGFyZ2VtZW50IG1hbnVlbCkKICBjb25zdCByZWZyZXNoRGF0YSA9IHVzZUNhbGxiYWNrKCgpID0+IHsKICAgIHF1ZXJ5Q2xpZW50LmludmFsaWRhdGVRdWVyaWVzKHsgcXVlcnlLZXk6IFsnYWktc2NoZWR1bGUnLCB1c2VyPy5pZF0gfSk7CiAgICBxdWVyeUNsaWVudC5pbnZhbGlkYXRlUXVlcmllcyh7IHF1ZXJ5S2V5OiBbJ2FpLWhvbWV3b3JrJywgdXNlcj8uaWRdIH0pOwogICAgcXVlcnlDbGllbnQuaW52YWxpZGF0ZVF1ZXJpZXMoeyBxdWVyeUtleTogWydob21ld29ya3MnLCB1c2VyPy5pZF0gfSk7CiAgfSwgW3F1ZXJ5Q2xpZW50LCB1c2VyPy5pZF0pOwoKICByZXR1cm4geyBleGlzdGluZ1NjaGVkdWxlLCBleGlzdGluZ0hvbWV3b3JrLCByZWZyZXNoRGF0YSB9Owp9Cg==
+// ✅ FIX #7 #8 — Hook dédié pour les données EDT et devoirs avec TanStack Query
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/utils/supabase/client";
+import { useUserStore } from "@/store/useUserStore";
+
+export function useAIData() {
+  const { user } = useUserStore();
+  const queryClient = useQueryClient();
+
+  // ✅ FIX #6 — Limite à 30 entrées, sélection minimale pour réduire le prompt
+  const { data: existingSchedule = [] } = useQuery({
+    queryKey: ['ai-schedule', user?.id],
+    queryFn: async () => {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) return [];
+      const { data } = await supabase
+        .from('schedule')
+        .select('id, week, day_index, subj, time_slot')
+        .order('day_index')
+        .order('time_slot')
+        .limit(30); // ✅ FIX #6 — Max 30 entrées
+      return data || [];
+    },
+    enabled: !!user?.id,
+    staleTime: 30_000,
+  });
+
+  const { data: existingHomework = [] } = useQuery({
+    queryKey: ['ai-homework', user?.id],
+    queryFn: async () => {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) return [];
+      const { data } = await supabase
+        .from('homework')
+        .select('id, subject, task, due_date, progression, status, priority')
+        .order('created_at', { ascending: false })
+        .limit(30); // ✅ FIX #6 — Max 30 entrées
+      return data || [];
+    },
+    enabled: !!user?.id,
+    staleTime: 30_000,
+  });
+
+  // ✅ FIX #8 — Invalidation via TanStack Query (pas de rechargement manuel)
+  const refreshData = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['ai-schedule', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['ai-homework', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
+  }, [queryClient, user?.id]);
+
+  return { existingSchedule, existingHomework, refreshData };
+}

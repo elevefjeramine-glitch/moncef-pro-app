@@ -1,3 +1,7 @@
+-- Déplacé depuis /migration_messaging.sql sans modifier le contenu — sha256 8fbf071e174e
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+
 -- ==========================================
 -- MIGRATION: SYSTÈME DE MESSAGERIE AVANCÉE
 -- Tables pour DM + Groupes style WhatsApp

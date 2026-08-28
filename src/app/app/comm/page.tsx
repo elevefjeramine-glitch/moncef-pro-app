@@ -339,7 +339,7 @@ export default function CommPage() {
     }]).select().single();
     
     if (error || !conv) { 
-      alert("Erreur base de données: Impossible de créer la conversation.\n\nVeuillez exécuter le script 'fix_rls_policies.sql' dans votre SQL Editor Supabase pour corriger ce bug !");
+      alert("Erreur base de données: Impossible de créer la conversation.\n\nVeuillez exécuter le script 'supabase/security-fix-rls.sql' dans votre SQL Editor Supabase pour corriger ce bug !");
       console.error('Error creating DM:', error); 
       return; 
     }

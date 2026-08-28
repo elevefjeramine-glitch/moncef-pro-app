@@ -71,7 +71,9 @@ export default function AppLayout({ children }) {
     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--a)', borderRadius: '50%' }} />
   </div>;
 
-  const activeColor = user.theme_color || '#00D2B6';
+  // sécurité: theme_color vient de l'API, on n'injecte QUE du hex dans le <style>
+  const rawColor = user.theme_color || '';
+  const activeColor = /^#[0-9a-fA-F]{3,8}$/.test(rawColor) ? rawColor : '#00D2B6';
 
   const lang = user.language || 'fr';
 
@@ -237,11 +239,9 @@ function SettingsModal({ user, lang, close }) {
       }).eq('id', user.id);
 
       if (error) {
-        if(error.message.includes("could not find the 'theme_color' column") || error.message.includes("could not find the 'status' column")) {
-          setMsg(t(lang, 'settings_col_warn'));
-        } else {
-          throw error;
-        }
+        // FIX: ce bloc transformait une erreur de schéma en simple avertissement.
+        // theme_color et status existent bien en base : on laisse l'erreur remonter.
+        throw error;
       } else {
         setMsg(t(lang, 'settings_saved') + " ✅");
         setTimeout(() => close(), 1500);

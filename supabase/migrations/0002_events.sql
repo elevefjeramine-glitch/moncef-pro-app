@@ -1,3 +1,7 @@
+-- Déplacé depuis /migration_events.sql sans modifier le contenu — sha256 55dd7093f8ff
+-- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
+--    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.
+
 -- ==========================================
 -- MIGRATION : TABLE ÉVÉNEMENTS
 -- À copier/coller dans l'éditeur SQL de Supabase
