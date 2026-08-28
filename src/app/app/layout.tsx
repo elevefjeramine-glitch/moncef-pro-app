@@ -5,7 +5,7 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu } from "lucide-react";
+import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu, ShieldAlert } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
 import { useUserStore } from "@/store/useUserStore";
 import type { ReactNode } from "react";
@@ -227,6 +227,51 @@ function SettingsModal({ user, lang, close }: any) {
   const [msg, setMsg] = useState("");
 
   const [status, setStatus] = useState(user.status || "online");
+  // Demande de suppression : `delBusy` bloque le bouton pendant l'appel,
+  // `delMsg` porte le retour (succès ou erreur). La date affichée vient de
+  // `user.deletion_scheduled_at`, que le canal realtime de ce layout rafraîchit
+  // tout seul dès que la ligne public.users est modifiée.
+  const [delBusy, setDelBusy] = useState(false);
+  const [delMsg, setDelMsg] = useState("");
+  // Deux temps : le premier clic arme le bouton, le second envoie la demande.
+  // L'armement se remet à zéro dès que l'appel se termine (succès ou erreur).
+  const [armed, setArmed] = useState(false);
+  const [delOk, setDelOk] = useState(true);
+
+  const pendingDeletion = user.deletion_scheduled_at ? new Date(user.deletion_scheduled_at) : null;
+  const pendingIsFuture = pendingDeletion ? pendingDeletion.getTime() > Date.now() : false;
+
+  const askDeletion = async (cancel: boolean) => {
+    setDelBusy(true); setDelMsg("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify(cancel ? { cancel: true } : { confirm: true }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      setDelOk(true);
+      if (cancel) {
+        setDelMsg(t(lang, 'del_cancelled'));
+      } else {
+        const when = json?.deletionScheduledAt
+          ? " — " + new Date(json.deletionScheduledAt).toLocaleDateString(lang === 'ar' ? 'fr' : lang)
+          : "";
+        setDelMsg(t(lang, 'del_done') + when);
+      }
+    } catch (err: any) {
+      setDelOk(false);
+      setDelMsg(t(lang, 'del_error') + ": " + (err?.message || String(err)));
+    } finally {
+      setDelBusy(false);
+      setArmed(false);
+    }
+  };
 
   const saveSettings = async () => {
     setLoading(true); setMsg("");
@@ -282,6 +327,9 @@ function SettingsModal({ user, lang, close }: any) {
           </button>
           <button onClick={() => setTab('interface')} style={{ flex: 1, padding: '16px', background: tab === 'interface' ? 'rgba(255,255,255,0.05)' : 'none', border: 'none', borderBottom: tab === 'interface' ? '2px solid var(--a)' : '2px solid transparent', color: tab === 'interface' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
             <Palette size={18}/> {t(lang, 'interface')}
+          </button>
+          <button onClick={() => setTab('danger')} style={{ flex: 1, padding: '16px', background: tab === 'danger' ? 'rgba(255,255,255,0.05)' : 'none', border: 'none', borderBottom: tab === 'danger' ? '2px solid var(--a)' : '2px solid transparent', color: tab === 'danger' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
+            <ShieldAlert size={18}/> {t(lang, 'danger')}
           </button>
         </div>
 
@@ -345,6 +393,45 @@ function SettingsModal({ user, lang, close }: any) {
                   ))}
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {tab === 'danger' && (
+            <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{t(lang, 'del_title')}</h3>
+              <p style={{ margin: '0 0 20px', fontSize: '13px', lineHeight: 1.6, color: 'rgba(255,255,255,0.6)' }}>
+                {t(lang, 'del_desc')}
+              </p>
+
+              {pendingIsFuture ? (
+                <div style={{ padding: '14px 16px', borderRadius: '12px', border: '1px solid var(--warn)', background: 'rgba(255,165,2,0.08)', marginBottom: '20px', fontSize: '13px' }}>
+                  ⏳ {t(lang, 'del_pending')}
+                  <strong>{new Date(user.deletion_scheduled_at).toLocaleDateString(lang === 'ar' ? 'fr' : lang)}</strong>
+                </div>
+              ) : null}
+
+              <button
+                onClick={() => {
+                  if (!pendingIsFuture && !armed) { setArmed(true); return; }
+                  askDeletion(pendingIsFuture);
+                }}
+                disabled={delBusy}
+                className="btn"
+                style={{
+                  width: '100%', minHeight: 'auto', padding: '12px 20px', borderRadius: '12px',
+                  background: pendingIsFuture ? 'rgba(255,255,255,0.08)' : 'rgba(255,51,102,0.15)',
+                  border: `1px solid ${pendingIsFuture ? 'rgba(255,255,255,0.2)' : 'var(--danger, #FF3366)'}`,
+                  color: '#fff', cursor: delBusy ? 'wait' : 'pointer', fontWeight: 700,
+                }}
+              >
+                {delBusy ? '...' : pendingIsFuture ? t(lang, 'del_cancel_cta') : armed ? t(lang, 'del_confirm_cta') : t(lang, 'del_cta')}
+              </button>
+
+              {delMsg && (
+                <div style={{ marginTop: '16px', fontSize: '13px', color: delOk ? 'var(--ok)' : 'var(--warn)', background: 'rgba(255,255,255,0.04)', padding: '10px 14px', borderRadius: '10px' }}>
+                  {delMsg}
+                </div>
+              )}
             </motion.div>
           )}
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { purgeDueDeletions } from '@/lib/compte';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -40,17 +41,22 @@ export async function POST(req: Request) {
 
     switch (action) {
       case 'GET_STATS': {
-        const [users, homework, messages, schedule] = await Promise.all([
+        const [users, homework, messages, schedule, deletionsDue] = await Promise.all([
           admin.from('users').select('id, email, first_name, last_name, role, tokens, created_at', { count: 'exact' }),
           admin.from('homework').select('id, subject, status, priority, user_id', { count: 'exact' }),
           admin.from('user_messages').select('id', { count: 'exact' }),
           admin.from('schedule').select('id', { count: 'exact' }),
+          // Comptes dont le délai de 7 jours est écoulé : à purger via PURGE_DUE_DELETIONS.
+          admin.from('users').select('id', { count: 'exact', head: true })
+            .not('deletion_scheduled_at', 'is', null)
+            .lte('deletion_scheduled_at', new Date().toISOString()),
         ]);
         return NextResponse.json({
           users: { count: users.count, data: users.data },
           homework: { count: homework.count, data: homework.data },
           messages: { count: messages.count },
           schedule: { count: schedule.count },
+          deletions: { due: deletionsDue.count ?? 0 },
         });
       }
 
@@ -88,7 +94,9 @@ export async function POST(req: Request) {
         await Promise.all([
           admin.from('homework').delete().eq('user_id', userId),
           admin.from('schedule').delete().eq('user_id', userId),
-          admin.from('user_messages').delete().eq('user_id', userId),
+          // user_messages n'a pas de colonne user_id (colonnes réelles : id, sender_id,
+          // receiver_id, content, created_at) : le filtre précédent échouait en silence.
+          admin.from('user_messages').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`),
           admin.from('conversation_messages').delete().eq('sender_id', userId),
           admin.from('conversation_members').delete().eq('user_id', userId),
           admin.from('conversations').delete().eq('created_by', userId),
@@ -123,6 +131,14 @@ export async function POST(req: Request) {
         const { error } = await admin.from('users').update({ tokens: amount ?? 700 }).eq('id', userId);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
+      }
+
+      case 'PURGE_DUE_DELETIONS': {
+        // Exécute la file d'attente des suppressions arrivées à échéance. Sans cron
+        // côté base (pg_cron non installé), c'est cette action — ou le premier appel
+        // /api/chat du concerné — qui fait réellement la purge.
+        const { purged, failed } = await purgeDueDeletions(admin);
+        return NextResponse.json({ success: failed.length === 0, purged, failed });
       }
 
       default:

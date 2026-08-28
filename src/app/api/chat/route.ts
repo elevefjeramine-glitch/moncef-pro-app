@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { applyDailyCreditFloor, DAILY_CREDIT_FLOOR, purgeAccount } from '@/lib/compte';
 
 // Configuration Supabase (Côté Serveur)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ggnwtszeitrrfhedgipv.supabase.co';
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
     // Vérifier les crédits (créer le profil si absent — cas OAuth Google/Microsoft)
     let { data: userData } = await supabase
       .from('users')
-      .select('tokens, role')
+      .select('tokens, role, tokens_reset_at, deletion_scheduled_at')
       .eq('id', user.id)
       .single();
 
@@ -92,20 +93,36 @@ export async function POST(req: Request) {
         first_name: firstName,
         last_name: lastName,
         role: 'normal',
-        tokens: 100
+        tokens: DAILY_CREDIT_FLOOR
       }).select('tokens, role').single();
-      userData = created || { tokens: 100, role: 'normal' };
+      userData = created || { tokens: DAILY_CREDIT_FLOOR, role: 'normal' };
     }
 
     if (!userData) {
       return NextResponse.json({ error: "Impossible de charger le profil utilisateur." }, { status: 500 });
     }
 
+    // Compte en attente de suppression : si les 7 jours sont écoulés, la purge
+    // demandée est exécutée ici (premier appel après l'échéance) et la requête
+    // s'arrête sur un 410 Gone. Voir src/lib/compte.ts.
+    if (userData.deletion_scheduled_at && new Date(userData.deletion_scheduled_at).getTime() <= Date.now()) {
+      const res = await purgeAccount(supabase, user.id);
+      return NextResponse.json({
+        error: res.ok
+          ? "Compte supprimé, comme demandé."
+          : "Suppression du compte partiellement exécutée : " + res.failed.join(' | ')
+      }, { status: 410 });
+    }
+
+    // Plancher quotidien : le solde est porté à 700 au premier appel du jour
+    // (date UTC), et n'est jamais réduit. C'est ce qui rend le message 402
+    // ci-dessous vrai — avant cette correction, aucune recharge n'existait.
+    const balance = await applyDailyCreditFloor(supabase, user.id, userData);
     const isUnlimited = ['founder', 'moderator'].includes(userData.role);
 
-    if (!isUnlimited && userData.tokens <= 0) {
+    if (!isUnlimited && balance <= 0) {
       return NextResponse.json({
-        response: "🚫 **Attention : Plus de crédits !** Vos tokens se rechargent automatiquement. Revenez plus tard."
+        response: "🚫 **Plus de crédits pour aujourd'hui.** Le solde repasse à " + DAILY_CREDIT_FLOOR + " au premier appel d'une nouvelle journée (UTC). Un modérateur peut aussi le recharger immédiatement depuis le panneau Alpha (action RESET_TOKENS)."
       }, { status: 402 });
     }
 
@@ -267,9 +284,9 @@ export async function POST(req: Request) {
     }
 
     // Déduction des crédits
-    let newTokens = userData.tokens;
+    let newTokens = balance;
     if (!isUnlimited) {
-      newTokens = Math.max(0, userData.tokens - 10);
+      newTokens = Math.max(0, balance - 10);
       await supabase.from('users').update({ tokens: newTokens }).eq('id', user.id);
     }
 
