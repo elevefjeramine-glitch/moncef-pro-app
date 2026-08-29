@@ -139,12 +139,19 @@ function evenement(lignes: string[]): string[] {
 
 export function construireIcs(
   donnees: { cours: Cours[]; devoirs: Devoir[]; evenements: Evenement[] },
-  opts: { maintenant?: Date; nom?: string; horizon?: number } = {}
+  opts: { maintenant?: Date; nom?: string; horizon?: number; stamp?: string | Date } = {}
 ): string {
   const maintenant = opts.maintenant ?? new Date();
   const horizon = opts.horizon ?? HORIZON_JOURS;
-  const fin = new Date(maintenant.getTime() + horizon * 86400000);
-  const stamp = enUtc(maintenant);
+  // L'horizon est arrondi au JOUR UTC suivant : un client qui rappelle trois fois dans
+  // l'heure doit recevoir l'OCTET PRÈS le même fichier. Avec une limite à la seconde,
+  // chaque relecture changeait `UNTIL`, donc le corps, donc forçait tous les calendriers
+  // à traiter le fichier comme modifié — le contraire de ce qu'on veut d'un flux.
+  const jour = new Date(maintenant.getTime() + horizon * 86400000);
+  const fin = new Date(Date.UTC(jour.getUTCFullYear(), jour.getUTCMonth(), jour.getUTCDate() + 1));
+  // `stamp` = l'instant de la DERNIÈRE écriture de l'élève, pas l'heure de la lecture :
+  // DTSTAMP est ce que les clients comparent pour savoir s'il faut tout recalculer.
+  const stamp = enUtc(opts.stamp ? new Date(opts.stamp) : maintenant);
   const lignes: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -154,6 +161,12 @@ export function construireIcs(
     `X-WR-CALNAME:${echapper(opts.nom ? `Moncef IA — ${opts.nom}` : "Moncef IA")}`,
     `X-WR-TIMEZONE:${FUSEAU}`,
     "X-WR-CALDESC:" + echapper("Cours, devoirs à rendre et évenements. Recharge automatiquement : la liste est recalculee a chaque lecture."),
+    // Rythme de relecture demandé aux clients (Apple et Thunderbird l'honorent ; Google
+    // l'ignore et pollifie à son propre rythme, on ne peut pas faire mieux). Douze heures
+    // : un emploi du temps ne bouge pas plus vite, et une URL gating un secret ne doit pas
+    // être rappelée vingt fois par jour.
+    "X-PUBLISHED-TTL:PT12H",
+    "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
     "BEGIN:VTIMEZONE",
     `TZID:${FUSEAU}`,
     "BEGIN:STANDARD",

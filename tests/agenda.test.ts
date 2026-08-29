@@ -136,15 +136,29 @@ describe("le fichier .ics produit", () => {
   it("propose une alarme la veille du devoir", () => {
     expect(deplie).toContain("TRIGGER:-P1D");
   });
-  it("est stable à la seconde près, et l'horizon glisse avec l'heure de lecture", () => {
-    const bis = construireIcs(JEUX, { maintenant: new Date(Date.UTC(2026, 7, 29, 12, 0, 0)), nom: "Moncef", horizon: 120 });
-    expect(bis).toBe(ics);
-    const sansTampon = (t: string) => t.split("\r\n").filter((l) => !l.startsWith("DTSTAMP") && !l.startsWith("RRULE"));
-    const plusTard = construireIcs(JEUX, { maintenant: new Date(Date.UTC(2026, 7, 29, 18, 0, 0)), nom: "Moncef", horizon: 120 });
-    expect(sansTampon(plusTard)).toEqual(sansTampon(ics)); // mêmes UIDs, mêmes heures de cours
+  it("rend le MÊME fichier à deux lectures du même jour (flux stable pour un abonnement)", () => {
+    // C'est la propriété qui compte pour un calendrier qui rappelle toutes les six heures :
+    // sans elle, chaque relecture change `DTSTAMP` et `UNTIL`, et le client recalcule tout.
+    const reglages = { nom: "Moncef", horizon: 120, stamp: "2026-08-28T07:15:00+00:00" };
+    const matin = construireIcs(JEUX, { ...reglages, maintenant: new Date(Date.UTC(2026, 7, 29, 8, 3, 11)) });
+    const soir = construireIcs(JEUX, { ...reglages, maintenant: new Date(Date.UTC(2026, 7, 29, 22, 41, 59)) });
+    expect(soir).toBe(matin);
+    expect(matin).toContain("DTSTAMP:20260828T071500Z"); // la dernière écriture de l'élève, pas l'heure de lecture
+    expect(matin).not.toContain("DTSTAMP:20260829");
+  });
+  it("fait avancer l'horizon d'un jour quand le jour change, pas d'une seconde", () => {
     const until = (t: string) => /UNTIL=(\d{8}T\d{6}Z)/.exec(t)![1]!;
-    expect(until(plusTard)).toBe("20261227T180000Z"); // +6 h de lecture = +6 h de fichier
-    expect(until(ics)).toBe("20261227T120000Z");
+    const J = { nom: "Moncef", horizon: 120, stamp: "2026-08-28T07:15:00+00:00" };
+    const un = construireIcs(JEUX, { ...J, maintenant: new Date(Date.UTC(2026, 7, 29, 0, 0, 0)) });
+    const deux = construireIcs(JEUX, { ...J, maintenant: new Date(Date.UTC(2026, 7, 30, 23, 59, 59)) });
+    expect(until(un)).toBe("20261228T000000Z"); // borné au jour UTC : jamais T120000Z ni T180000Z
+    expect(until(deux)).toBe("20261229T000000Z");
+    const rrules = un.split("\r\n").filter((l) => l.startsWith("RRULE:"));
+    expect(rrules.every((l) => /UNTIL=\d{8}T000000Z$/.test(l))).toBe(true);
+  });
+  it("demande un rythme de relecture aux clients qui savent l'écouter", () => {
+    expect(deplie).toContain("X-PUBLISHED-TTL:PT12H");
+    expect(deplie).toContain("REFRESH-INTERVAL;VALUE=DURATION:PT12H");
   });
   it("tolère l'absence totale de données", () => {
     const vide = construireIcs({ cours: [], devoirs: [], evenements: [] }, { maintenant: new Date(Date.UTC(2026, 7, 29)) });

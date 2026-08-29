@@ -188,6 +188,20 @@ verif("horaire a verifier" in ics.replace("\r\n ", ""), "le créneau illisible e
 verif(re.search(r"DTSTART;TZID=Africa/Casablanca:\d{8}T143000", ics.replace("\r\n ", "")) is not None,
       "l'heure de l'événement est reprise (14:30 → T143000)", re.findall(r"DTSTART[^\r]*", ics)[:2])
 
+# ── 3bis · un flux que les clients rappelent : ETag, 304, et stabilité ────────
+verif("X-PUBLISHED-TTL:PT12H" in ics.replace("\r\n ", ""), "le fichier demande un rythme de relecture (12 h)")
+verif("REFRESH-INTERVAL;VALUE=DURATION:PT12H" in ics.replace("\r\n ", ""), "et le redit dans la propriété standard")
+entete_etag = entetes.get("etag") or ""
+verif(entete_etag.startswith('W/"') and len(entete_etag) > 20, "la réponse porte un ETag faible", entete_etag[:24])
+st2, ent2, corps2 = http(BASE + lien, "GET", {"if-none-match": entete_etag}) if m else (0, {}, "")
+verif(st2 == 304, "re-lecture avec l'ETag → 304", st2)
+verif(corps2 == "", "et un 304 sans corps", len(corps2))
+st3, _, corps3 = http(BASE + lien, "GET", {"if-none-match": '"abc", "def"'}) if m else (0, {}, "")
+st4, _, corps4 = http(BASE + lien, "GET", {"if-none-match": '"' + ("0" * 22) + '"'}) if m else (0, {}, "")
+verif(st3 == 200 and st4 == 200 and corps3 == corps4, "deux lectures à quelques secondes d'écart rendent les MÊMES octets", "%s/%s · %d o" % (st3, st4, len(corps3)))
+st5, _, corps5 = http(BASE + "/api/agenda", "GET", A)
+verif(int(json.loads(corps5).get("lectures") or 0) >= 2, "le compteur de lectures compte aussi les 304", corps5[:70])
+
 # ── 4 · ce qui doit être refusé ───────────────────────────────────────────────
 st, _, _ = http(BASE + "/api/agenda/" + ("0" * 32) + ".ics")
 verif(st == 404, "un jeton inexistant → 404", st)

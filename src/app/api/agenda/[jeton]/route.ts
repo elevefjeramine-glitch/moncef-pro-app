@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { makeAdminClient } from "@/lib/compte";
 import { construireIcs, jetonValide, type Cours, type Devoir, type Evenement } from "@/lib/agenda";
@@ -30,7 +31,7 @@ function quaranteQuatre() {
   });
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ jeton: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ jeton: string }> }) {
   const brut = (await ctx.params).jeton ?? "";
   const jeton = brut.endsWith(".ics") ? brut.slice(0, -4) : brut;
   if (!jetonValide(jeton)) return quaranteQuatre();
@@ -43,21 +44,43 @@ export async function GET(_req: Request, ctx: { params: Promise<{ jeton: string 
   const maintenant = new Date();
   const debut = maintenant.toISOString().slice(0, 10);
   const [rCours, rDevoirs, rEvenements] = await Promise.all([
-    ADMIN.from("schedule").select("id, day_index, week, subj, time_slot").eq("user_id", uid).order("day_index", { ascending: true }),
+    ADMIN.from("schedule").select("id, day_index, week, subj, time_slot, created_at").eq("user_id", uid).order("day_index", { ascending: true }),
     // Seules les échéances À VENIR comptent : un calendrier n'est pas un historique, et
     // y empiler un an de devoirs rendus fait disparaître ce qui reste à faire.
-    ADMIN.from("homework").select("id, subject, task, due_date, status, priority").eq("user_id", uid).or("is_done.is.null,is_done.eq.false").gte("due_date", debut).order("due_date", { ascending: true }).limit(400),
-    ADMIN.from("events").select("id, title, description, event_date, event_time, category").eq("user_id", uid).gte("event_date", debut).order("event_date", { ascending: true }).limit(400),
+    ADMIN.from("homework").select("id, subject, task, due_date, status, priority, created_at").eq("user_id", uid).or("is_done.is.null,is_done.eq.false").gte("due_date", debut).order("due_date", { ascending: true }).limit(400),
+    ADMIN.from("events").select("id, title, description, event_date, event_time, category, created_at").eq("user_id", uid).gte("event_date", debut).order("event_date", { ascending: true }).limit(400),
   ]);
 
+  // La date d'écriture la plus récente du compte : c'est elle qui devient DTSTAMP, pour
+  // que deux relectures le même jour rendent le même fichier (voir src/lib/agenda.ts).
+  const ecritures = [...(rCours.data ?? []), ...(rDevoirs.data ?? []), ...(rEvenements.data ?? [])]
+    .map((l: { created_at?: string | null }) => String(l?.created_at ?? ""))
+    .filter(Boolean)
+    .sort();
   const ics = construireIcs(
     {
       cours: (rCours.data ?? []) as Cours[],
       devoirs: (rDevoirs.data ?? []) as Devoir[],
       evenements: (rEvenements.data ?? []) as Evenement[],
     },
-    { maintenant }
+    { maintenant, stamp: ecritures.length ? (ecritures[ecritures.length - 1] ?? maintenant.toISOString()) : maintenant.toISOString() }
   );
+
+  // ETag + 304 : un abonnement qui rappelle tous les jours ne doit pas rapporter 40 Ko
+  // quand rien n'a changé. Le comparateur accepte les formes faibles (`W/"…"`) et les
+  // listes : certains clients renvoient l'empreinte telle quelle, d'autres sans `W/`,
+  // d'autres encore une liste des deux — on compare donc l'empreinte nue.
+  const empreinte = createHash("sha1").update(ics, "utf8").digest("base64url");
+  const etag = `W/"${empreinte}"`;
+  const inmA = req.headers.get("if-none-match");
+  if (inmA && inmA.split(",").map((x) => x.trim().replace(/^W\//, "").replace(/^"|"$/g, "")).includes(empreinte)) {
+    void ADMIN.from("agenda_tokens").update({ vu_le: maintenant.toISOString(), lectures: Number(ligne.lectures ?? 0) + 1 }).eq("jeton", jeton).then(() => {});
+    return new NextResponse(null, {
+      status: 304,
+      headers: { etag, "cache-control": "private, max-age=1800", "content-type": "text/calendar; charset=utf-8" },
+    });
+  }
+
 
   // Best effort : si l'écriture du compteur échoue, le calendrier se charge quand même.
   void ADMIN.from("agenda_tokens").update({ vu_le: maintenant.toISOString(), lectures: Number(ligne.lectures ?? 0) + 1 }).eq("jeton", jeton).then(() => {});
@@ -67,6 +90,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ jeton: string 
     headers: {
       "content-type": "text/calendar; charset=utf-8",
       "content-disposition": 'attachment; filename="agenda.ics"',
+      etag,
       "cache-control": "private, max-age=1800",
       "x-content-type-options": "nosniff",
       "x-agenda-cours": String((rCours.data ?? []).length),
