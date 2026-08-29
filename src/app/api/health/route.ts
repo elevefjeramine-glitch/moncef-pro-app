@@ -42,15 +42,19 @@ async function probe(url: string, headers: Record<string, string>): Promise<{ ok
   }
 }
 
-// Une variable peut venir du build (figée par next.config) ou de l'environnement
-// d'exécution ; la première est la seule fiable sur Netlify, d'où l'ordre.
-function pick(...names: string[]): string | undefined {
-  for (const n of names) {
-    const v = process.env[n];
-    if (v) return v;
-  }
-  return undefined;
-}
+// Next remplace les valeurs de `env` (next.config) par des littéraux AU BUILD, mais
+// seulement pour les références écrites en toutes lettres : `process.env[nom]` avec une
+// clé calculée ne capte rien (mesuré sur l'aperçu local du 29/08 : les quatre champs
+// restaient null alors que COMMIT_REF était passé au build). D'où les quatre constantes
+// ci-dessous, chacune avec sa référence littérale, puis le repli sur la variable
+// d'exécution du même nom.
+const BUILD = {
+  commit: process.env.NEXT_PUBLIC_BUILD_COMMIT || process.env.COMMIT_REF || '',
+  branch: process.env.NEXT_PUBLIC_BUILD_BRANCH || process.env.BRANCH || '',
+  buildId: process.env.NEXT_PUBLIC_BUILD_ID || process.env.BUILD_ID || '',
+  context: process.env.NEXT_PUBLIC_BUILD_CONTEXT || process.env.CONTEXT || '',
+};
+const ouNull = (v: string): string | null => (v ? v : null);
 
 export async function GET() {
   const checks: Check[] = [];
@@ -105,10 +109,10 @@ export async function GET() {
       // (injectés par Netlify au build), null sinon. Pas de mystification :
       // la version déployée est identifiable, l'uptime ne l'est pas.
       deployment: {
-        commit: pick('NEXT_PUBLIC_BUILD_COMMIT', 'COMMIT_REF')?.slice(0, 7) ?? null,
-        branch: pick('NEXT_PUBLIC_BUILD_BRANCH', 'BRANCH') ?? null,
-        buildId: pick('NEXT_PUBLIC_BUILD_ID', 'BUILD_ID') ?? null,
-        context: pick('NEXT_PUBLIC_BUILD_CONTEXT', 'CONTEXT') ?? null,
+        commit: BUILD.commit ? BUILD.commit.slice(0, 7) : null,
+        branch: ouNull(BUILD.branch),
+        buildId: ouNull(BUILD.buildId),
+        context: ouNull(BUILD.context),
       },
     },
     {
