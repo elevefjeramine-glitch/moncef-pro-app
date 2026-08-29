@@ -36,7 +36,8 @@ function Field({ icon: Icon, label, badge, children }: any) {
 }
 
 export default function AuthPage() {
-  const [tab, setTab] = useState("login");
+  // "forgot" = l'écran « mot de passe oublié », sans mot de passe à saisir.
+  const [tab, setTab] = useState<"login" | "signup" | "forgot">("login");
   const [lang, setLang] = useState("fr");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -87,8 +88,31 @@ export default function AuthPage() {
     setSuccessMsg("");
   };
 
+  // Le lien « Mot de passe oublié ». Avant ce bloc, il n'existait AUCUNE voie de
+  // réinitialisation dans le dépôt : /auth/v1/recover répond pourtant 200 sur ce
+  // projet (mesuré le 29/08/2026), mais le lien n'avait nulle part où atterrir — le
+  // callback renvoyait sur /app avec une session de récupération, sans jamais
+  // demander le nouveau mot de passe. Il pointe donc sur /auth/callback?type=recovery,
+  // qui oriente vers /auth/reset.
+  const handleForgot = async () => {
+    setErrorMsg(""); setSuccessMsg("");
+    const cleanEmail = email.trim();
+    if (!cleanEmail) { setErrorMsg(t(lang, 'auth_fill_required')); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { setErrorMsg(t(lang, 'auth_invalid_email')); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+    });
+    setLoading(false);
+    if (error) { setErrorMsg(`${t(lang, 'auth_forgot_failed')} — ${error.message}`); return; }
+    // Le serveur répond pareil que le compte existe ou non (anti-énumération) : on le
+    // dit, au lieu de promettre un e-mail qui a pu être refusé par le serveur d'envoi.
+    setSuccessMsg(`${t(lang, 'auth_forgot_sent')} ${cleanEmail}`);
+  };
+
   const handleAuth = async () => {
     setErrorMsg(""); setSuccessMsg("");
+    if (tab === "forgot") { handleForgot(); return; }
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !password) {
@@ -136,7 +160,24 @@ export default function AuthPage() {
       }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-      if (error) setErrorMsg(error.message);
+      if (error) {
+        // GoTrue renvoie « Invalid login credentials » y compris quand le compte n'a
+        // jamais de mot de passe posé (créé par Google) — un simple « identifiants
+        // invalides » laisse l'utilisateur taper et retaper. La phrase doit dire quoi
+        // faire ensuite.
+        const msg = String(error.message || "");
+        if (/invalid login credentials/i.test(msg)) {
+          setErrorMsg(t(lang, 'auth_bad_credentials') + (oauthReady.google ? " " + t(lang, "auth_google_hint") : ""));
+        } else if (/not confirmed/i.test(msg)) {
+          setErrorMsg(t(lang, 'auth_email_not_confirmed'));
+        } else if (/rate limit|too many|provide credentials after/i.test(msg)) {
+          setErrorMsg(t(lang, 'auth_rate_limited'));
+        } else {
+          setErrorMsg(msg || t(lang, 'auth_bad_credentials'));
+        }
+      } else if (!data.session) {
+        setErrorMsg(t(lang, 'auth_email_not_confirmed'));
+      }
       else window.location.href = "/app";
     }
     setLoading(false);
@@ -337,10 +378,14 @@ export default function AuthPage() {
                 <Mail size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
                 <input type="email" className="fi" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="votre@email.com"
+                  // `autoComplete="username"` : le gestionnaire de mots de passe remplit
+                  // l'e-mail ET le mot de passe ; sans lui, rien n'est proposé sur mobile.
+                  autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                   style={{ height: 44, paddingLeft: 36 }} />
               </div>
             </div>
 
+            {tab !== 'forgot' && (
             <div style={{ marginBottom: '24px', position: 'relative' }}>
               {tab === 'login' && <label style={LABEL_STYLE}>{t(lang, 'auth_pwd')}</label>}
               <div style={{ position: 'relative' }}>
@@ -348,6 +393,12 @@ export default function AuthPage() {
                 <input type={showPw ? "text" : "password"} className="fi" value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  // Le clavier mobile corrige et capitalise par défaut : sur un mot de passe
+                  // long, une seule correction silencieuse et GoTrue répond « invalid login
+                  // credentials ». Ces quatre attributs coupent le problème, et `current-password`
+                  // laisse le gestionnaire remplir le champ.
+                  autoComplete={tab === "signup" ? "new-password" : "current-password"}
+                  autoCapitalize="none" autoCorrect="off" spellCheck={false}
                   style={{ height: 44, paddingLeft: 36, paddingRight: 44 }} />
                 <button type="button"
                   onClick={() => setShowPw(!showPw)}
@@ -356,6 +407,22 @@ export default function AuthPage() {
                 </button>
               </div>
             </div>
+            )}
+
+            {/* Accès à la réinitialisation, puis retour à la connexion. */}
+            {tab === 'login' && (
+              <p style={{ margin: '-8px 0 16px', textAlign: 'right' }}>
+                <button type="button" onClick={() => switchTab('forgot')}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                  {t(lang, 'auth_forgot_link')}
+                </button>
+              </p>
+            )}
+            {tab === 'forgot' && (
+              <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'rgba(255,255,255,0.5)', lineHeight: 1.55 }}>
+                {t(lang, 'auth_forgot_lede')}
+              </p>
+            )}
 
             {/* ── Submit ──────────────────────────────────────── */}
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -366,7 +433,7 @@ export default function AuthPage() {
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                   style={{ width: 18, height: 18, border: '2px solid rgba(0,0,0,0.3)', borderTop: '2px solid #000', borderRadius: '50%' }} />
               ) : (
-                <>{tab === "login" ? t(lang, 'auth_btn_login') : t(lang, 'auth_btn_signup')} <ChevronRight size={18} /></>
+                <>{tab === "login" ? t(lang, 'auth_btn_login') : tab === "forgot" ? t(lang, 'auth_forgot_btn') : t(lang, 'auth_btn_signup')} <ChevronRight size={18} /></>
               )}
             </motion.button>
 

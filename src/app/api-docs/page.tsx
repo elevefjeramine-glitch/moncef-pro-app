@@ -62,6 +62,7 @@ const ROUTES: RouteDoc[] = [
       "Chaque réponse réussie coûte 10 crédits. Un échec du modèle ne débite rien.",
       "Une image passe en `inlineData` au modèle ; le format accepté est une data URL base64 dans une partie `image_url`.",
       "Timeout de 20 s par appel fournisseur, une tentative supplémentaire sur erreur réseau, 429, 502, 503, 504.",
+      "Un client qui annonce un `Content-Length` plus gros que son corps ne reçoit pas ce 413 mais un 408 « Inactivity Timeout » du bord Netlify : la fonction n'est appelée qu'une fois le corps parvenu (mesuré le 29/08/2026 sur un déploiement de brouillon : en-tête 9000000 sans corps → 408, corps réel de 2 200 076 octets → 413).",
     ],
   },
   {
@@ -303,6 +304,7 @@ const ROUTES: RouteDoc[] = [
       "Les références [S<n>] sont contrôlées après coup : une référence à un passage qui n'a pas été fourni est retirée du texte et listée dans `avertissements`. Zéro citation renvoyée vaut l'avertissement « considère-la comme non sourcée ».",
       "Les liens ne sont jamais inventés. Seules des URL de recherche construites par le serveur sortent (YouTube, web) ; un lien direct dicté par le modèle n'est renvoyé que s'il résout, et son titre vient alors de oEmbed de la plateforme, pas du modèle.",
       "Coûts : 10 crédits (`ask`), 15 (`quiz`), 5 (`links`), 0 pour `sources` et `progress`. Les modes sans IA ne débitent pas ; un échec du modèle ne débite rien non plus (`debite: 0`).",
+      "Un client qui annonce un `Content-Length` plus gros que son corps ne reçoit pas ce 413 mais un 408 « Inactivity Timeout » du bord Netlify : la fonction n'est appelée qu'une fois le corps parvenu (mesuré le 29/08/2026 sur un déploiement de brouillon : en-tête 9000000 sans corps → 408, corps réel de 2 200 076 octets → 413).",
       "La correction du QCM est faite côté client par comparaison d'index : le modèle ne revoit jamais une copie. Un QCM mal formé (moins de 4 choix, index hors 0-3, choix identiques, source inexistante) est refusé en 502, motif à l'appui.",
       "Forme de succès LUE DANS LE CODE (src/app/api/thunder/route.ts), pas encore capturée sur un serveur où la clé IA est présente : à la date de cette page, les builds du dépôt sont suspendus faute de crédits sur le compte d'hébergement, et les réponses ci-dessus viennent de mes appels locaux, qui renvoient les refus (401, 413, 503) mais pas de réponse IA.",
     ],

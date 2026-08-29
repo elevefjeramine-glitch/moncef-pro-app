@@ -31,20 +31,32 @@ function CallbackInner() {
     if (urlErr) return;
 
     let settled = false;
+    // Une réinitialisation de mot de passe arrive ici avec ?type=recovery : supabase-js
+    // a échangé le lien en session de récupération, mais cette session NE DOIT PAS
+    // mener à /app — l'ancien mot de passe est toujours celui du compte, et le
+    // navigateur repartirait sur l'écran de connexion au prochain rechargement.
+    const suite = (session: any) => {
+      const recovery = params?.get?.("type") === "recovery" || !!session?.user?.recovery_sent_at;
+      router.replace(recovery ? "/auth/reset" : "/app");
+    };
+
     const finish = async () => {
       if (settled) return;
       settled = true;
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) router.replace("/app");
+      if (session) suite(session);
       else setExchangeFailed(true);
     };
 
     // 2) échec côté client (bout « Autoriser » puis retour) : on est déjà ici,
     //    l'échange tourne ; on écoute sa fin plutôt que de le deviner par timeout.
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      // PASSWORD_RECOVERY : l'événement émis par supabase-js quand l'URL contenait
+      // un lien de réinitialisation (type=recovery). Sans lui, la page restait sur
+      // son spinner jusqu'au filet de 6 s.
+      if (session && (event === "SIGNED_IN" || event === "PASSWORD_RECOVERY")) {
         settled = true;
-        router.replace("/app");
+        suite(session);
       }
     });
 
