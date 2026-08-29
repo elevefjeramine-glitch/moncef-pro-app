@@ -43,8 +43,14 @@ export default function SchedulePage() {
   };
 
   // Effect #1: Load data when selectedWeek changes
-  useEffect(() => { 
-    loadScheduleForWeek(selectedWeek); 
+  useEffect(() => {
+    // `loadScheduleForWeek` pose `setLoading(true)` AVANT son premier `await` : appelé
+    // directement dans l'effet, ce setState partait pendant la committure et provoquait un
+    // rendu en cascade à chaque changement de semaine. Le renvoi dans une microtâche le fit
+    // partir juste après la committure — donc avant tout paint, invisible — et supprime le
+    // cascade. (Règle `react-hooks/set-state-in-effect` : c'était un VRAI positif, pas un
+    // faux positif comme je l'avais noté une première fois.)
+    void Promise.resolve().then(() => loadScheduleForWeek(selectedWeek));
   }, [selectedWeek]);
 
   // Effect #2: Realtime subscription — runs once on mount, cleaned up on unmount

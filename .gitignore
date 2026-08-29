@@ -54,3 +54,7 @@ test-*.js
 
 # Aperçu statique de la page Thunder (fabriqué par tools/apercu-thunder.py)
 apercu-thunder.html
+
+# fichiers de mesure laissés par les toises python
+tests/__pycache__/
+.verif/
