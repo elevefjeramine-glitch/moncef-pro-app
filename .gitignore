@@ -51,3 +51,6 @@ netlify_key.pub
 setup-founder.mjs
 test-*.js
 .verif/
+
+# Aperçu statique de la page Thunder (fabriqué par tools/apercu-thunder.py)
+apercu-thunder.html

@@ -1064,3 +1064,1048 @@ a { text-decoration: none; color: inherit; }
 .rise-in-fade { animation: fade-in 0.5s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .rise-in-fade { animation: none; } }
 
+/* ═══════════════════════════════════════════════════════════════
+   15bis. THUNDER (app/app/thunder) — système de design de la page
+   ═══════════════════════════════════════════════════════════════
+   Tout est scopé sous .thunder pour ne rien changer aux autres
+   écrans. Trois partis pris, mesurables :
+    1. une échelle typographique (plus de 11 / 11.5 / 12 / 12.5 / 13 / 15 px
+       qui cohabitaient) : display, titre, corps 15, petit 13, micro 11.5
+       réservé aux libellés en capitales espacées ;
+    2. le violet n'est plus seulement un liseré : c'est la teinte de
+       l'en-tête, de l'onglet actif, du switch, du bouton, des focus et
+       des citations ;
+    3. aucune transparence ne sert à estomper du texte : les trois niveaux
+       d'encre ont été calculés pour passer 4.5:1 sur le fond #060a14
+       (voir la mesure dans outillage/).
+   Les propriétés sont logiques (margin-inline-start…) pour que [dir=rtl]
+   de l'arabe fonctionne sans correctif.
+   ─────────────────────────────────────────────────────────────── */
+
+.thunder {
+  --tv: #a78bfa;
+  --tv-fort: #d0bfff;
+  --tv-veil: rgba(167, 139, 250, 0.13);
+  --tv-lien: rgba(167, 139, 250, 0.38);
+  --encre: rgba(255, 255, 255, 0.94);
+  --encre-douce: rgba(233, 236, 245, 0.80);
+  --encre-faible: rgba(222, 226, 238, 0.66);
+  --filet: rgba(255, 255, 255, 0.10);
+  --t-display: clamp(23px, 2.5vw, 31px);
+  --t-corps: 15px;
+  --t-petit: 13px;
+  --t-micro: 11.5px;
+  --rythme: clamp(14px, 1.5vw, 20px);
+  --rayon: 18px;
+  color: var(--encre);
+  font-size: var(--t-corps);
+  line-height: 1.65;
+  height: 100%;
+  overflow-y: auto;
+  padding: calc(var(--rythme) * 1.4) clamp(14px, 2.6vw, 36px) 90px;
+  scrollbar-width: thin;
+}
+
+/* ── en-tête : halo, titre, compteurs ─────────────────────────── */
+.thunder .th-head {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--rythme);
+  padding-bottom: var(--rythme);
+  margin-bottom: calc(var(--rythme) * 1.3);
+  border-bottom: 1px solid var(--filet);
+}
+.thunder .th-head::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: -8%;
+  inset-block-start: -70px;
+  width: 320px;
+  height: 170px;
+  background: radial-gradient(closest-side, rgba(167, 139, 250, 0.22), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+.thunder .th-tete {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: min(100%, 340px);
+}
+.thunder .th-glyphe {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  color: var(--tv-fort);
+  background: linear-gradient(160deg, rgba(167, 139, 250, 0.28), rgba(167, 139, 250, 0.06));
+  border: 1px solid var(--tv-lien);
+  box-shadow: 0 10px 26px rgba(124, 58, 237, 0.22);
+}
+.thunder .th-nom {
+  margin: 0;
+  font-family: var(--font2);
+  font-size: var(--t-display);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+}
+.thunder .th-sous-titre {
+  margin: 6px 0 0;
+  font-size: var(--t-petit);
+  line-height: 1.5;
+  color: var(--encre-douce);
+  max-width: 54ch;
+}
+.thunder .th-compteurs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.thunder .th-compteur {
+  min-width: 108px;
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid var(--filet);
+  border-inline-start: 2px solid var(--tv);
+}
+.thunder .th-compteur b {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.thunder .th-compteur span {
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.075em;
+  color: var(--encre-faible);
+}
+
+/* ── disposition : rail collant + colonne de travail ──────────── */
+.thunder .th-grille {
+  display: grid;
+  grid-template-columns: 318px minmax(0, 1fr);
+  gap: calc(var(--rythme) * 1.1);
+  align-items: start;
+}
+.thunder .th-rail {
+  position: sticky;
+  inset-block-start: 4px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-inline-end: 4px;
+  scrollbar-width: thin;
+}
+@media (max-width: 1000px) {
+  .thunder .th-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .thunder .th-rail {
+    position: static;
+    max-height: none;
+  }
+}
+.thunder .th-colonne {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--rythme) * 0.9);
+  min-width: 0;
+}
+
+/* ── panneaux ─────────────────────────────────────────────────── */
+.thunder .th-panneau {
+  background: rgba(255, 255, 255, 0.026);
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon);
+  padding: 16px;
+  backdrop-filter: blur(14px);
+}
+.thunder .th-panneau--travail {
+  padding: 18px;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.32);
+  border-color: rgba(167, 139, 250, 0.22);
+}
+.thunder .th-etiquette {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: var(--t-micro);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}
+.thunder .th-etiquette i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tv);
+  flex: none;
+}
+.thunder .th-etiquette b {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  font-size: var(--t-petit);
+  color: var(--encre-douce);
+}
+
+/* ── sélecteur de mode (vraie tabBar, flèches au clavier) ─────── */
+.thunder .th-modes {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--filet);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.thunder .th-mode {
+  appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--encre-douce);
+  font: inherit;
+  font-size: var(--t-petit);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease;
+}
+.thunder .th-mode:hover {
+  color: var(--encre);
+  background: rgba(255, 255, 255, 0.05);
+}
+.thunder .th-mode[aria-selected="true"] {
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.30), rgba(167, 139, 250, 0.16));
+  color: #fff;
+  box-shadow: inset 0 0 0 1px var(--tv-lien);
+}
+
+/* ── champs ───────────────────────────────────────────────────── */
+.thunder .th-champ {
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 13px;
+  border: 1px solid var(--filet);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--encre);
+  font: inherit;
+  font-size: var(--t-corps);
+  line-height: 1.55;
+  box-sizing: border-box;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.thunder .th-champ::placeholder {
+  color: var(--encre-faible);
+  opacity: 1;
+}
+.thunder .th-champ:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.thunder .th-champ:focus-visible {
+  outline: 2px solid var(--tv);
+  outline-offset: 1px;
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.055);
+}
+.thunder .th-champ--zone {
+  min-height: 104px;
+  resize: vertical;
+}
+.thunder .th-champ--question {
+  min-height: 88px;
+  font-size: var(--t-corps);
+}
+.thunder .th-champ--court {
+  width: 72px;
+  padding-inline: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-label {
+  display: block;
+  font-size: var(--t-micro);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+  margin-bottom: 5px;
+}
+.thunder .th-aide {
+  margin: 6px 0 0;
+  font-size: var(--t-petit);
+  color: var(--encre-faible);
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-ligne-champs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.thunder .th-ligne-champs > * {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+/* ── bouton ───────────────────────────────────────────────────── */
+.thunder .th-envoi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.thunder .th-bouton {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  font-size: var(--t-petit);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 13px;
+  border: 1px solid var(--tv-lien);
+  color: #150c26;
+  background: linear-gradient(180deg, #cdb6ff, var(--tv));
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.28);
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+.thunder .th-bouton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 16px 34px rgba(124, 58, 237, 0.36);
+}
+.thunder .th-bouton:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+}
+.thunder .th-bouton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+.thunder .th-bouton--fantome {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--encre);
+  border-color: var(--filet);
+  box-shadow: none;
+}
+.thunder .th-bouton--fantome:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  filter: none;
+  box-shadow: none;
+}
+.thunder .th-bouton--mini {
+  min-height: 30px;
+  padding: 0 11px;
+  font-size: var(--t-micro);
+  border-radius: 9px;
+  letter-spacing: 0.02em;
+}
+.thunder .th-kbd {
+  font: inherit;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 7px;
+  border: 1px solid var(--filet);
+  border-bottom-width: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--encre-douce);
+  white-space: nowrap;
+}
+.thunder :where(button, a, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--tv);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ── interrupteur web ─────────────────────────────────────────── */
+.thunder .th-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--t-petit);
+  font-weight: 700;
+  color: var(--encre-douce);
+  padding: 7px 12px 7px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--filet);
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+.thunder .th-switch:hover {
+  border-color: rgba(167, 139, 250, 0.3);
+}
+.thunder .th-switch input {
+  appearance: none;
+  margin: 0;
+  width: 34px;
+  height: 19px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  position: relative;
+  cursor: pointer;
+  transition: background 160ms ease;
+  flex: none;
+}
+.thunder .th-switch input::after {
+  content: "";
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-start: 2px;
+  width: 15px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 160ms ease;
+}
+.thunder .th-switch input:checked {
+  background: var(--tv);
+}
+.thunder .th-switch input:checked::after {
+  transform: translateX(15px);
+}
+/* Le curseur part du bord logique « start » : en arabe il glisse vers la
+   gauche, sans correctif séparé. */
+[dir="rtl"] .thunder .th-switch input:checked::after {
+  transform: translateX(-15px);
+}
+.thunder .th-switch:has(input:checked) {
+  color: #fff;
+  background: var(--tv-veil);
+  border-color: var(--tv-lien);
+}
+
+/* ── sources : la liste qui borne la réponse ────────────────── */
+.thunder .th-sources {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.thunder .th-source {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1px solid var(--filet);
+  background: rgba(255, 255, 255, 0.022);
+  font-size: var(--t-petit);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.thunder .th-source:hover {
+  border-color: rgba(167, 139, 250, 0.32);
+  background: rgba(167, 139, 250, 0.06);
+}
+.thunder .th-source[data-retenu="non"] {
+  opacity: 0.66;
+}
+.thunder .th-source[data-retenu="oui"] {
+  border-inline-start: 2px solid var(--tv);
+}
+.thunder .th-source input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tv);
+  margin: 0;
+  cursor: pointer;
+}
+.thunder .th-source-nom {
+  font-weight: 700;
+  color: var(--encre);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.thunder .th-source-matiere {
+  font-size: var(--t-micro);
+  color: var(--encre-faible);
+  letter-spacing: 0.04em;
+}
+.thunder .th-source-long {
+  font-size: var(--t-micro);
+  color: var(--encre-faible);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.thunder .th-vider {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--encre-faible);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 8px;
+  transition: color 140ms ease, background 140ms ease;
+}
+.thunder .th-vider:hover {
+  color: #ff8f8f;
+  background: rgba(255, 107, 107, 0.12);
+}
+
+/* ── notes : erreur, avertissements, info ─────────────────────── */
+.thunder .th-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.thunder .th-note {
+  border-radius: 13px;
+  padding: 11px 13px;
+  font-size: var(--t-petit);
+  line-height: 1.55;
+  border: 1px solid var(--filet);
+  border-inline-start: 3px solid var(--encre-faible);
+  background: rgba(255, 255, 255, 0.03);
+}
+.thunder .th-note > p,
+.thunder .th-note > ul {
+  margin: 0;
+}
+.thunder .th-note ul {
+  padding-inline-start: 18px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.thunder .th-note-tete {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.thunder .th-note[data-niveau="erreur"] {
+  border-inline-start-color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.09);
+  color: #ffd7d7;
+}
+.thunder .th-note[data-niveau="alerte"] {
+  border-inline-start-color: #ffd700;
+  background: rgba(255, 215, 0, 0.07);
+  color: #f6e9bd;
+}
+.thunder .th-note[data-niveau="web"] {
+  border-inline-start-color: var(--tv);
+  background: var(--tv-veil);
+  color: #e8dcff;
+}
+.thunder .th-note[data-niveau="info"] {
+  color: var(--encre-douce);
+}
+
+/* ── réponse ──────────────────────────────────────────────────── */
+.thunder .th-reponse {
+  border-radius: var(--rayon);
+  border: 1px solid var(--filet);
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.06), rgba(255, 255, 255, 0.022) 120px);
+  overflow: hidden;
+}
+.thunder .th-reponse-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--filet);
+  background: rgba(0, 0, 0, 0.22);
+}
+.thunder .th-pastille {
+  font-size: var(--t-micro);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--filet);
+  color: var(--encre-douce);
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-pastille--violet {
+  color: #fff;
+  background: var(--tv-veil);
+  border-color: var(--tv-lien);
+}
+.thunder .th-pastille--or {
+  color: #ffe9a8;
+  border-color: rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.08);
+}
+.thunder .th-corps-reponse {
+  padding: 15px 16px 4px;
+  font-size: var(--t-corps);
+}
+.thunder .th-corps-reponse .ai-markdown {
+  font-size: var(--t-corps);
+  line-height: 1.72;
+}
+.thunder .th-corps-reponse .ai-markdown :is(h1, h2, h3) {
+  font-size: 16px;
+  margin: 14px 0 6px;
+}
+.thunder .th-corps-reponse .ai-markdown p {
+  margin-bottom: 10px;
+}
+.thunder .th-corps-reponse .ai-markdown a {
+  color: var(--tv-fort);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.thunder .th-citations {
+  margin: 0;
+  padding: 12px 16px 15px;
+  border-top: 1px dashed var(--filet);
+}
+.thunder .th-citations > summary {
+  cursor: pointer;
+  font-size: var(--t-petit);
+  font-weight: 800;
+  color: var(--encre-douce);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.thunder .th-citations > summary::-webkit-details-marker {
+  display: none;
+}
+.thunder .th-citations > summary::before {
+  content: "▸";
+  color: var(--tv);
+  transition: transform 150ms ease;
+}
+.thunder .th-citations[open] > summary::before {
+  transform: rotate(90deg);
+}
+.thunder .th-cite {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0 0;
+  font-size: var(--t-petit);
+}
+.thunder .th-cite-n {
+  font-weight: 800;
+  font-size: var(--t-micro);
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: var(--tv-veil);
+  border: 1px solid var(--tv-lien);
+  border-radius: 8px;
+  padding: 3px 0;
+  text-align: center;
+  height: fit-content;
+}
+.thunder .th-cite a {
+  color: var(--tv-fort);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.thunder .th-cite-titre {
+  font-weight: 700;
+  color: var(--encre);
+}
+.thunder .th-cite blockquote {
+  margin: 6px 0 0;
+  padding-inline-start: 11px;
+  border-inline-start: 2px solid var(--tv);
+  color: var(--encre-douce);
+  font-size: var(--t-petit);
+}
+.thunder .th-cite--cours blockquote {
+  border-inline-start-color: var(--a);
+}
+
+/* ── QCM : une carte par question, plus de tableau horizontal ─── */
+.thunder .th-jauge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 14px;
+  font-size: var(--t-petit);
+  color: var(--encre-douce);
+}
+.thunder .th-jauge-barre {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.thunder .th-jauge-barre i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c3aed, var(--tv));
+  transition: width 240ms ease;
+}
+.thunder .th-jauge b {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+.thunder .th-quiz {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.thunder .th-question {
+  border-radius: 15px;
+  border: 1px solid var(--filet);
+  background: rgba(255, 255, 255, 0.022);
+  padding: 13px 14px;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.thunder .th-question[data-etat="juste"] {
+  border-color: rgba(34, 197, 94, 0.42);
+  background: rgba(34, 197, 94, 0.07);
+}
+.thunder .th-question[data-etat="faux"] {
+  border-color: rgba(255, 107, 107, 0.42);
+  background: rgba(255, 107, 107, 0.06);
+}
+.thunder .th-question-tete {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.thunder .th-question-n {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: var(--t-micro);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--encre-douce);
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-question-e {
+  margin: 0;
+  font-size: var(--t-corps);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--encre);
+}
+.thunder .th-choix {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: var(--t-petit);
+  line-height: 1.5;
+  color: var(--encre-douce);
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.thunder .th-choix:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--filet);
+  color: var(--encre);
+}
+.thunder .th-choix input {
+  margin: 3px 0 0;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--tv);
+  flex: none;
+}
+.thunder .th-choix[data-choisi="oui"] {
+  background: var(--tv-veil);
+  border-color: var(--tv-lien);
+  color: #fff;
+}
+.thunder .th-choix[data-bonne="oui"] {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.12);
+  color: #fff;
+  font-weight: 700;
+}
+.thunder .th-choix[data-rejetee="oui"] {
+  border-color: rgba(255, 107, 107, 0.4);
+  color: #ffd7d7;
+  text-decoration: line-through;
+}
+.thunder .th-verdict {
+  font-size: var(--t-micro);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-inline-start: auto;
+  flex: none;
+}
+.thunder .th-verdict[data-sens="juste"] {
+  color: #0b1f13;
+  background: #4ade80;
+}
+.thunder .th-verdict[data-sens="faux"] {
+  color: #2a0a0a;
+  background: #ff8f8f;
+}
+.thunder .th-verdict[data-sens="vide"] {
+  color: var(--encre-faible);
+  border: 1px solid var(--filet);
+}
+.thunder .th-explication {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: var(--t-petit);
+  line-height: 1.6;
+  color: var(--encre-douce);
+}
+.thunder .th-explication blockquote {
+  margin: 8px 0 0;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--a);
+  color: var(--encre-douce);
+}
+.thunder .th-pied-quiz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.thunder .th-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--encre-douce);
+}
+.thunder .th-score b {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+/* ── liens de recherche, historique ──────────────────────────── */
+.thunder .th-liens,
+.thunder .th-histo-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.thunder .th-lien {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--filet);
+  background: rgba(255, 255, 255, 0.022);
+  font-size: var(--t-petit);
+}
+.thunder .th-lien b {
+  flex: 1 1 180px;
+  font-size: var(--t-corps);
+  font-weight: 700;
+}
+.thunder .th-histo-liste li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--filet);
+  font-size: var(--t-petit);
+  color: var(--encre-douce);
+}
+.thunder .th-mini-jauge {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.thunder .th-mini-jauge i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, var(--tv));
+}
+
+/* ── états d'attente ─────────────────────────────────────────── */
+/* Classes de repli : tout ce qui était écrit en style dans le JSX de Thunder y
+   passe, pour qu'il ne reste dans le fichier que les largeurs de jauge, qui
+   dépendent de la réponse du serveur. */
+.thunder .th-fila {
+  display: flex;
+  gap: 8px;
+}
+.thunder .th-file {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 12px;
+}
+.thunder .th-bloc {
+  margin-top: 14px;
+}
+.thunder .th-bloc + .th-bloc {
+  margin-top: 14px;
+}
+.thunder .th-pousser {
+  margin-inline-start: auto;
+}
+.thunder .th-liste-nue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.thunder .th-champ--urls {
+  min-height: 54px;
+  resize: vertical;
+}
+.thunder .th-copie-note {
+  padding: 0 16px 10px;
+}
+.thunder .th-pied-quiz--reponse {
+  padding: 0 16px 14px;
+  margin-top: 0;
+}
+.thunder .th-note--nue > ul {
+  list-style: none;
+  padding-inline-start: 0;
+  margin-top: 0;
+}
+.thunder .th-cite .th-pastille {
+  margin-inline-start: 7px;
+}
+.thunder .th-histo-liste b {
+  font-variant-numeric: tabular-nums;
+}
+.thunder details > summary.th-etiquette {
+  cursor: pointer;
+  margin-bottom: 0;
+  list-style: none;
+}
+.thunder details > summary.th-etiquette::-webkit-details-marker {
+  display: none;
+}
+.thunder .th-switch:has(input:checked) svg {
+  color: var(--tv);
+}
+.thunder .th-attente svg {
+  color: var(--tv);
+  flex: none;
+}
+
+.thunder .th-squelette {
+  border-radius: var(--rayon);
+  border: 1px solid var(--filet);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.022);
+}
+.thunder .th-squelette i {
+  display: block;
+  height: 12px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(167, 139, 250, 0.22) 45%, rgba(255, 255, 255, 0.06) 90%);
+  background-size: 220% 100%;
+  animation: th-shimmer 1.25s linear infinite;
+}
+.thunder .th-squelette i:nth-child(2) {
+  width: 88%;
+  animation-delay: 90ms;
+}
+.thunder .th-squelette i:nth-child(3) {
+  width: 64%;
+  animation-delay: 180ms;
+}
+@keyframes th-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.thunder .th-attente {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: var(--t-petit);
+  color: var(--encre-douce);
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-attente b {
+  color: var(--tv-fort);
+}
+@keyframes th-montee {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.thunder .th-entre {
+  animation: th-montee 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .thunder *,
+  .thunder *::before,
+  .thunder *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
