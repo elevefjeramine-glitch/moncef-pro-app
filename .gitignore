@@ -50,3 +50,4 @@ deploy-list.json
 netlify_key.pub
 setup-founder.mjs
 test-*.js
+.verif/

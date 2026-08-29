@@ -5,7 +5,7 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu, ShieldAlert } from "lucide-react";
+import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu, ShieldAlert, Zap } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
 import { useUserStore } from "@/store/useUserStore";
 import type { ReactNode } from "react";
@@ -81,6 +81,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   let navItems: { name: string; path: string; icon: any; isAlpha?: boolean }[] = [
     { name: t(lang, 'home'), path: '/app', icon: Home },
     { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
+    { name: t(lang, 'thunder'), path: '/app/thunder', icon: Zap },
     { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
     { name: t(lang, 'messages'), path: '/app/comm', icon: MessageSquare }
   ];

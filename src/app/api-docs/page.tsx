@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Terminal, ArrowLeft, Key, Copy, Check, Coins, ShieldAlert, HeartPulse, Trash2, Send, CalendarDays, BookOpen, Lock } from "lucide-react";
+import { Terminal, ArrowLeft, Key, Copy, Check, Coins, ShieldAlert, HeartPulse, Trash2, Send, CalendarDays, BookOpen, Lock, Zap } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const LanguageSwitcher = dynamic(() => import("@/components/LanguageSwitcher"), { ssr: false });
@@ -231,6 +231,82 @@ const ROUTES: RouteDoc[] = [
       "Aucun pourcentage de disponibilité n'est calculé ici, parce qu'aucune sonde historique n'existe : afficher du 99,9 % serait un chiffre inventé.",
     ],
   },
+  {
+    id: "thunder",
+    method: "POST",
+    path: "/api/thunder",
+    icon: Zap,
+    req: {
+      mode: "ask",
+      question: "Comment on calcule l'énergie cinétique en terminale ?",
+      include_all_sources: true,
+    },
+    res: {
+      reponse: "L'énergie cinétique vaut Ec = 1/2·m·v² [S1]. Elle se mesure en joules [S1].",
+      citations: [{ n: 1, titre: "Énergie — chapitre 2", extrait: "L'énergie cinétique est l'énergie de mouvement. Elle vaut Ec = 1/2·m·v²." }],
+      avertissements: [],
+      contexte: { passages: 2, caracteres: 431, blocs: 402 },
+      debite: 10,
+      newTokens: 690,
+    },
+    variants: [
+      {
+        label: "QCM (mode `quiz`)",
+        body: { mode: "quiz", question: "contrôle sur le chapitre 2", include_all_sources: true, n: 5, niveau: "lycée" },
+        res: {
+          questions: [
+            { question: "Quelle est la formule de l'énergie cinétique ?", choices: ["m·g·h", "1/2·m·v²", "m·v", "1/2·m·a²"], answer: 1, explication: "Cours, chapitre 2.", source: "S1", extrait: "L'énergie cinétique est l'énergie de mouvement." },
+          ],
+          passages_utilises: [{ n: 1, titre: "Énergie — chapitre 2", score: 0.789 }],
+          debite: 15,
+          newTokens: 685,
+        },
+      },
+      {
+        label: "Liens (mode `links`)",
+        body: { mode: "links", question: "énergie cinétique, travail d'une force", include_all_sources: true },
+        res: {
+          liens: { recherche: [{ sujet: "énergie cinétique", youtube: "https://www.youtube.com/results?search_query=%C3%A9nergie+cin%C3%A9tique", web: "https://duckduckgo.com/?q=%C3%A9nergie+cin%C3%A9tique" }] },
+          avertissement: "Ces liens ouvrent une page de recherche, pas une vidéo précise.",
+          debite: 5,
+          newTokens: 695,
+        },
+      },
+      {
+        label: "Sources (mode `sources`)",
+        body: { mode: "sources", action: "add", nouveau: { titre: "Énergie — chapitre 2", matiere: "Physique", texte: "L'énergie cinétique est l'énergie de mouvement…" } },
+        res: { ajoute: { id: "3f1b…", titre: "Énergie — chapitre 2", matiere: "Physique", longueur: 12840 } },
+      },
+    ],
+    fields: [
+      ["mode", "\"ask\" | \"quiz\" | \"links\" | \"sources\" | \"progress\"", "non", "Défaut `ask`. Un mode inconnu est refusé par un 400 qui énumère les valeurs attendues."],
+      ["question", "string", "oui", "1 à 4000 caractères. En mode `quiz` et `links`, c'est le sujet du QCM ou les mots de recherche, séparés par des virgules."],
+      ["sources", "array", "non", "Sources fournies à la volée, sans les enregistrer : [{ id, titre, matiere?, texte }]. `texte` limité à 60 000 caractères par document, 40 minimum."],
+      ["include_all_sources", "boolean", "non", "Ajoute les sources déjà enregistrées du compte (60 max, 240 000 caractères lus au total — au-delà, la route le dit dans `avertissements`)."],
+      ["source_ids", "array", "non", "Plutôt que tout : une sélection d'identifiants de sources."],
+      ["n / niveau", "number / string", "non", "Mode `quiz` uniquement : 3 à 10 questions, niveau libre (40 caractères max)."],
+      ["action / nouveau / id", "string / object / string", "non", "Mode `sources` : `list` (défaut), `add` (objet `nouveau`), `remove` (un `id`)."],
+      ["total / justes / lignes", "number / number / array", "non", "Mode `progress` : enregistrer une partie jouée. `justes` ne peut dépasser `total` (contrôle aussi en base)."],
+    ],
+    errors: [
+      ["400", "Champ `question` attendu."],
+      ["400", "Mode inconnu : attend `ask`, `quiz`, `links`, `sources` ou `progress`."],
+      ["400", "Le texte de cette source est vide ou trop court (40 caractères minimum) — rien à citer dedans."],
+      ["401", "Authentification requise.  (mesuré : POST sans en-tête Authorization -> 401)"],
+      ["402", "Pas assez de crédits pour cette opération (15 requis, 8 disponibles).  (coût du mode demandé)"],
+      ["413", "Corps de requête trop volumineux : 2 Mo maximum (2097152 octets), reçu 9000000 octets annoncés.  (mesuré ; la limite vaut 2 Mo ici, pas 5 Mo comme /api/chat)"],
+      ["502", "Le QCM reçu est incomplet ou incohérent — il n'est pas envoyé plutôt que d'être corrigé à l'aveugle.  (avec `motif`)"],
+      ["503", "Service non configuré : SUPABASE_SERVICE_ROLE_KEY est absente de l'environnement d'exécution.  (mesuré ; la route refuse plutôt que de tourner en clé anon)"],
+    ],
+    notes: [
+      "Aucune donnée apprise hors de vos documents n'est mélangée à la réponse : la recherche est lexicale sur les sources du compte (idf propre au corpus), sans embedding ni base vectorielle — la base ne contient aucune colonne vectorielle, et Thunder n'en simule pas.",
+      "Les références [S<n>] sont contrôlées après coup : une référence à un passage qui n'a pas été fourni est retirée du texte et listée dans `avertissements`. Zéro citation renvoyée vaut l'avertissement « considère-la comme non sourcée ».",
+      "Les liens ne sont jamais inventés. Seules des URL de recherche construites par le serveur sortent (YouTube, web) ; un lien direct dicté par le modèle n'est renvoyé que s'il résout, et son titre vient alors de oEmbed de la plateforme, pas du modèle.",
+      "Coûts : 10 crédits (`ask`), 15 (`quiz`), 5 (`links`), 0 pour `sources` et `progress`. Les modes sans IA ne débitent pas ; un échec du modèle ne débite rien non plus (`debite: 0`).",
+      "La correction du QCM est faite côté client par comparaison d'index : le modèle ne revoit jamais une copie. Un QCM mal formé (moins de 4 choix, index hors 0-3, choix identiques, source inexistante) est refusé en 502, motif à l'appui.",
+      "Forme de succès LUE DANS LE CODE (src/app/api/thunder/route.ts), pas encore capturée sur un serveur où la clé IA est présente : à la date de cette page, les builds du dépôt sont suspendus faute de crédits sur le compte d'hébergement, et les réponses ci-dessus viennent de mes appels locaux, qui renvoient les refus (401, 413, 503) mais pas de réponse IA.",
+    ],
+  },
 ];
 
 const ALPHA = {
@@ -246,7 +322,7 @@ const content = {
   fr: {
     title: "Documentation de l'API",
     subtitle: "Établie le 28 août 2026 sur le code déployé et sur des appels réellement exécutés en production.",
-    intro: "Six routes publiques, un seul mode d'authentification, aucun format maison : tout ce qui suit a été relevé en appelant le serveur. Les messages d'erreur sont cités mot pour mot, les champs inconnus sont décrits tels qu'ils sont traités.",
+    intro: "Sept routes publiques, un seul mode d'authentification, aucun format maison : tout ce qui suit a été relevé en appelant le serveur. Les messages d'erreur sont cités mot pour mot, les champs inconnus sont décrits tels qu'ils sont traités.",
     base: "URL de base",
     base_hint: "Toutes les routes sont sur le même domaine que le site. Les exemples ci-dessous utilisent déjà cette origine.",
     auth_title: "Authentification",
@@ -297,7 +373,7 @@ const content = {
   en: {
     title: "API documentation",
     subtitle: "Written on 2026-08-28 from the deployed code and from calls actually executed against production.",
-    intro: "Six public routes, one authentication scheme, no invented formats: everything below was captured by calling the server. Error messages are quoted verbatim, and unknown fields are described as they are really handled.",
+    intro: "Seven public routes, one authentication scheme, no invented formats: everything below was captured by calling the server. Error messages are quoted verbatim, and unknown fields are described as they are really handled.",
     base: "Base URL",
     base_hint: "Every route lives on the same origin as the site. The examples below already use that origin.",
     auth_title: "Authentication",
@@ -348,7 +424,7 @@ const content = {
   es: {
     title: "Documentación de la API",
     subtitle: "Redactada el 28/08/2026 a partir del código desplegado y de llamadas ejecutadas de verdad en producción.",
-    intro: "Seis rutas públicas, un solo modo de autenticación, ningún formato inventado: todo lo siguiente se obtuvo llamando al servidor. Los mensajes de error se citan literalmente y los campos desconocidos se describen tal como se tratan.",
+    intro: "Siete rutas públicas, un solo modo de autenticación, ningún formato inventado: todo lo siguiente se obtuvo llamando al servidor. Los mensajes de error se citan literalmente y los campos desconocidos se describen tal como se tratan.",
     base: "URL base",
     base_hint: "Todas las rutas están en el mismo dominio que el sitio. Los ejemplos ya usan ese origen.",
     auth_title: "Autenticación",
@@ -399,7 +475,7 @@ const content = {
   ar: {
     title: "وثيقة واجهة البرمجة",
     subtitle: "كُتبت في 28 غشت 2026 انطلاقًا من الكود المنشور ومن استدعاءات نُفِّذت فعلًا في الإنتاج.",
-    intro: "ست مسارات عمومية، ونمط واحد للمصادقة، ولا شيء مُتخيَّل: كل ما يلي تم قياسه بالاتصال بالخادم. رسائل الأخطاء منقولة حرفيًا، والحقول المجهولة موصوفة كما تُعالَج فعلًا.",
+    intro: "سبعة مسارات عمومية، ونمط واحد للمصادقة، ولا شيء مُتخيَّل: كل ما يلي تم قياسه بالاتصال بالخادم. رسائل الأخطاء منقولة حرفيًا، والحقول المجهولة موصوفة كما تُعالَج فعلًا.",
     base: "العنوان الأساس",
     base_hint: "كل المسارات على نفس نطاق الموقع. والأمثلة أدناه تستعمل هذا العنوان أصلًا.",
     auth_title: "المصادقة",
@@ -450,7 +526,7 @@ const content = {
   zh: {
     title: "API 文档",
     subtitle: "编写于 2026-08-28，依据已部署的代码，以及对生产环境实际发起的调用。",
-    intro: "六个公开接口、一种鉴权方式、没有任何臆造的格式：以下所有内容都是调用服务器后记录下来的。报错信息逐字引用，字段说明保留法语——因为服务器返回的字符串本身就是法语。",
+    intro: "七个公开接口、一种鉴权方式、没有任何臆造的格式：以下所有内容都是调用服务器后记录下来的。报错信息逐字引用，字段说明保留法语——因为服务器返回的字符串本身就是法语。",
     base: "基础地址",
     base_hint: "所有接口与站点同源。下方示例已使用该地址。",
     auth_title: "鉴权",

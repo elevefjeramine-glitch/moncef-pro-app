@@ -180,10 +180,15 @@ export async function POST(req: Request) {
           }));
 
           const response = await fetchWithTimeout(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_KEY}`,
+            // idem Thunder : la clé passe par l'en-tête, plus par l'URL. Une URL se retrouve
+            // dans les journaux du proxy, l'historique de la fonction et parfois dans le
+            // message d'erreur ; un en-tête non. Contrat vérifié le 29/08/2026 : une clé
+            // invalide par en-tête renvoie exactement la même réponse (400 · API_KEY_INVALID)
+            // que par `?key=`, donc seul le transport change.
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
               body: JSON.stringify({
                 systemInstruction: { parts: [{ text: enhancedSystem }] },
                 contents: geminiContents

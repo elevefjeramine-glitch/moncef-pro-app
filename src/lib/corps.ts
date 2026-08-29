@@ -39,6 +39,13 @@ export const LIMITE_CORPS = {
   alpha: 1 * MO,
   /** { confirm: true } ou { cancel: true } : quelques dizaines d'octets. */
   compte: 64 * KO,
+  /**
+   * /api/thunder : un cours collé ou plusieurs, en texte simple (pas d'image).
+   * 2 Mo = environ 1 million de caractères, soit bien au-delà d'un chapitre
+   * entier ; la limite réseau utile reste les 6 Mo des fonctions synchrones
+   * tamponnées de Netlify, qui plafonnent d'elles-mêmes n'importe quoi de plus gros.
+   */
+  thunder: 2 * MO,
 } as const;
 
 export class CorpsTropVolumineux extends Error {

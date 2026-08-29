@@ -26,6 +26,25 @@ export function makeAdminClient() {
 }
 
 /** Date du jour en UTC, format YYYY-MM-DD (la colonne est de type `date`). */
+/**
+ * Le rôle service est-il réellement configuré ?
+ *
+ * `makeAdminClient()` avec une clé vide ne plante pas : il fabrique un client qui
+ * ressemble à un client admin mais parle avec une clé vide, donc PostgREST refuse
+ * tout ce qui sort de la RLS — par exemple la mise à jour de `users.tokens`. Le
+ * résultat est le pire genre d'incident : le site répond, l'IA répond, et la
+ * comptabilité ne débite rien. `createClient` n'émet qu'un `console.warn`.
+ *
+ * Les routes qui écrivent ailleurs que dans la ligne de l'appelant (Thunder :
+ * sources, crédits) appellent ce contrôle et renvoient 503 au lieu de descendre
+ * en puissance sans le dire. /api/chat garde pour l'instant son ancien
+ * comportement — le basculer est proposé, pas imposé, parce qu'il casse le
+ * développement local sans clé (une seule réponse à changer côté client).
+ */
+export function adminConfigure(): boolean {
+  return (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim().length > 20;
+}
+
 export function todayUTC(): string {
   return new Date().toISOString().slice(0, 10);
 }
