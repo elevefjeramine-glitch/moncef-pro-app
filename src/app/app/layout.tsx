@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,7 +18,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const channelRef = useRef<any>(null);
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = "/auth"; return; }
     
@@ -30,7 +30,25 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       if (data.theme_color) setThemeColor(data.theme_color);
       if (data.language) setLanguage(data.language);
     } else { setUser(session.user); }
-  };
+  }, [setUser, setTokens, setThemeColor, setLanguage]);
+
+  // Le rôle d'une personne est lu dans `get_me` au montage : quand un fondateur
+  // change un grade, l'intéressé ne le voyait qu'en rechargeant la page. Le canal
+  // temps réel ci-dessous ne fonctionne que si `users` est dans la publication
+  // Realtime — ce que je n'ai pas pu vérifier depuis l'extérieur (socket TIMED_OUT
+  // le 29/08/2026). Donc on relit aussi le profil quand l'onglet redevient visible.
+  useEffect(() => {
+    if (!user?.id) return;
+    const reveil = () => {
+      if (document.visibilityState === "visible") void loadUser();
+    };
+    document.addEventListener("visibilitychange", reveil);
+    window.addEventListener("focus", reveil);
+    return () => {
+      document.removeEventListener("visibilitychange", reveil);
+      window.removeEventListener("focus", reveil);
+    };
+  }, [user?.id, loadUser]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -64,7 +82,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [loadUser]);
 
   const handleLogout = async (e: any) => { e.stopPropagation(); await supabase.auth.signOut(); window.location.href = "/"; };
 
@@ -78,10 +96,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const lang = user.language || 'fr';
 
-  let navItems: { name: string; path: string; icon: any; isAlpha?: boolean }[] = [
+  // `isAlpha` porte le doré, `accent` la couleur du module : Thunder est violet
+  // de bout en bout (menu, page, citations web), comme ALPHA est doré.
+  let navItems: { name: string; path: string; icon: any; isAlpha?: boolean; accent?: string; badge?: string }[] = [
     { name: t(lang, 'home'), path: '/app', icon: Home },
     { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
-    { name: t(lang, 'thunder'), path: '/app/thunder', icon: Zap },
+    { name: t(lang, 'thunder'), path: '/app/thunder', icon: Zap, accent: '#a78bfa', badge: 'IA' },
     { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
     { name: t(lang, 'messages'), path: '/app/comm', icon: MessageSquare }
   ];
@@ -114,10 +134,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             const Icon = item.icon;
             return (
               <Link href={item.path} key={item.path}>
-                <motion.div whileHover={{ scale: 1.02, x: 5 }} whileTap={{ scale: 0.98 }} className={`nav-item ${isActive ? 'active' : ''}`} style={item.isAlpha ? { background: isActive ? 'linear-gradient(90deg, rgba(255,215,0,0.15), transparent)' : 'rgba(255,215,0,0.05)', color: isActive ? '#FFD700' : 'rgba(255,215,0,0.7)', border: '1px solid rgba(255,215,0,0.1)' } : {}}>
-                  <Icon size={20} style={{ color: isActive ? (item.isAlpha ? '#FFD700' : 'var(--a)') : 'rgba(255,255,255,0.5)' }} />
+                <motion.div whileHover={{ scale: 1.02, x: 5 }} whileTap={{ scale: 0.98 }} className={`nav-item ${isActive ? 'active' : ''}`} style={item.isAlpha ? { background: isActive ? 'linear-gradient(90deg, rgba(255,215,0,0.15), transparent)' : 'rgba(255,215,0,0.05)', color: isActive ? '#FFD700' : 'rgba(255,215,0,0.7)', border: '1px solid rgba(255,215,0,0.1)' } : item.accent ? { background: isActive ? 'linear-gradient(90deg, ' + item.accent + '26, transparent)' : item.accent + '0d', color: isActive ? item.accent : 'rgba(255,255,255,0.72)', border: '1px solid ' + item.accent + '1f' } : {}}>
+                  <Icon size={20} style={{ color: isActive ? (item.isAlpha ? '#FFD700' : item.accent ?? 'var(--a)') : item.accent ? item.accent + 'b3' : 'rgba(255,255,255,0.5)' }} />
                   <span style={{ fontWeight: item.isAlpha ? 700 : (isActive ? 600 : 500) }}>{item.name}</span>
                   {item.isAlpha && <div style={{ marginLeft: 'auto', background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>PRO</div>}
+                  {item.badge && !item.isAlpha && <div style={{ marginLeft: 'auto', background: item.accent, color: '#0b0b12', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>{item.badge}</div>}
                 </motion.div>
               </Link>
             )

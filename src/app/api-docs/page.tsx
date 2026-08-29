@@ -252,6 +252,22 @@ const ROUTES: RouteDoc[] = [
     },
     variants: [
       {
+        // Le web est demandé, jamais supposé : sans ce drapeau, Thunder reste
+        // strictement collé aux documents du compte.
+        label: "Question ouverte sur le web (`web: true`)",
+        body: { mode: "ask", question: "Qu'est-ce que la photosynthèse chez les plantes ?", web: true, include_all_sources: true },
+        res: {
+          reponse: "La photosynthèse est un processus bioénergétique permettant de biosynthétiser de la matière organique en utilisant l'énergie lumineuse, l'eau et le dioxyde de carbone [S1].",
+          citations: [
+            { n: 1, titre: "web · Photosynthèse", extrait: "Chez les plantes…", url: "https://fr.wikipedia.org/wiki/Photosynth%C3%A8se", origine: "web", page_lue: true },
+          ],
+          avertissements: ["Cette réponse s'appuie sur 1 page(s) du web (fr.wikipedia.org/wiki/Photosynth%C3%A8se) — pas uniquement sur tes documents."],
+          contexte: { passages: 1, dont_web: 1, caracteres: 0, blocs: 4021 },
+          debite: 15,
+          newTokens: 685,
+        },
+      },
+      {
         label: "QCM (mode `quiz`)",
         body: { mode: "quiz", question: "contrôle sur le chapitre 2", include_all_sources: true, n: 5, niveau: "lycée" },
         res: {
@@ -307,7 +323,10 @@ const ROUTES: RouteDoc[] = [
       "Coûts : 10 crédits (`ask`), 15 (`quiz`), 5 (`links`), 0 pour `sources` et `progress`. Les modes sans IA ne débitent pas ; un échec du modèle ne débite rien non plus (`debite: 0`).",
       "Un client qui annonce un `Content-Length` plus gros que son corps ne reçoit pas ce 413 mais un 408 « Inactivity Timeout » du bord Netlify : la fonction n'est appelée qu'une fois le corps parvenu (mesuré le 29/08/2026 sur un déploiement de brouillon : en-tête 9000000 sans corps → 408, corps réel de 2 200 076 octets → 413).",
       "La correction du QCM est faite côté client par comparaison d'index : le modèle ne revoit jamais une copie. Un QCM mal formé (moins de 4 choix, index hors 0-3, choix identiques, source inexistante) est refusé en 502, motif à l'appui.",
-      "Forme de succès LUE DANS LE CODE (src/app/api/thunder/route.ts), pas encore capturée sur un serveur où la clé IA est présente : à la date de cette page, les builds du dépôt sont suspendus faute de crédits sur le compte d'hébergement, et les réponses ci-dessus viennent de mes appels locaux, qui renvoient les refus (401, 413, 503) mais pas de réponse IA.",
+      "Toutes les formes de succès ci-dessus ont été relevées sur le site déployé, avec une session authentifiée (29 août 2026) : `ask` a répondu en 10 à 13 s avec [S1] sur chaque phrase et le calcul juste, `quiz` a renvoyé 3 questions validées, `links` 2 URL de recherche. La mention inverse (« lu dans le code, pas encore capturé ») qui figurait ici est donc retirée.",
+      "Le mode web (`web: true`) télécharge réellement les pages et ne cite que ce qui a été lu : une page injoignable est annoncée dans `avertissements` avec sa cause (`HTTP 404`, `hôte réservé`…), jamais remplacée par un souvenir du modèle. Sans clé d'API de recherche dans l'environnement, la jambe utilisée est l'encyclopédie Wikipédia ; avec `BRAVE_API_KEY`, `SERPER_API_KEY` ou `TAVILY_API_KEY`, c'est le moteur choisi. Les URL non publiques sont refusées avant tout appel réseau (localhost, adresses privées, 169.254.169.254, ports, identifiants dans l'URL).",
+      "Le web n'est accepté que sur `ask` : un QCM se fabrique sur les documents de l'élève, et `links` n'a pas besoin de télécharger de pages. Une demande `web` sur un autre mode répond 400 avec ce motif.",
+      "Coût : `ask` avec web = 15 crédits (10 + 5). Un échec du modèle ou une lecture web impossible ne débite rien.",
     ],
   },
 ];
@@ -336,7 +355,7 @@ const content = {
     credits_title: "Crédits",
     credits: [
       ["Plancher quotidien", "700 crédits portés au solde au premier appel d'une journée UTC. Un solde plus élevé n'est jamais réduit."],
-      ["Coût d'un appel IA", "10 crédits, décomptés seulement après une réponse reçue."],
+      ["Coût d'un appel IA", "/api/chat : 10 crédits. Thunder : 10 la question, 15 le QCM et la question ouverte sur le web, 5 les liens — décomptés seulement après une réponse reçue."],
       ["Comptes founder et moderator", "Non débités (crédits illimités dans l'interface)."],
       ["Recharge d'un compte", "Manuelle, par un modérateur : action Alpha RESET_TOKENS."],
     ],
@@ -355,7 +374,7 @@ const content = {
     notes_title: "À savoir",
     variant: "variante",
     alpha_title: "Route d'administration (réservée)",
-    alpha_body: "Ce n'est pas une API publique : elle sert le panneau d'administration de l'application. Elle exige un compte dont le rôle est founder ou moderator, relu côté serveur — un compte normal reçoit 403 Accès refusé, quel que soit l'en-tête envoyé. Actions admises :",
+    alpha_body: "Ce n'est pas une API publique : elle sert le panneau d'administration de l'application. Elle exige un compte dont le rôle est founder ou moderator, relu côté serveur — un compte normal reçoit 403 Accès refusé, quel que soit l'en-tête envoyé. Actions admises : Une seconde route d'administration, /api/alpha/assistant, équipe la console IA du panneau de fonctions réellement exécutées (changer_role, donner_credits, lister_utilisateurs, statistiques) ; chaque action renvoie la valeur relue en base, et aucune suppression n'est exécutée sans confirmation humaine dans l'interface.",
     limits_title: "Limites réelles et zones fragiles",
     limits: [
       "Taille du corps plafonnée dans l'application : 5 Mo sur /api/chat, 1 Mo sur les trois imports et /api/alpha, 64 Ko sur /api/account/delete ; au-delà un 413 donne le nombre d'octets. La plateforme coupe elle à 6 Mo par requête (4,5 Mo effectifs pour une charge binaire à cause du base64) : mesuré le 28/08/2026, un corps de 8 Mo reçoit un 413 de la plateforme au corps vide, sans que la fonction tourne. Toujours aucun limite de débit : 5 Mo, autant de fois qu'on veut.",
@@ -387,7 +406,7 @@ const content = {
     credits_title: "Credits",
     credits: [
       ["Daily floor", "700 credits are applied to the balance on the first call of a UTC day. A higher balance is never reduced."],
-      ["Cost of one AI call", "10 credits, deducted only once an answer has been received."],
+      ["Cost of one AI call", "/api/chat: 10 credits. Thunder: 10 for a question, 15 for a quiz or a web-enabled question, 5 for links — deducted only once an answer has been received."],
       ["founder and moderator accounts", "Never charged (unlimited credits in the interface)."],
       ["Topping up an account", "Manually, by a moderator: Alpha action RESET_TOKENS."],
     ],
@@ -406,7 +425,7 @@ const content = {
     notes_title: "Worth knowing",
     variant: "variant",
     alpha_title: "Administration route (restricted)",
-    alpha_body: "Not a public API: it powers the app's admin panel. It requires an account whose role is founder or moderator, re-read on the server — a normal account gets 403 Accès refusé whatever header is sent. Accepted actions:",
+    alpha_body: "Not a public API: it powers the app's admin panel. It requires an account whose role is founder or moderator, re-read on the server — a normal account gets 403 Accès refusé whatever header is sent. Accepted actions: A second admin route, /api/alpha/assistant, gives the console AI functions that are actually executed (changer_role, donner_credits, lister_utilisateurs, statistiques); every action returns the value re-read from the database, and no deletion runs without a human confirmation in the interface.",
     limits_title: "Limits and rough edges",
     limits: [
       "Request size is capped in the app: 5 MB on /api/chat, 1 MB on the three import routes and /api/alpha, 64 KB on /api/account/delete; above that a 413 gives the byte count. The platform itself cuts at 6 MB per request (4.5 MB effective for a binary payload because of base64): measured on 2026-08-28, an 8 MB body gets a 413 from the platform with an empty body, the function never runs. Still no rate limit: 5 MB, as often as you like.",
@@ -438,7 +457,7 @@ const content = {
     credits_title: "Créditos",
     credits: [
       ["Mínimo diario", "Se aplican 700 créditos al primer aviso de un día UTC. Un saldo mayor nunca se reduce."],
-      ["Coste de una llamada IA", "10 créditos, descontados solo cuando la respuesta se ha recibido."],
+      ["Coste de una llamada IA", "/api/chat: 10 créditos. Thunder: 10 la pregunta, 15 el test y la pregunta con web, 5 los enlaces — descontados solo cuando la respuesta se ha recibido."],
       ["Cuentas founder y moderator", "Sin descuento (créditos ilimitados en la interfaz)."],
       ["Recargar una cuenta", "Manual, por un moderador: acción de Alpha RESET_TOKENS."],
     ],
@@ -457,7 +476,7 @@ const content = {
     notes_title: "Conviene saberlo",
     variant: "variante",
     alpha_title: "Ruta de administración (restringida)",
-    alpha_body: "No es una API pública: alimenta el panel de administración. Exige una cuenta con rol founder o moderator, comprobado en el servidor — una cuenta normal recibe 403 Accès refusé sea cual sea la cabecera. Acciones admitidas:",
+    alpha_body: "No es una API pública: alimenta el panel de administración. Exige una cuenta con rol founder o moderator, comprobado en el servidor — una cuenta normal recibe 403 Accès refusé sea cual sea la cabecera. Acciones admitidas: Una segunda ruta de administración, /api/alpha/assistant, da a la consola IA funciones que se ejecutan de verdad (changer_role, donner_credits, lister_utilisateurs, statistiques); cada acción devuelve el valor releído en la base, y ningún borrado se ejecuta sin confirmación humana en la interfaz.",
     limits_title: "Límites y zonas frágiles",
     limits: [
       "El tamaño del cuerpo tiene tope en la aplicación: 5 MB en /api/chat, 1 MB en las tres importaciones y /api/alpha, 64 KB en /api/account/delete; por encima, un 413 indica los bytes. La plataforma corta en 6 MB por petición (4,5 MB efectivos en binario por el base64): medido el 28/08/2026, un cuerpo de 8 MB recibe un 413 de la plataforma con el cuerpo vacío, sin ejecutar la función. Sigue sin haber límite de peticiones: 5 MB, las veces que quieras.",
@@ -489,7 +508,7 @@ const content = {
     credits_title: "الرصيد",
     credits: [
       ["الحد اليومي", "يُرفع الرصيد إلى 700 عند أول طلب في يوم بتوقيت UTC. رصيد أعلى لا يُنقَص أبدًا."],
-      ["تكلفة طلب الذكاء", "10 رصيد، تُخصم بعد التوصل بالجواب فقط."],
+      ["تكلفة طلب الذكاء", "10 رصيد على /api/chat؛ Thunder: 10 للسؤال، 15 للاختبار أو للسؤال مع الويب، 5 للروابط — تُخصم بعد التوصل بالجواب فقط."],
       ["حسابا founder و moderator", "غير مخصوم منهما (رصيد غير محدود في الواجهة)."],
       ["إعادة تعبئة حساب", "يدويًا من طرف معتدل: الإجراء RESET_TOKENS في لوحة Alpha."],
     ],
@@ -508,7 +527,7 @@ const content = {
     notes_title: "مما يُنفع معرفته",
     variant: "صيغة",
     alpha_title: "مسار الإدارة (محميّ)",
-    alpha_body: "ليست واجهة عمومية: فهي تشغّل لوحة الإدارة. تشترط حسابًا دوراه founder أو moderator، ويُعاد قراءتهما في الخادم — والحساب العادي receives 403 Accès refusé مهما كانت الترويسة. الإجراءات المقبولة:",
+    alpha_body: "ليست واجهة عمومية: فهي تشغّل لوحة الإدارة. تشترط حسابًا دوراه founder أو moderator، ويُعاد قراءتهما في الخادم — والحساب العادي receives 403 Accès refusé مهما كانت الترويسة. الإجراءات المقبولة: مسار إداري ثانٍ، /api/alpha/assistant، يمنح وحدة ذكاء الاصطناعية وظائف تُنفَّذ فعلاً (changer_role، donner_credits، lister_utilisateurs، statistiques)؛ كل إجراء يعيد القيمة المقروءة من القاعدة، ولا تُنفَّذ أي عملية حذف دون تأكيد بشري في الواجهة.",
     limits_title: "الحدود والنقاط الحساسة",
     limits: [
 "حجم المتن محدود داخل التطبيق: 5 ميغابايت في /api/chat، وميغابايت واحد في مسارات الاستيراد الثلاثة و/api/alpha، و64 كيلوبايت في /api/account/delete؛ وفوق ذلك يعيد 413 عدد البايتات. المنصة نفسها تقطع عند 6 ميغابايت للطلب (4.5 ميغابايت فعلياً للحمولة الثنائية بسبب base64): القياس بتاريخ 2026-08-28 أظهر أن متن 8 ميغابايت يستقبل 413 من المنصة بجسم فارغ دون تنفيذ الدالة. لا يزال عدد الطلبات غير محدود.",
@@ -540,7 +559,7 @@ const content = {
     credits_title: "额度",
     credits: [
       ["每日下限", "每个 UTC 日的首次调用会把余额补足到 700。余额更高时不会被削减。"],
-      ["一次 AI 调用的成本", "10 个额度，仅在收到回复后扣除。"],
+      ["一次 AI 调用的成本", "/api/chat 为 10 个额度；Thunder：提问 10，测验或联网提问 15，链接 5 —— 仅在收到回复后扣除。"],
       ["founder 与 moderator 账户", "不扣费（界面显示为无限额度）。"],
       ["为账户充值", "由管理员手动执行：Alpha 的 RESET_TOKENS 操作。"],
     ],
@@ -559,7 +578,7 @@ const content = {
     notes_title: "需要知道的事",
     variant: "变体",
     alpha_title: "管理接口（受限）",
-    alpha_body: "这不是公开 API：它服务于应用的后台面板。要求账户角色为 founder 或 moderator，且在服务器端重新读取——普通账户无论发送什么请求头都会收到 403 Accès refusé。接受的操作：",
+    alpha_body: "这不是公开 API：它服务于应用的后台面板。要求账户角色为 founder 或 moderator，且在服务器端重新读取——普通账户无论发送什么请求头都会收到 403 Accès refusé。接受的操作： 第二条管理路由 /api/alpha/assistant 让管理台 AI 真正执行函数（changer_role、donner_credits、lister_utilisateurs、statistiques）；每个操作返回数据库中重新读到的值，任何删除都必须由界面上的人工确认。",
     limits_title: "限制与薄弱处",
     limits: [
       "请求体大小已在应用内限制：/api/chat 为 5 MB，三个导入接口与 /api/alpha 为 1 MB，/api/account/delete 为 64 KB；超过即返回 413 并给出字节数。平台本身在每请求 6 MB 处截断（因 base64，二进制实际为 4.5 MB）：2026-08-28 实测，8 MB 的请求体会收到平台返回的空正文 413，函数根本不会执行。仍然没有限流。",

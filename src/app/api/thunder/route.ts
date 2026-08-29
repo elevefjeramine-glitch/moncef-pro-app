@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { DAILY_CREDIT_FLOOR, adminConfigure, applyDailyCreditFloor, makeAdminClient, purgeAccount } from "@/lib/compte";
 import { CorpsTropVolumineux, LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from "@/lib/corps";
+import { rechercherSurLeWeb, type ResultatWeb } from "@/lib/web";
 import {
-  CHARTE_THUNDER,
+  charte,
+  type Passage,
   type Source,
   blocContexte,
   citationsUtilisees,
@@ -32,29 +34,63 @@ import {
  * la logique de /api/chat (un seul chemin de comptabilité, pas deux versions).
  */
 
-export const maxDuration = 45;
+// 60 s : le maximum synchrone documenté par Netlify. À 45 s, les deux fournisseurs
+// relancés après un 429 tombaient pile au-dessus du budget et l'élève recevait une
+// erreur de passerelle au lieu de mon message « modèles indisponibles ».
+export const maxDuration = 60;
 
-const AI_TIMEOUT_MS = 20000;
+const AI_TIMEOUT_MS = 24000;
 const COUT = { ask: 10, quiz: 15, links: 5, sources: 0, progress: 0 } as const;
+
+/**
+ * Combien de temps attendre avant de relancer. `retry-after` d'abord (seconde ou
+ * date HTTP), puis la phrase « try again in 6.6075s » que Groq écrit dans son
+ * message, enfin 400 ms. Borné à 9 s : au-delà, la fonction Netlify coupe la
+ * requête et l'élève n'a plus de message du tout.
+ */
+async function delaiConseille(res: Response, parDefaut: number): Promise<number> {
+  const plafond = 9000;
+  const entete = res.headers.get("retry-after");
+  if (entete) {
+    const sec = Number(entete);
+    if (Number.isFinite(sec) && sec >= 0) return Math.min(plafond, Math.max(200, sec * 1000));
+    const date = Date.parse(entete);
+    if (!Number.isNaN(date)) return Math.min(plafond, Math.max(200, date - Date.now()));
+  }
+  try {
+    const corps = await res.clone().text();
+    const m = corps.match(/try again in\s+([\d.]+)\s*s/i);
+    if (m) return Math.min(plafond, Math.max(200, Number(m[1]) * 1000));
+  } catch {
+    /* corps illisible : on garde le délai par défaut */
+  }
+  return Math.min(plafond, Math.max(200, parDefaut));
+}
 
 /** Un appel réseau vers les fournisseurs, borné et retenté une fois (idem /api/chat). */
 async function fetchAvecDelai(url: string, init: RequestInit, tentatives = 2): Promise<Response> {
   let derniereErreur: unknown = null;
+  let attente = 400;
   for (let i = 0; i < tentatives; i++) {
     try {
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(AI_TIMEOUT_MS) });
       const reessayable = res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
       if (!reessayable || i === tentatives - 1) return res;
+      // Un 429 porte une consigne : « try again in 6.6s ». Repartir à vide 400 ms
+      // après, c'est consommer un deuxième essai pour rien et voir l'élève rester
+      // sur « indisponible » alors que le créneau se libérait.
+      attente = await delaiConseille(res, attente);
     } catch (e: unknown) {
       derniereErreur = e;
       if (i === tentatives - 1) throw e instanceof Error ? e : new Error("Appel IA échoué");
     }
-    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+    await new Promise((r) => setTimeout(r, attente));
   }
   throw derniereErreur instanceof Error ? derniereErreur : new Error("Appel IA échoué");
 }
 
 type Corps = {
+  web?: boolean; web_urls?: unknown[]; web_requete?: string;
   mode?: unknown;
   question?: unknown;
   sources?: unknown;
@@ -236,7 +272,22 @@ export async function POST(req: Request) {
 
     const solde = await applyDailyCreditFloor(admin, user.id, profil);
     const illimité = ["founder", "moderator"].includes(String(profil.role));
-    const cout: number = COUT[mode as keyof typeof COUT] ?? 10;
+    // ── Le web est une option posée par l'élève, question par question ────────
+    // Ce n'est jamais le défaut : « je ne réponds qu'à partir de ce que tu m'as
+    // donné » reste la promesse de Thunder. Ici l'élève demande explicitement
+    // d'aller lire des pages, et chaque phrase citée porte alors l'URL lue.
+    const webDemande = body?.web === true || (Array.isArray(body?.web_urls) && (body.web_urls as unknown[]).length > 0);
+    if (webDemande && mode !== "ask") {
+      return NextResponse.json(
+        { error: "Le web ne se branche que sur une question (mode `ask`) : un QCM se fabrique sur TES documents, et des liens de recherche se passent de télécharger des pages." },
+        { status: 400 }
+      );
+    }
+    const webUrls = Array.isArray(body?.web_urls) ? (body.web_urls as unknown[]).map((x) => String(x)).slice(0, 4) : [];
+    const webRequete = String(body?.web_requete ?? "").trim().slice(0, 300);
+    const webActif = webDemande && mode === "ask";
+    const SURCHARGE_WEB = 5;
+    const cout: number = (COUT[mode as keyof typeof COUT] ?? 10) + (webActif ? SURCHARGE_WEB : 0);
     if (!illimité && solde < cout) {
       return NextResponse.json(
         {
@@ -292,7 +343,37 @@ export async function POST(req: Request) {
     }
 
     const passages = rechercher(retenues, question, mode === "quiz" ? 8 : 6);
-    const sansSource = reponseSansSource(passages);
+
+    // ── Jambe web : on télécharge AVANT de répondre, et on ne cite que ce qu'on a lu
+    let webPages: ResultatWeb[] = [];
+    let webAvert: string[] = [];
+    if (webActif) {
+      const r = await rechercherSurLeWeb(webRequete || question, {
+        env: process.env as Record<string, string | undefined>,
+        lang: String((profil as { language?: string } | null)?.language ?? "fr"),
+        urls: webUrls,
+      });
+      webPages = r.pages;
+      webAvert = r.avertissements;
+    }
+    const passagesWeb: Passage[] = webPages.map((p, i) => ({
+      sourceId: "W" + (i + 1),
+      sourceTitre: "web · " + (p.titre || p.url).slice(0, 120),
+      n: passages.length + i + 1,
+      debut: 0,
+      // Une page entière n'est pas un passage : on garde le début, là où se trouve
+      // l'introduction. 1 800 caractères par page et pas 4 000 : mesuré le
+      // 29/08/2026, quatre pages à 4 000 font 16 308 caractères, soit 5 620 jetons,
+      // et Groq refuse au-dessus de 8 000 jetons par minute (« Requested 5620 ») —
+      // le mode web se retrouvait donc systématiquement hors quota.
+      texte: p.texte.slice(0, 1800),
+      score: 1,
+      url: p.url,
+      origine: "web" as const,
+      pageLue: p.pageLue,
+    }));
+    const material = [...passages, ...passagesWeb];
+    const sansSource = reponseSansSource(material);
 
     // ── mode links : aucun lien inventé, aucune promesse de vidéo « exacte » ─
     if (mode === "links") {
@@ -315,7 +396,16 @@ export async function POST(req: Request) {
       if (mode === "quiz") {
         return NextResponse.json({ error: sansSource, debite: 0, newTokens: solde }, { status: 400 });
       }
-      return NextResponse.json({ reponse: sansSource, citations: [], passages: 0, debite: 0, newTokens: solde });
+      return NextResponse.json({
+        reponse: webActif
+          ? "Ni tes documents ni les pages lues ne permettent de répondre.\n\nAucune page n'a pu être téléchargée (" + (webAvert[0] ?? "aucun résultat") + "). Ajoute un cours dans le panneau « Sources », ou donne une URL qui répond."
+          : sansSource,
+        citations: [],
+        passages: 0,
+        avertissements: webAvert,
+        debite: 0,
+        newTokens: solde,
+      });
     }
 
     // ── L'appel au modèle ────────────────────────────────────────────────────
@@ -325,11 +415,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Aucune clé IA configurée (GEMINI_API_KEY / GROQ_API_KEY)." }, { status: 503 });
     }
 
-    const consigne =
-      mode === "quiz"
-        ? "Tu fabriques un QCM. Tu réponds UNIQUEMENT par le tableau JSON demandé, sans texte autour."
-        : CHARTE_THUNDER;
-    const userPrompt = mode === "quiz" ? promptQuiz(String(body?.niveau ?? "lycée"), passages, Math.min(10, Math.max(3, Number(body?.n) || 5))) : promptAsk(question, passages);
+    const consigne = mode === "quiz" ? "Tu fabriques un QCM. Tu réponds UNIQUEMENT par le tableau JSON demandé, sans texte autour." : charte(webActif);
+    const userPrompt = mode === "quiz" ? promptQuiz(String(body?.niveau ?? "lycée"), passages, Math.min(10, Math.max(3, Number(body?.n) || 5))) : promptAsk(question, material);
 
     const fournisseurs: { nom: string; appeler: () => Promise<string> }[] = [];
     if (GEMINI) {
@@ -430,11 +517,14 @@ const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1be
     }
 
     // ── `ask` : citations contrôlées, liens directs vérifiés ─────────────────
-    const controle = controlerCitations(brut, passages);
-    const citations = citationsUtilisees(controle.texte, passages).map((p) => ({
+    const controle = controlerCitations(brut, material);
+    const citations = citationsUtilisees(controle.texte, material).map((p) => ({
       n: p.n,
       titre: p.sourceTitre,
       extrait: p.texte.slice(0, 500),
+      url: p.url ?? null,
+      origine: p.origine ?? "cours",
+      page_lue: p.pageLue ?? true,
     }));
 
     // Le modèle peut proposer des URL en fin de réponse : on ne les garde que si
@@ -462,6 +552,16 @@ const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1be
       citations,
       avertissements: [
         sansCitation ? "Aucun passage n'est référencé dans la réponse du modèle : considère-la comme non sourcée." : "",
+        passagesWeb.length ? "Cette réponse s'appuie sur " + passagesWeb.length + " page(s) du web (" + passagesWeb.map((p) => {
+            // Le titre distingue deux pages du même site ; l'URL tronquée à 40
+            // caractères affichait « Photosynthèse » deux fois pour deux pages
+            // différentes (mesuré le 29/08/2026) — une phrase fausse, donc corrigée.
+            const t = String(p.sourceTitre ?? "").replace(/^web\s*·\s*/, "").trim();
+            const court = t || String(p.url ?? "").replace(/^https?:\/\//, "");
+            return court.length > 34 ? court.slice(0, 34) + "…" : court;
+          }).join(", ") + ") — pas uniquement sur tes documents." : "",
+        passagesWeb.some((p) => !p.pageLue) ? "Une page n'a pas pu être ouverte : seul son extrait de recherche a été cité." : "",
+        ...webAvert.map((a) => "web : " + a),
         controle.rejets.length ? `Références écartées car absentes de tes documents : ${controle.rejets.join(", ")}.` : "",
         sacrifiees ? `${sacrifiees} document(s) non lu(s) : le contexte dépasse ${LIMITE_TEXTE.toLocaleString("fr-FR")} caractères.` : "",
       ].filter(Boolean),
@@ -471,7 +571,7 @@ const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1be
           { sujet: question.slice(0, 120), youtube: lienRechercheYouTube(question), web: lienRechercheWeb(question) },
         ],
       },
-      contexte: { passages: passages.length, caracteres: total, blocs: blocContexte(passages).length },
+      contexte: { passages: material.length, dont_web: passagesWeb.length, caracteres: total, blocs: blocContexte(material).length },
       debite: illimité ? 0 : cout,
       newTokens: illimité ? solde : Math.max(0, solde - cout),
     });
@@ -505,5 +605,5 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false })
     .limit(100);
   if (err) return NextResponse.json({ error: "Lecture impossible : " + err.message }, { status: 500 });
-  return NextResponse.json({ sources: data ?? [], credits_par_mode: COUT });
+  return NextResponse.json({ sources: data ?? [], credits_par_mode: { ...COUT, ask_web: COUT.ask + 5 } });
 }

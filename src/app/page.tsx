@@ -337,47 +337,53 @@ const BRUIT = "url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53M
    sans que `tsc` bronche, plus 45 lignes d'objets et de JSX réallouées à chaque
    frappe de touche. Il est maintenant au niveau module et typé : une langue
    oubliée est une erreur de compilation, plus une grille silencieusement vide. */
-type Carte = { icon: React.ReactNode; title: string; desc: string; list?: string[]; premium?: boolean };
+type Carte = { icon: React.ReactNode; title: string; desc: string; list?: string[]; premium?: boolean;
+  /** teinte propre à la carte : ALPHA garde l'or, Thunder son violet */ accent?: string; etiquette?: string };
 
 const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
   fr: [
     { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir : une IA à qui tu soumets un cours, un devoir ou un concept dense, et qui répond.", list: ["Conversation libre sur tes cours", "Analyse de la photo d’un énoncé", "10 crédits par réponse"] },
+        { icon: <Zap size={28} />, title: "Thunder", desc: "Tes fiches d’abord, rien d’autre : il répond à partir du texte que tu lui as donné, et chaque phrase porte la référence du passage cité. Hors de tes documents, il le dit au lieu de meubler.", list: ["Question 10 crédits, QCM 15, liens 5", "Chaque [S1] renvoie à ton texte, pas à un souvenir du modèle", "Peut lire une page du web quand tu le demandes (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Ton emploi du temps s'importe en une fois — semaines A/B, jours, matières, horaires — et se retrouve sur tous tes appareils.", list: ["Semaines A/B", "Sync Cloud temps réel", "Aucune alerte envoyée"] },
     { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que la route d'import enregistre.", list: ["Photo de l'énoncé analysée", "priority et status rangés tels quels", "Aucun tri, aucun rappel"] },
     { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Une messagerie interne pour le travail en groupe : salons, messages privés et pièces jointes, cloisonnés par compte.", list: ["Salons de Travail", "Messages Privés", "Partage de Fichiers"] },
-    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Statistiques et comptes en direct", "Analytics avancés", "Aucune console IA dans ce panneau"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Statistiques et comptes en direct", "Analytics avancés", "Un assistant IA qui exécute et relit la base"] },
     { icon: <Star size={28} />, title: "Modération 2.0", desc: "Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA.", list: ["Gestion des Rôles", "Recharge et suppression de comptes", "Accès founder et moderator seulement"] }
   ],
   en: [
     { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge: an AI you hand a course, a piece of work or a dense concept, and that answers.", list: ["Open conversation about your courses", "Analysis of a question photo", "10 credits per answer"] },
+        { icon: <Zap size={28} />, title: "Thunder", desc: "Your notes first, nothing else: it answers from the text you handed it, and every sentence carries the reference of the passage it came from. Outside your documents it says so instead of padding.", list: ["Question 10 credits, quiz 15, links 5", "Every [S1] points back at your text, not at the model’s memory", "Can read a web page when you ask (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Your timetable is imported in one pass — A/B weeks, days, subjects, time slots — and shows up on all your devices.", list: ["A/B Weeks", "Real-time cloud sync", "No alert is sent"] },
     { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import route stores.", list: ["Question photo analysed", "priority and status stored as given", "No sorting, no reminders"] },
     { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Internal messaging for group work: rooms, private messages and attachments, separated per account.", list: ["Work Rooms", "Private DMs", "File Sharing"] },
-    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Live stats and accounts", "Advanced analytics", "No AI console in this panel"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Live stats and accounts", "Advanced analytics", "An AI assistant that acts and re-reads the database"] },
     { icon: <Star size={28} />, title: "Moderation 2.0", desc: "Sophisticated tools to maintain the integrity and security of the Moncef IA community.", list: ["Role Management", "Top-up and account deletion", "founder and moderator access only"] }
   ],
   es: [
     { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento: una IA a la que entregas un curso, un trabajo o un concepto denso, y responde.", list: ["Conversación libre sobre tus cursos", "Análisis de la foto de un enunciado", "10 créditos por respuesta"] },
+        { icon: <Zap size={28} />, title: "Thunder", desc: "Tus apuntes primero, nada más: responde a partir del texto que le diste, y cada frase lleva la referencia del pasaje citado. Fuera de tus documentos lo dice en vez de rellenar.", list: ["Pregunta 10 créditos, test 15, enlaces 5", "Cada [S1] apunta a tu texto, no a la memoria del modelo", "Puede leer una página web si se lo pides (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Tu horario se importa de una vez — semanas A/B, días, materias y franjas — y aparece en todos tus dispositivos.", list: ["Semanas A/B", "Sincronización en la nube", "No se envía ninguna alerta"] },
     { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de deberes que la ruta de importación guarda.", list: ["Foto del enunciado analizada", "priority y status guardados tal cual", "Sin orden ni recordatorios"] },
     { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Mensajería interna para trabajar en grupo: salas, mensajes privados y adjuntos, separados por cuenta.", list: ["Salas de Trabajo", "Mensajes Privados", "Compartir Archivos"] },
-    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Estadísticas y cuentas en vivo", "Analítica avanzada", "Ninguna consola de IA aquí"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Estadísticas y cuentas en vivo", "Analítica avanzada", "Asistente IA que actúa y relee la base de datos"] },
     { icon: <Star size={28} />, title: "Moderación 2.0", desc: "Herramientas sofisticadas para mantener la integridad y seguridad de la comunidad Moncef IA.", list: ["Gestión de Roles", "Recarga y borrado de cuentas", "Solo acceso founder y moderator"] }
   ],
   ar: [
     { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك: ذكاء اصطناعي تمنحه درساً أو عملاً أو مفهوماً معقداً فيجيب.", list: ["محادثة حرة حول دروسك", "تحليل صورة نصّ التمرين", "10 اعتمادات لكل ردّ"] },
+        { icon: <Zap size={28} />, title: "Thunder", desc: "ملاحظاتك أولاً لا غير: يجيب من النص الذي أعطيته إياه، وكل جملة تحمل المرجع إلى الفقرة المقتبسة. وخارج وثائقك يقول ذلك بصراحة بدل أن يلفّق.", list: ["سؤال 10 نقاط، اختبار 15، روابط 5", "كل إشارة [S1] تعود إلى نصك لا إلى ذاكرة النموذج", "يمكنه قراءة صفحة ويب إذا طلبت (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "يُستورد جدولك دفعة واحدة — أسابيع أ/ب، الأيام، المواد والتوقيتات — ويظهر على كل أجهزتك.", list: ["أسابيع أ/ب", "مزامنة سحابية فورية", "لا تُرسل أي تنبيهات"] },
     { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات تحفظها مسار الاستيراد.", list: ["تحليل صورة نصّ التمرين", "priority وstatus يُحفظان كما هما", "بلا ترتيب ولا تذكيرات"] },
     { icon: <MessageSquare size={28} />, title: "اتصالات كورتيكس", desc: "مراسلة داخلية للعمل الجماعي: غرف ورسائل خاصة ومرفقات، مفصولة لكل حساب.", list: ["غرف عمل", "رسائل خاصة", "مشاركة الملفات"] },
-    { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["إحصاءات وحسابات مباشرة", "تحليلات متقدمة", "لا توجد وحدة تحكم IA هنا"] },
+    { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["إحصاءات وحسابات مباشرة", "تحليلات متقدمة", "مساعد ذكاء ينفّذ الإجراءات ويتحقق من القاعدة"] },
     { icon: <Star size={28} />, title: "إشراف 2.0", desc: "أدوات متطورة للحفاظ على نزاهة وأمان مجتمع ذكاء منصف.", list: ["إدارة الأدوار", "إعادة تعبئة وحذف الحسابات", "الوصول founder و moderator فقط"] }
   ],
   zh: [
     { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心：把课程、作业或复杂概念交给它，它来回答。", list: ["围绕课程自由对话", "分析题目照片", "每次回答 10 额度"] },
+        { icon: <Zap size={28} />, title: "Thunder", desc: "只根据你给的资料回答：每句话都带着它所引段落的编号；资料里没有的内容，它会直说，而不是编。", list: ["提问 10 积分，测验 15，链接 5", "每条 [S1] 都指回你的原文", "你要求时可读网页（15）"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "课程表一次性导入——A/B 周、星期、科目与时间——并在你的所有设备上同步显示。", list: ["A/B 周", "实时云同步", "不发送任何提醒"] },
     { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入接口写入。", list: ["题目照片分析", "priority 与 status 原样写入", "不排序、不提醒"] },
     { icon: <MessageSquare size={28} />, title: "Cortex 通信", desc: "面向课堂协作的内部消息：讨论区、私信与附件，按账户隔离。", list: ["讨论区", "私信", "文件分享"] },
-    { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["实时统计与账户", "高级分析", "此处没有 AI 控制台"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["实时统计与账户", "高级分析", "AI 助手可执行管理操作并回读数据库核对"] },
     { icon: <Star size={28} />, title: "审核 2.0", desc: "维护 Moncef IA 社区完整性和安全性的高级工具。", list: ["角色管理", "充值与删除账户", "仅 founder 与 moderator 可访问"] }
   ]
 };;
@@ -654,6 +660,8 @@ export default function Home() {
                 desc={feat.desc}
                 list={feat.list}
                 premium={feat.premium}
+                accent={feat.accent}
+                etiquette={feat.etiquette}
                 /* Le cumul de flottants écrivait « 0.30000000000000004s » dans le DOM ;
                    on arrondit au centième de seconde. */
                 delay={Math.round((0.1 + idx * 0.1) * 100) / 100}
@@ -765,17 +773,23 @@ export default function Home() {
    (l'effet venait de gsap, retiré ici). Il pilote maintenant une animation CSS :
    les cartes entrent en cascade, et — différence essentielle avec gsap.from — leur
    état au repos est opacity: 1 ; c'est l'image de départ qui est invisible. */
-function FeatureCard({ icon, title, desc, list = [], premium = false, delay }: { icon: React.ReactNode, title: string, desc: string, list?: string[] | undefined, premium?: boolean | undefined, delay: number }) {
+function FeatureCard({ icon, title, desc, list = [], premium = false, accent, etiquette, delay }: { icon: React.ReactNode, title: string, desc: string, list?: string[] | undefined, premium?: boolean | undefined, accent?: string | undefined, etiquette?: string | undefined, delay: number }) {
+  // Une carte peut avoir sa propre teinte : ALPHA reste à l'or de « premium »,
+  // Thunder passe au violet avec une étiquette « IA » qui dit ce qu'elle est.
+  const teinte = accent ?? (premium ? "var(--gold)" : "var(--p)");
   return (
     <TiltCard className="card card-gsap rise-in-fade" style={{ padding: "48px 32px", position: "relative", overflow: "hidden", animationDelay: `${delay}s` }}>
-      {premium && (
+      {(premium || etiquette) && (
         <div style={{
-          position: "absolute", top: 12, right: 12, background: "var(--gold)", color: "#000",
+          position: "absolute", top: 12, right: 12, background: teinte, color: "#000",
           fontSize: 10, fontWeight: 900, padding: "4px 12px", borderRadius: 99
-        }}>PREMIUM</div>
+        }}>{etiquette ?? "PREMIUM"}</div>
       )}
-      <div style={{ color: premium ? "var(--gold)" : "var(--p)", marginBottom: 28, display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)" }}>
+      {accent && (
+        <div aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 2, background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+      )}
+      <div style={{ color: teinte, marginBottom: 28, display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center", border: accent ? `1px solid ${accent}55` : "1px solid var(--border)" }}>
           {icon}
         </div>
         <h3 style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font2)", letterSpacing: "-0.03em" }}>{title}</h3>
@@ -784,7 +798,7 @@ function FeatureCard({ icon, title, desc, list = [], premium = false, delay }: {
       <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
         {list.map((item, i) => (
           <li key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
-            <Check size={14} style={{ color: "var(--a)" }} /> {item}
+            <Check size={14} style={{ color: teinte }} /> {item}
           </li>
         ))}
       </ul>

@@ -74,17 +74,86 @@ export async function POST(req: Request) {
 
       case 'UPDATE_USER': {
         const { userId, updates } = payload;
+        const allowed = ['role', 'tokens', 'first_name', 'last_name'];
+        const safe = Object.fromEntries(Object.entries(updates ?? {}).filter(([k]) => allowed.includes(k)));
+
+        // Le rôle est validé AVANT écriture. Un `role: "admin"` (qui n'existe pas
+        // dans l'app) passait jusqu'ici sans bruit : le compte se retrouvait avec
+        // un grade que plus aucun garde-fou ne reconnaît, donc un admin croyait
+        // avoir promu quelqu'un qui n'avait rien obtenu.
+        if ('role' in safe) {
+          const demande = String(safe.role ?? '').trim();
+          if (!['normal', 'moderator', 'founder'].includes(demande)) {
+            return NextResponse.json({ error: `Grade inconnu : « ${demande || 'vide'} ». Admis : normal, moderator, founder.` }, { status: 400 });
+          }
+          safe.role = demande;
+        }
+        if ('tokens' in safe) {
+          const n = Number(safe.tokens);
+          if (!Number.isInteger(n) || n < 0 || n > 100_000) {
+            return NextResponse.json({ error: 'Crédits : un entier entre 0 et 100000 est attendu.' }, { status: 400 });
+          }
+          safe.tokens = n;
+        }
+        if (!Object.keys(safe).length) return NextResponse.json({ error: 'Rien à modifier.' }, { status: 400 });
+
+        const estFondateur = profile?.role === 'founder';
+        if ('role' in safe && !estFondateur) {
+          return NextResponse.json({ error: 'Seul un fondateur peut changer un grade.' }, { status: 403 });
+        }
         if (profile?.role === 'moderator') {
-          const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single();
-          if (targetProfile?.role !== 'normal' || updates.role === 'founder' || updates.role === 'moderator') {
-            return NextResponse.json({ error: "Les modérateurs ne peuvent modifier que les comptes utilisateurs normaux, et ne peuvent pas attribuer de grades modérateurs ou fondateurs." }, { status: 403 });
+          const { data: cible } = await admin.from('users').select('role').eq('id', userId).single();
+          if (cible?.role !== 'normal') {
+            return NextResponse.json({ error: "Les modérateurs ne peuvent modifier que les comptes utilisateurs normaux." }, { status: 403 });
           }
         }
-        const allowed = ['role', 'tokens', 'first_name', 'last_name'];
-        const safe = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-        const { error } = await admin.from('users').update(safe).eq('id', userId);
+
+        const { error, count } = await admin.from('users').update(safe).eq('id', userId).select('id');
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ success: true });
+
+        // Le compte existe côté authentification mais peut ne PLUS avoir de ligne
+        // de profil (compte importé, ou ligne purgée). `update` ne touche alors
+        // aucune ligne et ne signale rien : le panneau affichait « ✅ mis à jour »
+        // pour rien. On crée donc la ligne, puis on relit.
+        let ligne_cree = false;
+        const { data: relu1 } = await admin.from('users').select('id').eq('id', userId).single();
+        if (!relu1) {
+          const { data: paquet } = await admin.auth.admin.getUserById(userId);
+          const compte = paquet?.user ?? null;
+          const nomComplet = String((compte as any)?.user_metadata?.nom ?? (compte as any)?.user_metadata?.full_name ?? '');
+          const { error: e2 } = await admin.from('users').upsert({
+            id: userId,
+            email: compte?.email ?? null,
+            first_name: nomComplet.split(' ')[0] || 'Utilisateur',
+            role: 'normal',
+            tokens: 700,
+            ...safe,
+          });
+          if (e2) return NextResponse.json({ error: 'Profil absent et création impossible : ' + e2.message }, { status: 500 });
+          ligne_cree = true;
+        }
+
+        // Miroir dans app_metadata : utile à ce qui lit le jeton. Le jeton déjà
+        // émis garde son ancien contenu jusqu au prochain rafraîchissement — c est
+        // écrit dans la réponse plutôt que laissé deviner.
+        let miroir = 'ok';
+        if ('role' in safe) {
+          try {
+            await admin.auth.admin.updateUserById(userId, { app_metadata: { role: safe.role } });
+          } catch (e: unknown) {
+            miroir = 'non écrit (' + (e instanceof Error ? e.message.slice(0, 70) : 'erreur') + ')';
+          }
+        }
+
+        const { data: relu } = await admin.from('users').select('role, tokens').eq('id', userId).single();
+        return NextResponse.json({
+          success: true,
+          applique: relu ?? null,
+          relu_en_base: relu?.role ?? null,
+          ligne_cree,
+          miroir_metadata: miroir,
+          portee: "l'intéressé voit le nouveau rôle dès qu'il recharge l'application ou revient dans l'onglet",
+        });
       }
 
       case 'DELETE_USER': {

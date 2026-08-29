@@ -98,6 +98,15 @@ nom('identifiantVideo: site random refusé', T.identifiantVideo('https://evil.ex
   const refuse=await T.filtrerLiensDirects([{url:'https://www.youtube.com/watch?v=zzz999'}], async()=>null);
   nom('filtrerLiensDirects: lien mort → rien publié', refuse.length===0);
   nom('reponseSansSource: mode "ce n\'est pas dans tes documents"', /^Ce n'est pas dans tes documents\./.test(T.reponseSansSource([])||''));
+  // ── charte(web) : le mode web doit rester cohérent avec ce qui est réellement lu ──
+  // Sans ces deux réécritures, le modèle recevait « rien d'internet » alors que
+  // quatre pages venaient d'être téléchargées — mesuré : il répondait sans citer.
+  const cw = T.charte(true), cf = T.charte(false);
+  nom('charte: web éteint = charte de base, caractère par caractère', cf === T.CHARTE_THUNDER);
+  nom("charte: web allumé, l'interdit « rien d'internet » a disparu", !cw.includes("rien d'internet"));
+  nom('charte: web allumé, le refus nomme les pages lues', cw.includes('Ni tes documents ni les pages lues') && !cw.includes("Ce n'est pas dans tes documents."));
+  nom('charte: web allumé, la règle 7 réclame la référence [S<n>]', /\n7\./.test(cw) && cw.includes('[S<n>]'));
+
   console.log(`\n   ═══ ${ok} vérifications réussies, ${ko} échec(s) ═══`);
   process.exit(ko?1:0);
 })();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, Bot, Link2, ListChecks, Plus, Send, ShieldAlert, Trash2 } from "lucide-react";
+import { BookOpen, Bot, Globe, Link2, ListChecks, Plus, Send, ShieldAlert, Trash2, Zap } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
 import { useLanguage, t } from "@/utils/i18n";
@@ -21,9 +21,18 @@ import { supabase } from "@/utils/supabase/client";
  */
 
 type Source = { id: string; titre: string; matiere: string | null; longueur: number | string; created_at: string };
-type Citation = { n: number; titre: string; extrait: string };
+type Citation = { n: number; titre: string; extrait: string; url?: string | null; origine?: "cours" | "web"; page_lue?: boolean };
 type Question = { question: string; choices: string[]; answer: number; explication: string; source: string; extrait?: string };
 type Partie = { id: string; total: number; justes: number; niveau: string | null; lignes: { n: number; justifie: boolean; choisi: number | null }[]; created_at: string };
+
+/**
+ * Le violet est la couleur de Thunder, partout : dans le menu, sur la page, sur
+ * les citations qui viennent du web. Elle est reprise de la palette déjà usada
+ * par le panneau admin (rôle modérateur) pour ne pas inventer un sixième bleu.
+ */
+const VIOLET = "#a78bfa";
+const VIOLET_DOUX = "rgba(167,139,250,0.14)";
+const VIOLET_LIEN = "rgba(167,139,250,0.34)";
 
 const markdown = (texte: string) =>
   DOMPurify.sanitize(marked.parse(texte, { async: false, breaks: true, gfm: true }) as string, { USE_PROFILES: { html: true } });
@@ -84,6 +93,8 @@ export default function ThunderPage() {
   const [niveaux, setNiveau] = useState("lycée");
   const [nbQuestions, setNbQuestions] = useState(5);
   const [enCours, setEnCours] = useState(false);
+  const [web, setWeb] = useState(false);
+  const [webUrls, setWebUrls] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [reponse, setReponse] = useState<string | null>(null);
   const [citations, setCitations] = useState<Citation[]>([]);
@@ -127,7 +138,17 @@ export default function ThunderPage() {
     setQuestions(null);
     setLiens(null);
     setCorrection(null);
-    const d = await appeler({ mode, question, include_all_sources: true, niveau: niveaux, n: nbQuestions });
+    const urls = webUrls.split(/\n|,/).map((x) => x.trim()).filter(Boolean).slice(0, 4);
+    const d = await appeler({
+      mode,
+      question,
+      include_all_sources: true,
+      niveau: niveaux,
+      n: nbQuestions,
+      // Le web n'est demandé que si l'élève le demande : la promesse de Thunder
+      // (« je ne réponds qu'à partir de ce que tu m'as donné ») reste vraie par défaut.
+      ...(mode === "ask" && (web || urls.length) ? { web: true, web_urls: urls } : {}),
+    });
     if (!d) return;
     if (mode === "ask") {
       setReponse(String(d.reponse ?? ""));
@@ -198,9 +219,12 @@ export default function ThunderPage() {
   return (
     <div style={{ height: "100%", overflowY: "auto", padding: "24px clamp(16px, 3vw, 40px) 80px" }}>
       <header style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "clamp(26px, 3.4vw, 40px)", margin: 0, letterSpacing: "-0.03em" }}>{t(lang, "thunder_title")}</h1>
-        <p style={{ color: "var(--muted-foreground)", margin: "8px 0 0", fontSize: 14, maxWidth: 720, lineHeight: 1.6 }}>{t(lang, "thunder_lede")}</p>
-        <p style={{ color: "var(--muted-foreground)", margin: "6px 0 0", fontSize: 12, opacity: 0.8 }}>{t(lang, "thunder_cout")}</p>
+        <h1 style={{ fontSize: "clamp(26px, 3.4vw, 40px)", margin: 0, letterSpacing: "-0.03em", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 34, height: 34, borderRadius: 11, background: VIOLET_DOUX, border: "1px solid " + VIOLET_LIEN, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <Zap size={18} style={{ color: VIOLET }} aria-hidden />
+          </span>
+          {t(lang, "thunder_title")}
+        </h1>
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, alignItems: "start" }}>
@@ -212,7 +236,7 @@ export default function ThunderPage() {
           </h2>
 
           {sources.length === 0 && (
-            <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 14px", lineHeight: 1.55 }}>{t(lang, "thunder_s_none")}</p>
+            <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: "0 0 12px" }}>{t(lang, "thunder_s_vide")}</p>
           )}
 
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 14px", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -256,8 +280,8 @@ export default function ThunderPage() {
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
                   padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
-                  border: mode === m.id ? "1px solid var(--a)" : "1px solid rgba(255,255,255,0.1)",
-                  background: mode === m.id ? "rgba(89,130,255,0.12)" : "transparent", color: "inherit",
+                  border: mode === m.id ? "1px solid " + VIOLET : "1px solid rgba(255,255,255,0.1)",
+                  background: mode === m.id ? VIOLET_DOUX : "transparent", color: "inherit",
                 }}
               >
                 <m.icon size={14} /> {m.label}
@@ -283,8 +307,30 @@ export default function ThunderPage() {
             </div>
           )}
 
+          {mode === "ask" && (
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12.5, cursor: "pointer", userSelect: "none" }}>
+                <input
+                  type="checkbox"
+                  checked={web}
+                  onChange={(e) => setWeb(e.target.checked)}
+                  style={{ width: 15, height: 15, accentColor: VIOLET, cursor: "pointer" }}
+                />
+                <Globe size={13} style={{ color: web ? VIOLET : undefined }} /> {t(lang, "thunder_web")}
+              </label>
+              {web && (
+                <textarea
+                  style={{ ...champ, minHeight: 46, marginTop: 8, fontFamily: "inherit", lineHeight: 1.5, fontSize: 12.5 }}
+                  placeholder={t(lang, "thunder_web_urls")}
+                  value={webUrls}
+                  onChange={(e) => setWebUrls(e.target.value)}
+                  aria-label={t(lang, "thunder_web_urls")}
+                />
+              )}
+            </div>
+          )}
+
           <textarea
-           
             style={{ ...champ, minHeight: 76, resize: "vertical", fontFamily: "inherit", lineHeight: 1.55 }}
             placeholder={t(lang, "thunder_q")}
             value={question}
@@ -327,8 +373,19 @@ export default function ThunderPage() {
                   <ol style={{ margin: "10px 0 0", paddingLeft: 20, display: "flex", flexDirection: "column", gap: 8 }}>
                     {citations.map((c) => (
                       <li key={c.n} style={{ fontSize: 12.5, lineHeight: 1.55 }}>
-                        <strong>[S{c.n}] {c.titre}</strong>
-                        <blockquote style={{ margin: "4px 0 0", paddingLeft: 10, borderLeft: "2px solid var(--a)", color: "var(--muted-foreground)" }}>{c.extrait}</blockquote>
+                        <strong>[S{c.n}]</strong>{" "}
+                        {c.url ? (
+                          <a href={c.url} target="_blank" rel="noopener noreferrer nofollow" style={{ color: VIOLET, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 2 }}>
+                            {c.titre.replace(/^web · /, "")}
+                          </a>
+                        ) : (
+                          <strong>{c.titre}</strong>
+                        )}
+                        {c.origine === "web" && (
+                          <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 800, padding: "1px 6px", borderRadius: 999, background: VIOLET_DOUX, color: VIOLET, border: "1px solid " + VIOLET_LIEN }}>web</span>
+                        )}
+                        {c.origine === "web" && c.page_lue === false && <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.6 }}>extrait seul, page non ouverte</span>}
+                        <blockquote style={{ margin: "4px 0 0", paddingLeft: 10, borderLeft: "2px solid " + (c.origine === "web" ? VIOLET : "var(--a)"), color: "var(--muted-foreground)" }}>{c.extrait}</blockquote>
                       </li>
                     ))}
                   </ol>
@@ -339,7 +396,7 @@ export default function ThunderPage() {
 
           {liens && (
             <div style={{ marginTop: 16 }}>
-              <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "0 0 10px" }}>{liens.avertissement ?? t(lang, "thunder_note_liens")}</p>
+              {liens.avertissement && <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "0 0 10px" }}>{liens.avertissement}</p>}
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                 {(liens.recherche ?? []).map((l) => (
                   <li key={l.sujet} style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px 12px", fontSize: 13 }}>

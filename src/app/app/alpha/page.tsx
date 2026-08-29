@@ -52,7 +52,10 @@ export default function AlphaPage() {
   const [serviceKeyMissing, setServiceKeyMissing] = useState(false); // Bug #9 fix
 
   // AI Console
-  const [messages, setMessages] = useState([
+  // Un tour peut porter les actions réellement exécutées par le serveur, et les
+  // suppressions que l'humain doit encore confirmer.
+  type Tour = { role: string; content: string; actions?: { outil: string; cible?: string; resultat: Record<string, any> }[]; aExecuter?: { cible: string; id: string; email: string }[]; avertissements?: string[] };
+  const [messages, setMessages] = useState<Tour[]>([
     { role: 'assistant', content: '👑 ALPHA — Interface d\'administration activée. Je peux analyser vos données, gérer les utilisateurs et vous fournir des statistiques en temps réel. Quelle est votre directive ?' }
   ]);
   const [input, setInput] = useState("");
@@ -173,41 +176,41 @@ export default function AlphaPage() {
     setMessages(ctx);
     setAiLoading(true);
 
-    // Build context summary for the AI
-    const statsSummary = stats ? `
-DONNÉES EN TEMPS RÉEL:
-- Utilisateurs total: ${stats.users?.count}
-- Devoirs total: ${stats.homework?.count}
-- Messages total: ${stats.messages?.count}
-- Cours emploi du temps: ${stats.schedule?.count}
-- Liste utilisateurs: ${JSON.stringify(stats.users?.data?.map((u: any) => ({ id: u.id, email: u.email, nom: u.first_name, role: u.role, tokens: u.tokens, inscrit: u.created_at })))}
-- Devoirs par statut: todo=${stats.homework?.data?.filter((h: any) => h.status === 'todo').length}, en_cours=${stats.homework?.data?.filter((h: any) => h.status === 'in_progress').length}, fait=${stats.homework?.data?.filter((h: any) => h.status === 'done').length}
-` : 'Statistiques en cours de chargement.';
 
     try {
-      const res = await fetch('/api/chat', {
+      // La console appelait /api/chat : une IA sans aucun outil, dont le propre
+      // prompt disait « tu peux expliquer comment effectuer des actions admin ».
+      // Un admin qui écrit « passe Amina en modératrice » repartait donc avec un
+      // mode d'emploi. /api/alpha/assistant, lui, exécute la fonction demandée
+      // avec TA session, puis relit la base avant de répondre.
+      const res = await fetch('/api/alpha/assistant', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: ctx.map(m => ({ role: m.role, content: m.content })),
-          system: `Tu es ALPHA, l'IA d'administration de la plateforme "Moncef IA", propulsée par les technologies IA les plus avancées. Tu as accès à toutes les données de la plateforme en temps réel. 
-L'utilisateur actuel qui te consulte a le rôle de : ${userRole === 'founder' ? '👑 Fondateur' : '🛡️ Modérateur'}.
-Tu es ultra-précis, direct, et tu fournis des analyses détaillées. 
-Tu peux expliquer comment effectuer des actions admin comme changer un rôle utilisateur, supprimer un compte, réinitialiser des tokens.
-La date actuelle est le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
-
-${statsSummary}
-
-Tu peux suggérer des actions spécifiques en formatant tes réponses de manière claire avec des tableaux ou statistiques quand c'est pertinent.`
-        })
+          authToken,
+          messages: ctx.map((m) => ({ role: m.role, content: String(m.content || '').slice(0, 4000) })),
+        }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response || (data.error ? `${data.error} ${data.details || ''}` : 'Erreur.') }]);
+      if (!res.ok) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: `\u274c ${data?.error || 'Assistant indisponible.'}` }]);
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: data.reponse || 'Réponse vide.',
+          actions: Array.isArray(data.actions) ? data.actions : [],
+          aExecuter: Array.isArray(data.a_executer) ? data.a_executer : [],
+          avertissements: Array.isArray(data.avertissements) ? data.avertissements : [],
+        },
+      ]);
+      loadStats();
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Erreur de connexion.' }]);
+      // Panne réseau, réponse illisible : la bulle le dit au lieu de s'éteindre
+      // en silence en laissant l'admin croire que la commande est partie.
+      setMessages((prev) => [...prev, { role: 'assistant', content: '❌ Le serveur na pas répondu — aucune action na été exécutée.' }]);
     } finally {
       setAiLoading(false);
     }
@@ -386,7 +389,7 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#ffa502' }}>Clé Service Role manquante</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
-                  Pour activer toutes les fonctionnalités admin, ajoutez <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>SUPABASE_SERVICE_ROLE_KEY</code> dans vos variables d'environnement Netlify et dans <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>.env.local</code>.
+                  Pour activer toutes les fonctionnalités admin, ajoutez <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>SUPABASE_SERVICE_ROLE_KEY</code> dans vos variables d’environnement Netlify et dans <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>.env.local</code>.
                   <br />Trouvez-la dans : Supabase → Settings → API → service_role key.
                 </div>
               </div>
@@ -530,6 +533,40 @@ Tu peux suggérer des actions spécifiques en formatant tes réponses de manièr
                     <div className={isAi ? "alpha-markdown" : ""} style={{ padding: '14px 18px', borderRadius: 18, borderTopLeftRadius: isAi ? 4 : 18, borderTopRightRadius: isAi ? 18 : 4, background: isAi ? 'rgba(255,215,0,0.04)' : 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))', border: `1px solid ${isAi ? 'rgba(255,215,0,0.12)' : 'rgba(255,215,0,0.3)'}`, color: isAi ? '#EEDD88' : '#fff', fontSize: 14, lineHeight: 1.65, whiteSpace: 'normal', wordBreak: 'break-word' }}
                       dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '') as string) : msg.content }}
                     />
+                    {isAi && (msg.actions?.length || msg.aExecuter?.length || msg.avertissements?.length) ? (
+                      <div style={{ maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                        {(msg.actions || []).map((a, i) => (
+                          <div key={a.outil + i} style={{ fontSize: 11.5, lineHeight: 1.45, padding: '6px 10px', borderRadius: 10, background: 'rgba(167,139,250,0.09)', border: '1px solid rgba(167,139,250,0.28)', color: '#d9ccff' }}>
+                            <strong style={{ color: '#a78bfa' }}>{a.outil}</strong>
+                            {a.cible ? ` · ${a.cible}` : ''}
+                            {a.resultat?.avant !== undefined ? ` · ${a.resultat.avant} → ${a.resultat.relu_en_base ?? '?'}` : ''}
+                            {a.resultat?.relu_en_base !== undefined && a.resultat?.avant === undefined ? ` · relu : ${typeof a.resultat.relu_en_base === 'object' ? JSON.stringify(a.resultat.relu_en_base) : a.resultat.relu_en_base}` : ''}
+                            {a.resultat?.erreur ? ` · ${a.resultat.erreur}` : ''}
+                            {a.resultat?.ligne_cree ? ' · profil recréé' : ''}
+                            {a.resultat?.rappel ? ` · ${a.resultat.rappel}` : ''}
+                          </div>
+                        ))}
+                        {(msg.aExecuter || []).map((pr) => (
+                          <div key={pr.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11.5, padding: '7px 10px', borderRadius: 10, background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)' }}>
+                            <span>Suppression à confirmer : <strong>{pr.email}</strong></span>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const r = await alphaFetch('DELETE_USER', { userId: pr.id });
+                                setActionMsg(r?.success ? `\u2705 ${pr.email} supprimé` : `\u274c ${r?.error}`);
+                                setTimeout(() => setActionMsg(''), 4000);
+                              }}
+                              style={{ background: '#ff6b6b', color: '#12060a', border: 0, borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                            >
+                              Confirmer
+                            </button>
+                          </div>
+                        ))}
+                        {(msg.avertissements || []).map((w) => (
+                          <div key={w} style={{ fontSize: 11, opacity: 0.72 }}>{w}</div>
+                        ))}
+                      </div>
+                    ) : null}
                   </motion.div>
                 );
               })}

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "verif:thunder": "npx tsc src/lib/thunder.ts --ignoreConfig --outDir .verif --module commonjs --target es2022 --skipLibCheck --strict && node tests/thunder-verif.cjs",
+    "verif:thunder": "npx tsc src/lib/thunder.ts src/lib/web.ts --ignoreConfig --outDir .verif --module commonjs --target es2022 --skipLibCheck --strict && node tests/thunder-verif.cjs && node tests/web-verif.cjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
