@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "check:i18n": "node scripts/check-i18n.mjs",
     "verif:design": "python3 tests/design-thunder.py",
-    "verif:alpha": "python3 tests/alpha-perm.py"
+    "verif:alpha": "python3 tests/alpha-perm.py",
+    "verif:vitrine": "python3 tests/vitrine-espaces.py"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

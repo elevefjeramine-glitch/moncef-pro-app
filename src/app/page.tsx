@@ -60,7 +60,7 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
       {
         "title": "Modérateur",
         "badge": "Illimité",
-        "desc": "Accès à la console d'administration ALPHA. Privilèges de modération : modification des profils utilisateurs (sauf Fondateur) et suppression des devoirs/contenus abusifs pour maintenir l'intégrité de la communauté."
+        "desc": "Accès à la console d'administration ALPHA, en lecture sur les comptes : statistiques, liste des utilisateurs, suppression des devoirs et contenus abusifs. Les rôles, les crédits et la suppression d'un compte sont réservés au fondateur."
       },
       {
         "title": "Fondateur Alpha",
@@ -111,7 +111,7 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
       {
         "title": "Moderator",
         "badge": "Unlimited",
-        "desc": "Access to the ALPHA administration console. Moderation privileges: editing user profiles (except the Founder's) and deleting abusive homework or content to keep the community sound."
+        "desc": "Access to the ALPHA administration console, read-only on accounts: statistics, the user list, and deleting abusive homework or content. Roles, credits and deleting an account are reserved for the founder."
       },
       {
         "title": "Alpha Founder",
@@ -162,7 +162,7 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
       {
         "title": "Moderador",
         "badge": "Ilimitado",
-        "desc": "Acceso a la consola de administración ALPHA. Privilegios de moderación: editar perfiles de usuario (excepto el del Fundador) y borrar deberes o contenidos abusivos para cuidar la comunidad."
+        "desc": "Acceso a la consola de administración ALPHA, en solo lectura sobre las cuentas: estadísticas, lista de usuarios y borrado de tareas o contenido abusivo. Los roles, los créditos y eliminar una cuenta están reservados al fundador."
       },
       {
         "title": "Fundador Alpha",
@@ -213,7 +213,7 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
       {
         "title": "مشرف",
         "badge": "غير محدود",
-        "desc": "الوصول إلى وحدة التحكم ALPHA وصلاحيات الإشراف: تعديل ملفات المستخدمين (باستثناء المؤسس) وحذف الواجبات أو المحتوى المسيء لحماية المجتمع."
+        "desc": "الوصول إلى وحدة التحكم ALPHA مع قراءة الحسابات فقط: الإحصاءات وقائمة المستخدمين وحذف الواجبات أو المحتوى المسيء. الأدوار والأرصدة وحذف الحساب محفوظة للمؤسس."
       },
       {
         "title": "المؤسس ألفا",
@@ -264,7 +264,7 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
       {
         "title": "管理员",
         "badge": "无限",
-        "desc": "可进入 ALPHA 管理台，拥有监督权限：修改用户资料（创始人除外）、删除违规作业或内容，以维护社区秩序。"
+        "desc": "可进入 ALPHA 管理台，对账户只读：查看统计与用户列表、删除违规作业或内容。角色、积分与删除账户仅限创始人操作。"
       },
       {
         "title": "Alpha 创始人",
@@ -585,7 +585,16 @@ export default function Home() {
             }}>
               <span style={{ color: "#fff", display: "inline-block" }}>
                 {firstWords.split(" ").map((word: any, i: any) => (
-                  <span key={i} style={{ display: "inline-block" }}>
+                  // LE `<span>` porteur NE DOIT PAS être en `inline-block` : un espace
+                  // placé à la fin d'une boîte inline-block est supprimé par le
+                  // navigateur (il termine une ligne), et les mots se retrouvaient
+                  // collés — « L'intelligenceartificielleau servicede… », mesuré dans le
+                  // HTML servi le 29/08/2026. En `inline`, l'espace appartient à la
+                  // ligne du parent : il rend, et il donne un point de retour à la
+                  // ligne — sans ça le titre débordait sur téléphone. La transformation
+                  // de l'animation reste possible car c'est le `motion.span` intérieur
+                  // qui est en inline-block.
+                  <span key={i}>
                     <motion.span custom={i} variants={letterAnim} style={{ display: "inline-block" }}>{word}</motion.span>
                     {" "}
                   </span>
