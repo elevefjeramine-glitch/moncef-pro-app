@@ -1,0 +1,503 @@
+import { NextResponse } from "next/server";
+import { DAILY_CREDIT_FLOOR, adminConfigure, applyDailyCreditFloor, makeAdminClient, purgeAccount } from "@/lib/compte";
+import { CorpsTropVolumineux, LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from "@/lib/corps";
+import {
+  CHARTE_THUNDER,
+  type Source,
+  blocContexte,
+  citationsUtilisees,
+  controlerCitations,
+  extraireJson,
+  filtrerLiensDirects,
+  identifiantVideo,
+  lienRechercheWeb,
+  lienRechercheYouTube,
+  promptAsk,
+  promptQuiz,
+  reponseSansSource,
+  rechercher,
+  validerQuiz,
+} from "@/lib/thunder";
+
+/**
+ * Thunder — l'assistant ancré sur les documents de l'élève, à la NotebookLM.
+ *
+ * Trois modes, un seul contrat d'honnêteté :
+ *   ask     réponse construite sur les passages récupérés dans SES cours, avec [S<n>]
+ *   quiz    QCM généré depuis ces mêmes passages, validé structurellement avant envoi
+ *   links   sujets de recherche (YouTube / web) tirés des termes du cours — jamais une
+ *           URL dictée par le modèle : un lien direct n'est retenu que s'il résout
+ *
+ * Les crédits, la suppression programmée et le plancher quotidien suivent exactement
+ * la logique de /api/chat (un seul chemin de comptabilité, pas deux versions).
+ */
+
+export const maxDuration = 45;
+
+const AI_TIMEOUT_MS = 20000;
+const COUT = { ask: 10, quiz: 15, links: 5, sources: 0, progress: 0 } as const;
+
+/** Un appel réseau vers les fournisseurs, borné et retenté une fois (idem /api/chat). */
+async function fetchAvecDelai(url: string, init: RequestInit, tentatives = 2): Promise<Response> {
+  let derniereErreur: unknown = null;
+  for (let i = 0; i < tentatives; i++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(AI_TIMEOUT_MS) });
+      const reessayable = res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
+      if (!reessayable || i === tentatives - 1) return res;
+    } catch (e: unknown) {
+      derniereErreur = e;
+      if (i === tentatives - 1) throw e instanceof Error ? e : new Error("Appel IA échoué");
+    }
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+  }
+  throw derniereErreur instanceof Error ? derniereErreur : new Error("Appel IA échoué");
+}
+
+type Corps = {
+  mode?: unknown;
+  question?: unknown;
+  sources?: unknown;
+  source_ids?: unknown;
+  include_all_sources?: unknown;
+  action?: unknown;
+  nouveau?: { titre?: unknown; matiere?: unknown; texte?: unknown };
+  id?: unknown;
+  n?: unknown;
+  niveau?: unknown;
+  total?: unknown;
+  justes?: unknown;
+  lignes?: unknown;
+};
+
+export async function POST(req: Request) {
+  // 1) taille avant tout le reste — lire un jeton, interroger la base ou bufferiser
+  //    un cours de 40 Mo pour finir à la poubelle serait le pire ordre.
+  const tropGrosse = rejeterSiAnnonceTropGrosse(req, LIMITE_CORPS.thunder);
+  if (tropGrosse) return tropGrosse;
+
+  const auth = req.headers.get("authorization");
+  if (!auth) return NextResponse.json({ error: "Authentification requise." }, { status: 401 });
+
+  let body: Corps;
+  try {
+    body = (await lireJson(req, LIMITE_CORPS.thunder)) as Corps;
+  } catch (e: unknown) {
+    const refus = reponse413(e);
+    if (refus) return refus;
+    return NextResponse.json({ error: "Corps de requête illisible : du JSON est attendu." }, { status: 400 });
+  }
+
+  const mode = String(body?.mode ?? "ask");
+  if (!["ask", "quiz", "links", "sources", "progress"].includes(mode)) {
+    return NextResponse.json({ error: "Mode inconnu : attend `ask`, `quiz`, `links`, `sources` ou `progress`." }, { status: 400 });
+  }
+
+  // Écrire dans thunder_sources / users demande le rôle service : sans lui, la RLS
+  // laisserait lire sa propre ligne mais refuserait d'écrire — et le solde de crédits
+  // ne bougerait pas. On le dit au lieu de faire semblant de marcher.
+  if (!adminConfigure()) {
+    return NextResponse.json(
+      { error: "Service non configuré : SUPABASE_SERVICE_ROLE_KEY est absente de l'environnement d'exécution. Thunder ne peut ni enregistrer de source ni débiter de crédit." },
+      { status: 503 }
+    );
+  }
+
+  const admin = makeAdminClient();
+
+  try {
+    const {
+      data: { user },
+      error: erreurAuth,
+    } = await admin.auth.getUser(auth.replace("Bearer ", ""));
+    if (erreurAuth || !user) return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
+
+    // ── Gestion des sources : pas d'IA, donc pas de crédit ──────────────────
+    if (mode === "sources") {
+      const action = String(body?.action ?? "list");
+      if (action === "add") {
+        const titre = String(body?.nouveau?.titre ?? "").trim().slice(0, 200);
+        const matiere = String(body?.nouveau?.matiere ?? "").trim().slice(0, 80);
+        const texte = String(body?.nouveau?.texte ?? "");
+        if (titre.length < 2) return NextResponse.json({ error: "Un titre est nécessaire pour reconnaître la source." }, { status: 400 });
+        if (texte.trim().length < 40) {
+          return NextResponse.json(
+            { error: "Le texte de cette source est vide ou trop court (40 caractères minimum) — rien à citer dedans." },
+            { status: 400 }
+          );
+        }
+        const { data, error } = await admin
+          .from("thunder_sources")
+          .insert({ user_id: user.id, titre, matiere: matiere || null, texte })
+          .select("id, titre, matiere, length(texte) as longueur")
+          .single();
+        if (error) return NextResponse.json({ error: "Enregistrement impossible : " + error.message }, { status: 500 });
+        return NextResponse.json({ ajoute: data });
+      }
+      if (action === "remove") {
+        const id = String(body?.id ?? "");
+        if (!id) return NextResponse.json({ error: "Identifiant de source manquant." }, { status: 400 });
+        // `user_id` dans le filtre : sans lui, un identifiant deviné effacerait la
+        // source d'un autre élève. La politique RLS protège aussi, mais la route ne
+        // doit pas compter sur elle seule.
+        const { error } = await admin.from("thunder_sources").delete().eq("id", id).eq("user_id", user.id);
+        if (error) return NextResponse.json({ error: "Suppression impossible : " + error.message }, { status: 500 });
+        return NextResponse.json({ supprime: id });
+      }
+      const { data, error } = await admin
+        .from("thunder_sources")
+        .select("id, titre, matiere, length(texte) as longueur, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) return NextResponse.json({ error: "Lecture impossible : " + error.message }, { status: 500 });
+      return NextResponse.json({ sources: data ?? [] });
+    }
+
+    // ── Historique du tableau interactif : aucune IA appel é, donc 0 crédit ──
+    if (mode === "progress") {
+      const action = String(body?.action ?? "list");
+      if (action === "save") {
+        const total = Number(body?.total);
+        const justes = Number(body?.justes);
+        const lignes = Array.isArray(body?.lignes) ? (body.lignes as unknown[]).slice(0, 40) : [];
+        if (!Number.isInteger(total) || total < 1 || total > 40) {
+          return NextResponse.json({ error: "`total` attendu : entier entre 1 et 40." }, { status: 400 });
+        }
+        if (!Number.isInteger(justes) || justes < 0 || justes > total) {
+          return NextResponse.json({ error: "`justes` attendu : entier entre 0 et `total` (un score ne peut pas dépasser le nombre de questions)." }, { status: 400 });
+        }
+        if (!lignes.length) {
+          return NextResponse.json({ error: "`lignes` attendu : le détail par question, pour que le tableau affiche autre chose qu'un score." }, { status: 400 });
+        }
+        const { error } = await admin.from("thunder_quiz_attempts").insert({
+          user_id: user.id,
+          total,
+          justes,
+          niveau: String(body?.niveau ?? "").slice(0, 40) || null,
+          lignes,
+        });
+        if (error) return NextResponse.json({ error: "Enregistrement impossible : " + error.message }, { status: 500 });
+        return NextResponse.json({ enregistre: true });
+      }
+      const { data, error } = await admin
+        .from("thunder_quiz_attempts")
+        .select("id, total, justes, niveau, lignes, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) return NextResponse.json({ error: "Lecture impossible : " + error.message }, { status: 500 });
+      const histo = data ?? [];
+      const notes = histo.map((h: { total: number; justes: number }) => (Number(h.total) ? Number(h.justes) / Number(h.total) : 0));
+      return NextResponse.json({
+        parties: histo,
+        resume: histo.length
+          ? {
+              parties: histo.length,
+              moyenne: Math.round((notes.reduce((x: number, y: number) => x + y, 0) / notes.length) * 100),
+              derniere: histo[0]?.created_at ?? null,
+            }
+          : null,
+      });
+    }
+
+    // ── Comptabilité, dans le même ordre que /api/chat ──────────────────────
+    let { data: profil } = await admin
+      .from("users")
+      .select("tokens, role, tokens_reset_at, deletion_scheduled_at")
+      .eq("id", user.id)
+      .single();
+    if (!profil) {
+      const meta = user.user_metadata || {};
+      const nom = String(meta.full_name || meta.name || "");
+      const { data: cree } = await admin
+        .from("users")
+        .upsert({
+          id: user.id,
+          email: user.email,
+          first_name: nom.split(" ")[0] || "Utilisateur",
+          last_name: nom.split(" ").slice(1).join(" ") || "",
+          role: "normal",
+          tokens: DAILY_CREDIT_FLOOR,
+        })
+        .select("tokens, role, tokens_reset_at, deletion_scheduled_at")
+        .single();
+      profil = cree;
+    }
+    if (!profil) return NextResponse.json({ error: "Impossible de charger le profil utilisateur." }, { status: 500 });
+
+    if (profil.deletion_scheduled_at && new Date(String(profil.deletion_scheduled_at)).getTime() <= Date.now()) {
+      const res = await purgeAccount(admin, user.id);
+      return NextResponse.json(
+        { error: res.ok ? "Compte supprimé, comme demandé." : "Suppression partiellement exécutée : " + res.failed.join(" | ") },
+        { status: 410 }
+      );
+    }
+
+    const solde = await applyDailyCreditFloor(admin, user.id, profil);
+    const illimité = ["founder", "moderator"].includes(String(profil.role));
+    const cout: number = COUT[mode as keyof typeof COUT] ?? 10;
+    if (!illimité && solde < cout) {
+      return NextResponse.json(
+        {
+          error: `Pas assez de crédits pour cette opération (${cout} requis, ${solde} disponibles). Le solde repasse à ${DAILY_CREDIT_FLOOR} au premier appel d'une nouvelle journée UTC.`,
+        },
+        { status: 402 }
+      );
+    }
+
+    // ── Rassemblement des sources : celles du corps, plus celles de la base ──
+    const sources: Source[] = [];
+    const vus = new Set<string>();
+    const inline = Array.isArray(body?.sources) ? (body.sources as unknown[]) : [];
+    inline.forEach((raw, i) => {
+      const s = raw as Record<string, unknown>;
+      const id = String(s?.id ?? `L${i + 1}`).replace(/[^\w-]/g, "").slice(0, 40) || `L${i + 1}`;
+      const texte = String(s?.texte ?? "").slice(0, 60000);
+      if (texte.trim().length < 40 || vus.has(id)) return;
+      vus.add(id);
+      sources.push({ id, titre: String(s?.titre ?? `Document ${i + 1}`).slice(0, 200), matiere: String(s?.matiere ?? "").slice(0, 80), texte });
+    });
+
+    const idsDemandes = Array.isArray(body?.source_ids) ? (body.source_ids as unknown[]).map((x) => String(x).slice(0, 64)) : [];
+    if (body?.include_all_sources === true || idsDemandes.length) {
+      let requete = admin.from("thunder_sources").select("id, titre, matiere, texte").eq("user_id", user.id).limit(60);
+      if (idsDemandes.length) requete = requete.in("id", idsDemandes.slice(0, 60));
+      const { data: enBase, error: errBase } = await requete;
+      if (errBase) return NextResponse.json({ error: "Lecture des sources impossible : " + errBase.message }, { status: 500 });
+      for (const r of enBase ?? []) {
+        const id = String(r.id);
+        if (vus.has(id)) continue;
+        vus.add(id);
+        sources.push({ id, titre: String(r.titre ?? "Sans titre"), matiere: String(r.matiere ?? ""), texte: String(r.texte ?? "") });
+      }
+    }
+
+    const question = String(body?.question ?? "").trim().slice(0, 4000);
+    if (!question) return NextResponse.json({ error: "Champ `question` attendu." }, { status: 400 });
+
+    // Plafond de contexte : au-delà, on coupe EN LE DISANT (un élève qui colle
+    // 400 000 caractères doit savoir que tout n'a pas été lu).
+    const LIMITE_TEXTE = 240000;
+    let total = 0;
+    const retenues: Source[] = [];
+    let sacrifiees = 0;
+    for (const s of sources) {
+      if (total + s.texte.length > LIMITE_TEXTE) {
+        sacrifiees++;
+        continue;
+      }
+      total += s.texte.length;
+      retenues.push(s);
+    }
+
+    const passages = rechercher(retenues, question, mode === "quiz" ? 8 : 6);
+    const sansSource = reponseSansSource(passages);
+
+    // ── mode links : aucun lien inventé, aucune promesse de vidéo « exacte » ─
+    if (mode === "links") {
+      const sujets = [...new Set(question.split(/[,;\n]/).map((s) => s.trim()).filter((s) => s.length > 3))].slice(0, 8);
+      const liens = sujets.map((s) => ({ type: "recherche" as const, sujet: s, youtube: lienRechercheYouTube(s), web: lienRechercheWeb(s) }));
+      if (!illimité) await admin.from("users").update({ tokens: Math.max(0, solde - cout) }).eq("id", user.id);
+      return NextResponse.json({
+        liens,
+        avertissement:
+          "Ces liens ouvrent une page de recherche, pas une vidéo précise : personne — ni moi ni le modèle — ne peut garantir le contenu d'une URL non vérifiée. Un lien direct n'est ajouté que s'il répond.",
+        newTokens: illimité ? solde : Math.max(0, solde - cout),
+      });
+    }
+
+    if (sansSource) {
+      // Réponse honnête, pas de consommation IA : on ne débite pas.
+      return NextResponse.json({ reponse: sansSource, citations: [], passages: 0, debite: 0, newTokens: solde });
+    }
+
+    // ── L'appel au modèle ────────────────────────────────────────────────────
+    const GEMINI = process.env.GEMINI_API_KEY ?? "";
+    const GROQ = process.env.GROQ_API_KEY ?? "";
+    if (!GEMINI && !GROQ) {
+      return NextResponse.json({ error: "Aucune clé IA configurée (GEMINI_API_KEY / GROQ_API_KEY)." }, { status: 503 });
+    }
+
+    const consigne =
+      mode === "quiz"
+        ? "Tu fabriques un QCM. Tu réponds UNIQUEMENT par le tableau JSON demandé, sans texte autour."
+        : CHARTE_THUNDER;
+    const userPrompt = mode === "quiz" ? promptQuiz(String(body?.niveau ?? "lycée"), passages, Math.min(10, Math.max(3, Number(body?.n) || 5))) : promptAsk(question, passages);
+
+    const fournisseurs: { nom: string; appeler: () => Promise<string> }[] = [];
+    if (GEMINI) {
+      fournisseurs.push({
+        nom: "Gemini",
+        appeler: async () => {
+          // La clé voyage dans `x-goog-api-key`, plus dans `?key=`. Vérifié le 29/08/2026 sur
+// l'API Google : une clé invalide envoyée par en-tête et la même envoyée en query
+// string renvoient la même réponse (400 · reason=API_KEY_INVALID), donc le transport
+// change rien au contrat ; en revanche une URL passe dans les journaux des proxys,
+// l'historique de la fonction, parfois dans le message d'erreur — une clé non.
+const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: consigne }] },
+              contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error?.message || `Erreur Gemini (${res.status})`);
+          return data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p?.text ?? "").join("") ?? "";
+        },
+      });
+    }
+    if (GROQ) {
+      fournisseurs.push({
+        nom: "Groq",
+        appeler: async () => {
+          const res = await fetchAvecDelai("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${GROQ}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "openai/gpt-oss-20b",
+              messages: [
+                { role: "system", content: consigne },
+                { role: "user", content: userPrompt },
+              ],
+              max_tokens: mode === "quiz" ? 3072 : 1024,
+              temperature: 0.4,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error?.message || `Erreur Groq (${res.status})`);
+          return data?.choices?.[0]?.message?.content ?? "";
+        },
+      });
+    }
+
+    let brut = "";
+    const echecs: string[] = [];
+    for (const f of fournisseurs) {
+      try {
+        const texte = String((await f.appeler()) ?? "").trim();
+        if (texte) {
+          brut = texte;
+          break;
+        }
+        echecs.push(`${f.nom}: réponse vide`);
+      } catch (e: unknown) {
+        echecs.push(`${f.nom}: ${e instanceof Error ? e.message : "erreur inconnue"}`);
+      }
+    }
+    if (!brut) {
+      // Aucun fournisseur n'a répondu : aucun crédit débité.
+      return NextResponse.json({ error: "Les modèles d'IA sont momentanément indisponibles.", details: echecs.join(" | ") }, { status: 502 });
+    }
+
+    // ── `quiz` : validation structurelle AVANT envoi, sinon refus ────────────
+    if (mode === "quiz") {
+      const numeros = new Set(passages.map((p) => p.n));
+      const validation = validerQuiz(extraireJson(brut), numeros);
+      if (!validation.ok) {
+        return NextResponse.json(
+          {
+            error: "Le QCM reçu est incomplet ou incohérent — il n'est pas envoyé plutôt que d'être corrigé à l'aveugle.",
+            motif: validation.motif,
+            debite: 0,
+          },
+          { status: 502 }
+        );
+      }
+      // Les questions ne citent que des passages existants ; on joint les extraits
+      // correspondants pour que l'élève voie la preuve, pas seulement la référence.
+      const parNumero = new Map(passages.map((p) => [p.n, p]));
+      const questions = validation.questions.map((q) => ({
+        ...q,
+        extrait: parNumero.get(Number(q.source.replace("S", "")))?.texte.slice(0, 420) ?? "",
+      }));
+      if (!illimité) await admin.from("users").update({ tokens: Math.max(0, solde - cout) }).eq("id", user.id);
+      return NextResponse.json({
+        questions,
+        passages_utilises: passages.map((p) => ({ n: p.n, titre: p.sourceTitre, score: p.score })),
+        sources_non_lues: sacrifiees,
+        debite: illimité ? 0 : cout,
+        newTokens: illimité ? solde : Math.max(0, solde - cout),
+      });
+    }
+
+    // ── `ask` : citations contrôlées, liens directs vérifiés ─────────────────
+    const controle = controlerCitations(brut, passages);
+    const citations = citationsUtilisees(controle.texte, passages).map((p) => ({
+      n: p.n,
+      titre: p.sourceTitre,
+      extrait: p.texte.slice(0, 500),
+    }));
+
+    // Le modèle peut proposer des URL en fin de réponse : on ne les garde que si
+    // elles résolvent, et le titre affiché vient alors de la plateforme.
+    const urlsCand = [...controle.texte.matchAll(/https?:\/\/[^\s)>\]]+/g)].map((m) => ({ url: m[0] }));
+    const liensDirects = await filtrerLiensDirects(urlsCand, async (url) => {
+      if (!identifiantVideo(url)) return null; // seul YouTube est vérifiable proprement ici
+      try {
+        const r = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`, {
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return { ok: true, titre: String(j?.title ?? ""), auteur: String(j?.author_name ?? "") };
+      } catch {
+        return null;
+      }
+    });
+
+    const sansCitation = citations.length === 0;
+    if (!illimité) await admin.from("users").update({ tokens: Math.max(0, solde - cout) }).eq("id", user.id);
+
+    return NextResponse.json({
+      reponse: controle.texte,
+      citations,
+      avertissements: [
+        sansCitation ? "Aucun passage n'est référencé dans la réponse du modèle : considère-la comme non sourcée." : "",
+        controle.rejets.length ? `Références écartées car absentes de tes documents : ${controle.rejets.join(", ")}.` : "",
+        sacrifiees ? `${sacrifiees} document(s) non lu(s) : le contexte dépasse ${LIMITE_TEXTE.toLocaleString("fr-FR")} caractères.` : "",
+      ].filter(Boolean),
+      liens: {
+        verifies: liensDirects,
+        recherche: [
+          { sujet: question.slice(0, 120), youtube: lienRechercheYouTube(question), web: lienRechercheWeb(question) },
+        ],
+      },
+      contexte: { passages: passages.length, caracteres: total, blocs: blocContexte(passages).length },
+      debite: illimité ? 0 : cout,
+      newTokens: illimité ? solde : Math.max(0, solde - cout),
+    });
+  } catch (e: unknown) {
+    if (e instanceof CorpsTropVolumineux) {
+      // `reponse413` renvoie `NextResponse | null` (il ne connaît le type d'erreur
+      // que s'il s'agit bien du notre). Rendre le null tel quel faisait échouer le
+      // build Next — et, sans ce contrôle de type, aurait pu renvoyer un corps vide.
+      const refus = reponse413(e);
+      return refus ?? NextResponse.json({ error: "Corps de requête trop volumineux pour Thunder." }, { status: 413 });
+    }
+    console.error("[thunder]", e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "Thunder n'a pas pu répondre.", details: e instanceof Error ? e.message : undefined }, { status: 500 });
+  }
+}
+
+/** GET = l'inventaire des sources, sans passer par POST (lisibilité du panneau). */
+export async function GET(req: Request) {
+  const auth = req.headers.get("authorization");
+  if (!auth) return NextResponse.json({ error: "Authentification requise." }, { status: 401 });
+  const admin = makeAdminClient();
+  const {
+    data: { user },
+    error,
+  } = await admin.auth.getUser(auth.replace("Bearer ", ""));
+  if (error || !user) return NextResponse.json({ error: "Session invalide." }, { status: 401 });
+  const { data, error: err } = await admin
+    .from("thunder_sources")
+    .select("id, titre, matiere, length(texte) as longueur, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (err) return NextResponse.json({ error: "Lecture impossible : " + err.message }, { status: 500 });
+  return NextResponse.json({ sources: data ?? [], credits_par_mode: COUT });
+}
