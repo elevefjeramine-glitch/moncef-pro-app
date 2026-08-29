@@ -27,6 +27,14 @@ const r = T.rechercher(sources, "comment calcule-t-on l'énergie cinétique ?", 
 nom('rechercher: renvoie des passages', r.length>0, r.length);
 nom('rechercher: premier passage = le bon document', r[0]?.sourceId==='physique-chap2', r.map(p=>p.sourceId+':'+p.score));
 nom('rechercher: numérotation [S1..] continue', r.every((p,i)=>p.n===i+1), r.map(p=>p.n));
+// Le seuil de 2 lettres est là pour les unités : « kg » doit rester un terme.
+// Sans lui, « combien font 2 kg à 3 m/s ? » ne trouvait rien dans un cours qui
+// contient pourtant la réponse — mesuré en production le 29/08/2026.
+{
+  const unit = T.rechercher([{ id: "u", titre: "Énergie", texte: "Une boule de 2 kg lancée à 3 m/s possède Ec = 9 joules. Le kilogramme est l'unité de masse." }], "combien font 2 kg ?", 3);
+  nom('rechercher: conserve les unités de 2 lettres (kg)', unit.length > 0, unit[0] ? 'score ' + unit[0].score : 'rien');
+  nom('rechercher: les 2 lettres devenues outils ne comptent pas', T.termes("de la le et un kg").includes("kg") && !T.termes("de la le et un").length, T.termes("de la le et un kg"));
+}
 nom('rechercher: requête sans rapport = 0 passage', T.rechercher(sources,"la photosynthèse chez les gymnospermes",3).length===0);
 nom('blocContexte: étiquettes présentes', T.blocContexte(r).startsWith('[S1] ('));
 

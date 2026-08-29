@@ -63,6 +63,10 @@ const VIDES = new Set([
   // ar / zh : mots outils fréquents (les tokenizations varient, la liste reste un mieux)
   "من", "إلى", "في", "على", "عن", "هذا", "هذه", "التي", "الذي", "أن", "كان", "مع",
   "的", "了", "和", "是", "在", "有", "对", "与", "或", "也",
+  // 2 lettres : rendues candidates par le seuil ci-dessus, donc exclues explicitement
+  "de", "du", "la", "le", "un", "une", "à", "a", "ou", "ni", "ce", "ma", "ta", "sa", "mon", "ton", "nos", "vos", "es", "est", "sont", "ont", "ai", "as", "avez", "suis", "être", "avoir", "donc", "car", "don",
+  "of", "to", "in", "is", "it", "an", "as", "at", "be", "by", "on", "or", "so", "no", "my", "me", "us", "we", "you", "are", "was", "did", "does", "has", "had", "not", "but",
+  "el", "los", "las", "lo", "del", "por", "con", "se", "su", "y", "u", "es", "son", "fue",
 ]);
 
 /** Minuscules, sans accents, sans ponctuation : « l'énergie » et « énergie » comptent pareil. */
@@ -80,7 +84,10 @@ export function normaliser(s: string): string {
 export function termes(s: string): string[] {
   return normaliser(s)
     .split(" ")
-    .filter((t) => t.length > 2 && !VIDES.has(t));
+    // Une unité de deux lettres (kg, mg, cb, dv) est un terme utile : le seuil
+    // était à 3 et faisait perdre « 2 kg » d'un énoncé. Le bruit gagné est rendu
+    // à la liste des mots outils ci-dessus, complétée en conséquence.
+    .filter((t) => t.length >= 2 && !VIDES.has(t));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
