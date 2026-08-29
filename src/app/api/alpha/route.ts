@@ -43,6 +43,28 @@ export async function POST(req: Request) {
     }
     if (!['founder', 'moderator'].includes(profile?.role ?? '')) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
 
+    // ── Un modérateur ne touche plus ni un compte, ni un solde, ni une suppression.
+    // Décidé le 29/08/2026, et voici les trois trous que ça referme (mesurés dans le
+    // code, pas supposés) :
+    //  • DELETE_USER autorisait un modérateur à supprimer tout compte `normal` : la
+    //    vérification portait sur la cible, jamais sur l'auteur du geste ;
+    //  • RESET_TOKENS n'avait AUCUN contrôle de rôle — un modérateur remettait le
+    //    solde de n'importe qui, fondateur compris, à la valeur de son choix ;
+    //  • PURGE_DUE_DELETIONS exécutait la file des suppressions différées, donc
+    //    contournait purement et simplement l'interdit de supprimer.
+    // UPDATE_USER tombe sous le même garde : « lecture seule sur les comptes ». Un
+    // admin qui ne peut ni créditer ni rétrograder ne doit pas pouvoir le faire
+    // champ par champ. GET_STATS / GET_USERS / GET_ALL_HOMEWORK / DELETE_HOMEWORK
+    // restent ouverts au modérateur : rien de demandé ici ne les concerne.
+    const EST_FONDATEUR = profile?.role === 'founder';
+    const RESERVE_FONDATEUR = new Set(['UPDATE_USER', 'DELETE_USER', 'RESET_TOKENS', 'PURGE_DUE_DELETIONS']);
+    if (!EST_FONDATEUR && RESERVE_FONDATEUR.has(String(action))) {
+      return NextResponse.json({
+        error: 'Réservé au fondateur : un modérateur ne supprime aucun compte et ne modifie les crédits ni les rôles de personne.',
+        action: String(action),
+      }, { status: 403 });
+    }
+
     const admin = getAdminClient();
 
     switch (action) {
@@ -97,15 +119,11 @@ export async function POST(req: Request) {
         }
         if (!Object.keys(safe).length) return NextResponse.json({ error: 'Rien à modifier.' }, { status: 400 });
 
-        const estFondateur = profile?.role === 'founder';
-        if ('role' in safe && !estFondateur) {
+        // Inutile en apparence depuis le garde du haut — gardé exprès : si la liste
+        // RESERVE_FONDATEUR change un jour, un appel direct ne pourra jamais
+        // promouvoir qui que ce soit sans être un fondateur relu en base.
+        if ('role' in safe && profile?.role !== 'founder') {
           return NextResponse.json({ error: 'Seul un fondateur peut changer un grade.' }, { status: 403 });
-        }
-        if (profile?.role === 'moderator') {
-          const { data: cible } = await admin.from('users').select('role').eq('id', userId).single();
-          if (cible?.role !== 'normal') {
-            return NextResponse.json({ error: "Les modérateurs ne peuvent modifier que les comptes utilisateurs normaux." }, { status: 403 });
-          }
         }
 
         const { error, count } = await admin.from('users').update(safe).eq('id', userId).select('id');
@@ -157,13 +175,10 @@ export async function POST(req: Request) {
       }
 
       case 'DELETE_USER': {
+        // Un modérateur n'arrive jamais ici : RESERVE_FONDATEUR le refuse plus haut,
+        // quel que soit le rôle de la cible. La suppression reste un geste de
+        // fondateur, avec la double confirmation de l'interface.
         const { userId } = payload;
-        if (profile?.role === 'moderator') {
-          const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single();
-          if (targetProfile?.role !== 'normal') {
-            return NextResponse.json({ error: "Les modérateurs ne peuvent supprimer que les comptes utilisateurs normaux." }, { status: 403 });
-          }
-        }
         
         // 1. Force delete all related records to avoid Foreign Key constraints
         await Promise.all([

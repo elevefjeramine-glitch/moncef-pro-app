@@ -374,7 +374,7 @@ const content = {
     notes_title: "À savoir",
     variant: "variante",
     alpha_title: "Route d'administration (réservée)",
-    alpha_body: "Ce n'est pas une API publique : elle sert le panneau d'administration de l'application. Elle exige un compte dont le rôle est founder ou moderator, relu côté serveur — un compte normal reçoit 403 Accès refusé, quel que soit l'en-tête envoyé. Actions admises : Une seconde route d'administration, /api/alpha/assistant, équipe la console IA du panneau de fonctions réellement exécutées (changer_role, donner_credits, lister_utilisateurs, statistiques) ; chaque action renvoie la valeur relue en base, et aucune suppression n'est exécutée sans confirmation humaine dans l'interface.",
+    alpha_body: "Ce n'est pas une API publique : elle sert le panneau d'administration de l'application. Elle exige un compte dont le rôle est founder ou moderator, relu côté serveur — un compte normal reçoit 403 Accès refusé, quel que soit l'en-tête envoyé. Actions admises : Une seconde route d'administration, /api/alpha/assistant, équipe la console IA du panneau de fonctions réellement exécutées (changer_role, donner_credits, lister_utilisateurs, statistiques) ; chaque action renvoie la valeur relue en base, et aucune suppression n'est exécutée sans confirmation humaine dans l'interface. La console IA est réservée au fondateur. Un modérateur garde le dashboard, la liste des comptes et les devoirs, mais UPDATE_USER, DELETE_USER, RESET_TOKENS et PURGE_DUE_DELETIONS lui sont refusés (403) : il ne supprime personne et ne touche ni les rôles ni les crédits.",
     limits_title: "Limites réelles et zones fragiles",
     limits: [
       "Taille du corps plafonnée dans l'application : 5 Mo sur /api/chat, 1 Mo sur les trois imports et /api/alpha, 64 Ko sur /api/account/delete ; au-delà un 413 donne le nombre d'octets. La plateforme coupe elle à 6 Mo par requête (4,5 Mo effectifs pour une charge binaire à cause du base64) : mesuré le 28/08/2026, un corps de 8 Mo reçoit un 413 de la plateforme au corps vide, sans que la fonction tourne. Toujours aucun limite de débit : 5 Mo, autant de fois qu'on veut.",
@@ -425,7 +425,7 @@ const content = {
     notes_title: "Worth knowing",
     variant: "variant",
     alpha_title: "Administration route (restricted)",
-    alpha_body: "Not a public API: it powers the app's admin panel. It requires an account whose role is founder or moderator, re-read on the server — a normal account gets 403 Accès refusé whatever header is sent. Accepted actions: A second admin route, /api/alpha/assistant, gives the console AI functions that are actually executed (changer_role, donner_credits, lister_utilisateurs, statistiques); every action returns the value re-read from the database, and no deletion runs without a human confirmation in the interface.",
+    alpha_body: "Not a public API: it powers the app's admin panel. It requires an account whose role is founder or moderator, re-read on the server — a normal account gets 403 Accès refusé whatever header is sent. Accepted actions: A second admin route, /api/alpha/assistant, gives the console AI functions that are actually executed (changer_role, donner_credits, lister_utilisateurs, statistiques); every action returns the value re-read from the database, and no deletion runs without a human confirmation in the interface. The AI console is reserved for the founder. A moderator keeps the dashboard, the user list and the homework tab, but UPDATE_USER, DELETE_USER, RESET_TOKENS and PURGE_DUE_DELETIONS are refused (403): they delete no account and touch neither roles nor credits.",
     limits_title: "Limits and rough edges",
     limits: [
       "Request size is capped in the app: 5 MB on /api/chat, 1 MB on the three import routes and /api/alpha, 64 KB on /api/account/delete; above that a 413 gives the byte count. The platform itself cuts at 6 MB per request (4.5 MB effective for a binary payload because of base64): measured on 2026-08-28, an 8 MB body gets a 413 from the platform with an empty body, the function never runs. Still no rate limit: 5 MB, as often as you like.",
@@ -476,7 +476,7 @@ const content = {
     notes_title: "Conviene saberlo",
     variant: "variante",
     alpha_title: "Ruta de administración (restringida)",
-    alpha_body: "No es una API pública: alimenta el panel de administración. Exige una cuenta con rol founder o moderator, comprobado en el servidor — una cuenta normal recibe 403 Accès refusé sea cual sea la cabecera. Acciones admitidas: Una segunda ruta de administración, /api/alpha/assistant, da a la consola IA funciones que se ejecutan de verdad (changer_role, donner_credits, lister_utilisateurs, statistiques); cada acción devuelve el valor releído en la base, y ningún borrado se ejecuta sin confirmación humana en la interfaz.",
+    alpha_body: "No es una API pública: alimenta el panel de administración. Exige una cuenta con rol founder o moderator, comprobado en el servidor — una cuenta normal recibe 403 Accès refusé sea cual sea la cabecera. Acciones admitidas: Una segunda ruta de administración, /api/alpha/assistant, da a la consola IA funciones que se ejecutan de verdad (changer_role, donner_credits, lister_utilisateurs, statistiques); cada acción devuelve el valor releído en la base, y ningún borrado se ejecuta sin confirmación humana en la interfaz. La consola de IA está reservada al fundador. El moderador conserva el panel, la lista de cuentas y las tareas, pero UPDATE_USER, DELETE_USER, RESET_TOKENS y PURGE_DUE_DELETIONS se le rechazan (403): no elimina a nadie y no toca ni roles ni créditos.",
     limits_title: "Límites y zonas frágiles",
     limits: [
       "El tamaño del cuerpo tiene tope en la aplicación: 5 MB en /api/chat, 1 MB en las tres importaciones y /api/alpha, 64 KB en /api/account/delete; por encima, un 413 indica los bytes. La plataforma corta en 6 MB por petición (4,5 MB efectivos en binario por el base64): medido el 28/08/2026, un cuerpo de 8 MB recibe un 413 de la plataforma con el cuerpo vacío, sin ejecutar la función. Sigue sin haber límite de peticiones: 5 MB, las veces que quieras.",
@@ -527,7 +527,7 @@ const content = {
     notes_title: "مما يُنفع معرفته",
     variant: "صيغة",
     alpha_title: "مسار الإدارة (محميّ)",
-    alpha_body: "ليست واجهة عمومية: فهي تشغّل لوحة الإدارة. تشترط حسابًا دوراه founder أو moderator، ويُعاد قراءتهما في الخادم — والحساب العادي receives 403 Accès refusé مهما كانت الترويسة. الإجراءات المقبولة: مسار إداري ثانٍ، /api/alpha/assistant، يمنح وحدة ذكاء الاصطناعية وظائف تُنفَّذ فعلاً (changer_role، donner_credits، lister_utilisateurs، statistiques)؛ كل إجراء يعيد القيمة المقروءة من القاعدة، ولا تُنفَّذ أي عملية حذف دون تأكيد بشري في الواجهة.",
+    alpha_body: "ليست واجهة عمومية: فهي تشغّل لوحة الإدارة. تشترط حسابًا دوراه founder أو moderator، ويُعاد قراءتهما في الخادم — والحساب العادي receives 403 Accès refusé مهما كانت الترويسة. الإجراءات المقبولة: مسار إداري ثانٍ، /api/alpha/assistant، يمنح وحدة ذكاء الاصطناعية وظائف تُنفَّذ فعلاً (changer_role، donner_credits، lister_utilisateurs، statistiques)؛ كل إجراء يعيد القيمة المقروءة من القاعدة، ولا تُنفَّذ أي عملية حذف دون تأكيد بشري في الواجهة.وحدة ذكاء الاصطناعية مخصّصة للمؤسس فقط. يحتفظ المُعدِّل بلوحة القيادة وقائمة الحسابات والواجبات، لكن UPDATE_USER وDELETE_USER وRESET_TOKENS وPURGE_DUE_DELETIONS تُرفض في وجهه (403): لا يحذف أي حساب ولا يمسّ الأدوار ولا الأرصدة.",
     limits_title: "الحدود والنقاط الحساسة",
     limits: [
 "حجم المتن محدود داخل التطبيق: 5 ميغابايت في /api/chat، وميغابايت واحد في مسارات الاستيراد الثلاثة و/api/alpha، و64 كيلوبايت في /api/account/delete؛ وفوق ذلك يعيد 413 عدد البايتات. المنصة نفسها تقطع عند 6 ميغابايت للطلب (4.5 ميغابايت فعلياً للحمولة الثنائية بسبب base64): القياس بتاريخ 2026-08-28 أظهر أن متن 8 ميغابايت يستقبل 413 من المنصة بجسم فارغ دون تنفيذ الدالة. لا يزال عدد الطلبات غير محدود.",
@@ -578,7 +578,7 @@ const content = {
     notes_title: "需要知道的事",
     variant: "变体",
     alpha_title: "管理接口（受限）",
-    alpha_body: "这不是公开 API：它服务于应用的后台面板。要求账户角色为 founder 或 moderator，且在服务器端重新读取——普通账户无论发送什么请求头都会收到 403 Accès refusé。接受的操作： 第二条管理路由 /api/alpha/assistant 让管理台 AI 真正执行函数（changer_role、donner_credits、lister_utilisateurs、statistiques）；每个操作返回数据库中重新读到的值，任何删除都必须由界面上的人工确认。",
+    alpha_body: "这不是公开 API：它服务于应用的后台面板。要求账户角色为 founder 或 moderator，且在服务器端重新读取——普通账户无论发送什么请求头都会收到 403 Accès refusé。接受的操作： 第二条管理路由 /api/alpha/assistant 让管理台 AI 真正执行函数（changer_role、donner_credits、lister_utilisateurs、statistiques）；每个操作返回数据库中重新读到的值，任何删除都必须由界面上的人工确认。 AI 控制台仅限创始人使用。协作者保留仪表盘、账户列表和作业页，但 UPDATE_USER、DELETE_USER、RESET_TOKENS 与 PURGE_DUE_DELETIONS 一律返回 403：协作者不能删除任何人，也不能改角色或积分。",
     limits_title: "限制与薄弱处",
     limits: [
       "请求体大小已在应用内限制：/api/chat 为 5 MB，三个导入接口与 /api/alpha 为 1 MB，/api/account/delete 为 64 KB；超过即返回 413 并给出字节数。平台本身在每请求 6 MB 处截断（因 base64，二进制实际为 4.5 MB）：2026-08-28 实测，8 MB 的请求体会收到平台返回的空正文 413，函数根本不会执行。仍然没有限流。",

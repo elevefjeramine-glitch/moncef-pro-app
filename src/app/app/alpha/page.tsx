@@ -122,6 +122,14 @@ export default function AlphaPage() {
     if (tab === 'homework' && isAuthorizedAdmin) loadAllHomework();
   }, [tab, isAuthorizedAdmin, loadAllHomework]);
 
+  // Si le rôle change en cours de séance (fondateur qui rétrograde, onglet resté
+  // ouvert), on ne laisse pas la page sur un écran qui n'existe plus pour elle.
+  // Posé ici, parmi les autres effets : placé plus bas, après les `return` de
+  // garde, il aurait été un hook conditionnel — eslint le refuse à juste titre.
+  useEffect(() => {
+    if (tab === 'ai' && userRole !== 'founder') setTab('dashboard');
+  }, [tab, userRole]);
+
   // Auto-refresh every 30s
   useEffect(() => {
     if (!isAuthorizedAdmin) return;
@@ -235,8 +243,13 @@ export default function AlphaPage() {
     { id: 'dashboard', label: t(lang,'alpha_tab_dashboard'), icon: BarChart3 },
     { id: 'users', label: t(lang,'alpha_tab_users'), icon: Users },
     { id: 'homework', label: t(lang,'alpha_tab_homework'), icon: BookOpen },
-    { id: 'ai', label: t(lang,'alpha_tab_console'), icon: Terminal },
+    // La console IA est retirée aux modérateurs : elle exécute des gestes de
+    // fondateur (grade, solde, suppression à confirmer). L'onglet disparaît pour
+    // que l'interface ne promette pas ce que le serveur refuse — le vrai garde est
+    // dans /api/alpha/assistant, qui renvoie 403 à un compte non fondateur.
+    ...(userRole === 'founder' ? [{ id: 'ai', label: t(lang,'alpha_tab_console'), icon: Terminal }] : []),
   ];
+
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -402,6 +415,13 @@ export default function AlphaPage() {
       {tab === 'users' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{users.length} utilisateurs enregistrés</div>
+          {userRole !== 'founder' && (
+            // Dit, pas caché : un modérateur qui cherche le crayon ou la corbeille
+            // doit comprendre pourquoi ils ne sont pas là.
+            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: '#d9ccff', background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.24)', borderRadius: 12, padding: '10px 14px' }}>
+              {t(lang,'alpha_readonly_admin')}
+            </div>
+          )}
           {users.map(u => {
             const rc = ROLE_COLORS[u.role as string] || ROLE_COLORS.normal || {};
             const isEditing = editingUser?.id === u.id;
@@ -420,7 +440,7 @@ export default function AlphaPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 10, background: rc.bg, color: rc.color, fontWeight: 700 }}>{rc.label}</span>
                     <span style={{ fontSize: 12, color: '#FFD700', fontWeight: 700 }}>⚡ {u.tokens}</span>
-                    {((userRole === 'founder' && u.role !== 'founder') || (userRole === 'moderator' && u.role === 'normal')) && (
+                    {userRole === 'founder' && u.role !== 'founder' && (
                       <>
                         <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
                           onClick={() => { setEditingUser(u); setEditRole(u.role); setEditTokens(u.tokens); }}

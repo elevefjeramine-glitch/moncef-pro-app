@@ -133,9 +133,17 @@ export async function POST(req: Request) {
     if (errAuth || !sess?.user) return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
     const db = admin();
     const { data: moi } = await db.from("users").select("role").eq("id", sess.user.id).single();
-    if (!["founder", "moderator"].includes(String(moi?.role ?? ""))) {
-      return NextResponse.json({ error: "Accès refusé : réservé founder et moderator." }, { status: 403 });
+    // La console IA n'est plus un outil de modération : elle APPUIE sur des boutons
+    // (grade, solde, proposition de suppression). Demandé le 29/08/2026 — et le
+    // refus est ici, pas seulement dans l'onglet masqué de l'interface, pour qu'un
+    // appel direct ne contourne rien.
+    if (String(moi?.role ?? "") !== "founder") {
+      return NextResponse.json({
+        error: "La console IA d'administration est réservée au fondateur. Un modérateur garde le dashboard, la liste des comptes et les devoirs, mais ne peut ni changer un rôle, ni toucher les crédits, ni supprimer un compte.",
+      }, { status: 403 });
     }
+    // Toujours lu en base : les gardes par action ci-dessous restent en vigueur si
+    // la porte du haut venait à s'ouvrir à un autre rôle.
     const estFondateur = String(moi?.role) === "founder";
 
     const journal: { outil: string; cible?: string; resultat: Record<string, unknown> }[] = [];
@@ -176,7 +184,7 @@ export async function POST(req: Request) {
         const u = t.rows[0];
         const n = Number(args?.credits);
         if (!Number.isInteger(n) || n < 0 || n > 100000) return { erreur: "`credits` doit être un entier entre 0 et 100000" };
-        if (!estFondateur && u.role !== "normal") return { erreur: "un modérateur ne touche que les comptes normaux" };
+        if (!estFondateur) return { erreur: "seul un fondateur touche le solde de crédits" };
         const { error } = await db.from("users").update({ tokens: n }).eq("id", u.id);
         if (error) return { erreur: error.message };
         const { data: relu } = await db.from("users").select("tokens").eq("id", u.id).single();
