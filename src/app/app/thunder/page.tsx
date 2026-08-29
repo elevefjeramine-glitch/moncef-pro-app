@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, BookOpen, Bot, Check, Copy, Globe, Link2, ListChecks, Plus, Send, ShieldAlert, Trash2, Zap } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Bot, Check, Copy, Globe, Layers, Link2, ListChecks, Plus, Send, ShieldAlert, Trash2, Zap } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
 import { useLanguage, t } from "@/utils/i18n";
@@ -25,6 +25,36 @@ import { supabase } from "@/utils/supabase/client";
  * la réponse du serveur.
  */
 
+type Mode = "ask" | "quiz" | "links" | "cartes";
+type Carte = {
+  id: string;
+  question: string;
+  reponse: string;
+  ce_que_tu_avais: string | null;
+  matiere: string | null;
+  boite: number;
+  reps: number;
+  lapses: number;
+  due_at: string;
+};
+type EtatRevisions = {
+  du_jour: Carte[];
+  compteurs: {
+    total: number;
+    du_aujourdhui: number;
+    plus_tard: number;
+    creees_7_jours: number;
+    fragiles: number;
+    notees_7_jours: number;
+    justes_7_jours: number;
+    serie_jours: number;
+    abonnements: number;
+  };
+  prochaine: string | null;
+  horloge: string;
+  cle_publique_vapid: string | null;
+  push_possible: boolean;
+};
 type Source = { id: string; titre: string; matiere: string | null; longueur: number | string; created_at: string };
 type Citation = { n: number; titre: string; extrait: string; url?: string | null; origine?: "cours" | "web"; page_lue?: boolean };
 type Question = { question: string; choices: string[]; answer: number; explication: string; source: string; extrait?: string };
@@ -91,7 +121,7 @@ export default function ThunderPage() {
   };
 
   // ── Trois modes, un seul état de rendu ────────────────────────────────────
-  const [mode, setMode] = useState<"ask" | "quiz" | "links">("ask");
+  const [mode, setMode] = useState<Mode>("ask");
   const [question, setQuestion] = useState("");
   const [niveaux, setNiveau] = useState("lycée");
   const [nbQuestions, setNbQuestions] = useState(5);
@@ -110,6 +140,12 @@ export default function ThunderPage() {
   const [correction, setCorrection] = useState<{ justes: number; lignes: { n: number; justifie: boolean; choisi: number | null }[] } | null>(null);
   const [historique, setHistorique] = useState<Partie[]>([]);
   const [resume, setResume] = useState<{ parties: number; moyenne: number } | null>(null);
+  // ── Révisions espacées (quatrième onglet) ──
+  const [revisions, setRevisions] = useState<EtatRevisions | null>(null);
+  const [revele, setRevele] = useState(false);
+  const [cartesAjoutees, setCartesAjoutees] = useState(0);
+  const [notif, setNotif] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
 
   // ── Ce que l'élève veut savoir sans compter lui-même ──────────────────────
   const [credit, setCredit] = useState<number | null>(null);
@@ -243,6 +279,38 @@ export default function ThunderPage() {
     });
     setCorrection({ justes, lignes });
     const token = await jeton();
+    // Chaque question ratée devient une carte à revoir demain. C'est le seul
+    // endroit où une carte naît automatiquement : pas de « plan de révision »
+    // inventé, juste l'erreur que l'élève a vraiment faite, avec ce qu'il avait
+    // répondu collé à la bonne réponse.
+    const ratees = questions
+      .map((q, i) => ({ q, choisi: reponses[i] }))
+      .filter((x) => x.choisi !== x.q.answer);
+    if (ratees.length) {
+      const nb = (s: string | null | undefined) => Number(String(s ?? "").replace(/[^0-9]/g, ""));
+      const corps = ratees.map(({ q, choisi }) => {
+        const index = nb(q.source);
+        return {
+          question: q.question,
+          reponse: q.choices?.[q.answer] ?? q.explication ?? "",
+          ce_que_tu_avais: choisi === null || choisi === undefined ? null : (q.choices?.[choisi] ?? null),
+          matiere: null as string | null,
+          // `S<n>` désigne la n-ième source RETENUE au moment de la question ; si le
+          // compte ne colle plus, on envoie null plutôt qu'un lien douteux.
+          source_id: index >= 1 && index <= retenues.length ? retenues[index - 1] : null,
+        };
+      });
+      fetch("/api/revisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: "creer", cartes: corps }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && typeof d.creees === "number") setCartesAjoutees(d.creees);
+        })
+        .catch(() => {});
+    }
     await fetch("/api/thunder", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -272,10 +340,141 @@ export default function ThunderPage() {
   const repondues = reponses.filter((r) => r !== null).length;
   const taux = useMemo(() => (reponses.length ? repondues / reponses.length : 0), [reponses, repondues]);
 
+  const chargerRevisions = useCallback(async () => {
+    const token = await jeton();
+    const r = await fetch("/api/revisions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mode: "etat" }),
+    }).catch(() => null);
+    if (!r || !r.ok) return;
+    const d = (await r.json()) as EtatRevisions;
+    setRevisions(d);
+    setNotif((d.compteurs?.abonnements ?? 0) > 0);
+  }, [jeton]);
+
+  useEffect(() => {
+    if (mode === "cartes") chargerRevisions();
+  }, [mode, chargerRevisions]);
+
+  const noter = async (note: "encore" | "bien" | "facile") => {
+    const c = revisions?.du_jour[0];
+    if (!c) return;
+    const token = await jeton();
+    const r = await fetch("/api/revisions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mode: "noter", carte_id: c.id, note }),
+    }).catch(() => null);
+    if (r && r.ok) {
+      const d = await r.json();
+      // La file se met à jour depuis la RÉPONSE du serveur (qui a relu la base), pas
+      // depuis un optimistic update : une boîte qui n'a pas bougé doit se voir.
+      setRevisions((prev) =>
+        prev
+          ? {
+              ...prev,
+              du_jour: prev.du_jour.filter((x) => x.id !== c.id),
+              compteurs: {
+                ...prev.compteurs,
+                du_aujourdhui: Math.max(0, prev.compteurs.du_aujourdhui - 1),
+                plus_tard: prev.compteurs.plus_tard + 1,
+                notees_7_jours: prev.compteurs.notees_7_jours + 1,
+                justes_7_jours: prev.compteurs.justes_7_jours + (note === "encore" ? 0 : 1),
+                serie_jours: typeof d.serie_jours === "number" ? d.serie_jours : prev.compteurs.serie_jours,
+              },
+            }
+          : prev
+      );
+      setRevele(false);
+    }
+  };
+
+  const ignorerCarte = async () => {
+    const c = revisions?.du_jour[0];
+    if (!c) return;
+    const token = await jeton();
+    await fetch("/api/revisions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mode: "ignorer", carte_id: c.id }),
+    }).catch(() => {});
+    setRevisions((prev) => (prev ? { ...prev, du_jour: prev.du_jour.slice(1), compteurs: { ...prev.compteurs, total: Math.max(0, prev.compteurs.total - 1), du_aujourdhui: Math.max(0, prev.compteurs.du_aujourdhui - 1) } } : prev));
+    setRevele(false);
+  };
+
+  const cleEnOctets = (b64: string) => {
+    const brut = b64.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = brut + "=".repeat((4 - (brut.length % 4)) % 4);
+    const binaire = atob(pad);
+    return Uint8Array.from(binaire, (ch) => ch.charCodeAt(0));
+  };
+
+  const basculerNotif = async (activer: boolean) => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || typeof Notification === "undefined") {
+      setNotifMsg(t(lang, "thunder_notify_unsupported"));
+      return;
+    }
+    const token = await jeton();
+    if (!activer) {
+      const inst = await navigator.serviceWorker.getRegistration().catch(() => null);
+      const sub = await inst?.pushManager.getSubscription().catch(() => null);
+      if (sub) {
+        await fetch("/api/revisions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ mode: "desabonner", endpoint: sub.endpoint }),
+        }).catch(() => null);
+        await sub.unsubscribe().catch(() => {});
+      }
+      setNotif(false);
+      setNotifMsg(t(lang, "thunder_notify_off_done"));
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      const demande = await Notification.requestPermission().catch(() => "denied" as NotificationPermission);
+      if (demande !== "granted") {
+        setNotifMsg(t(lang, "thunder_notify_denied"));
+        return;
+      }
+    }
+    const cle = revisions?.cle_publique_vapid;
+    if (!cle) {
+      setNotifMsg(t(lang, "thunder_notify_unavailable"));
+      return;
+    }
+    try {
+      const inst = await navigator.serviceWorker.register("/sw-push.js");
+      const subscription = await inst.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cleEnOctets(cle) });
+      const r = await fetch("/api/revisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: "abonner", subscription: subscription.toJSON() }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setNotifMsg(t(lang, "thunder_notify_refused") + " — " + String(d.error || r.status));
+        return;
+      }
+      setNotif(true);
+      // Un vrai message, tout de suite : « ça marche » doit se vérifier en le
+      // recevant, pas en cochant une case.
+      const test = await fetch("/api/revisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: "notifier" }),
+      }).then((x) => x.json()).catch(() => null);
+      setNotifMsg(test?.envoyees ? t(lang, "thunder_notify_sent") : t(lang, "thunder_notify_wait"));
+    } catch (e) {
+      setNotifMsg(t(lang, "thunder_notify_error") + " — " + (e instanceof Error ? e.message.slice(0, 90) : "navigateur"));
+    }
+  };
+
   const MODES = [
     { id: "ask", label: t(lang, "thunder_ask"), icon: Send },
     { id: "quiz", label: t(lang, "thunder_quiz"), icon: ListChecks },
     { id: "links", label: t(lang, "thunder_links"), icon: Link2 },
+    { id: "cartes", label: t(lang, "thunder_cards"), icon: Layers },
   ] as const;
 
   const onglet = useRef<(HTMLButtonElement | null)[]>([]);
@@ -294,6 +493,10 @@ export default function ThunderPage() {
   if (erreur) notes.push({ niveau: "erreur", lignes: [erreur] });
   if (rienALire) notes.push({ niveau: "info", lignes: [t(lang, "thunder_aucune_source_active")] });
   if (avertissements.length) notes.push({ niveau: "alerte", titre: t(lang, "thunder_avertissements"), lignes: avertissements });
+  // Le nombre vient de la base (upsert avec doublons ignorés), pas du compte des
+  // questions ratées fait à la main : 8 ratées peuvent donner 3 cartes.
+  if (cartesAjoutees > 0)
+    notes.push({ niveau: "info", lignes: [`${nombre(cartesAjoutees, lang)} ${t(lang, "thunder_cards_created")}`] });
   // Ce qui a été réellement téléchargé, dit avec les nombres renvoyés par la route —
   // pas une barre de progression inventée pendant que le serveur travaille.
   if (mode === "ask" && web && reponse && contexte) {
@@ -456,6 +659,80 @@ export default function ThunderPage() {
                 </button>
               ))}
             </div>
+
+            {mode === "cartes" && (
+              <div className="th-bloc th-cartes">
+                <div className="th-cartes-tete">
+                  <div className="th-cartes-chiffre">
+                    <b>{nombre(revisions?.compteurs.du_aujourdhui ?? 0, lang)}</b>
+                    <span>{t(lang, "thunder_cards_due")}</span>
+                  </div>
+                  <div className="th-cartes-chiffre">
+                    <b>{nombre(revisions?.compteurs.total ?? 0, lang)}</b>
+                    <span>{t(lang, "thunder_cards_total")}</span>
+                  </div>
+                  <div className="th-cartes-chiffre">
+                    <b>{nombre(revisions?.compteurs.serie_jours ?? 0, lang)}</b>
+                    <span>{t(lang, "thunder_cards_streak")}</span>
+                  </div>
+                  <div className="th-cartes-chiffre">
+                    <b>{nombre(revisions?.compteurs.fragiles ?? 0, lang)}</b>
+                    <span>{t(lang, "thunder_cards_fragile")}</span>
+                  </div>
+                </div>
+
+                {revisions && revisions.du_jour.length === 0 ? (
+                  <p className="th-cartes-vide">
+                    {revisions.prochaine
+                      ? `${t(lang, "thunder_cards_rien")} — ${new Date(revisions.prochaine).toLocaleDateString(lang === "ar" ? "ar-MA" : lang === "fr" ? "fr-FR" : lang, { day: "numeric", month: "long" })}`
+                      : t(lang, "thunder_cards_none")}
+                  </p>
+                ) : revisions?.du_jour[0] ? (
+                  <article className="th-carte" aria-live="polite">
+                    <span className="th-cartes-boite">
+                      {revisions.du_jour[0].boite}/6 · {nombre(revisions.du_jour[0].reps, lang)} {t(lang, "thunder_cards_reps")}
+                    </span>
+                    <p className="th-carte-question">{revisions.du_jour[0].question}</p>
+                    {revisions.du_jour[0].ce_que_tu_avais ? (
+                      <p className="th-carte-erreur">
+                        <span>{t(lang, "thunder_cards_your_wrong")}</span> {revisions.du_jour[0].ce_que_tu_avais}
+                      </p>
+                    ) : null}
+                    {revele ? (
+                      <p className="th-carte-reponse">{revisions.du_jour[0].reponse}</p>
+                    ) : (
+                      <button type="button" className="btn btn-ghost th-carte-montre" onClick={() => setRevele(true)}>
+                        {t(lang, "thunder_cards_show")}
+                      </button>
+                    )}
+                    {revele ? (
+                      <div className="th-carte-notes">
+                        <button type="button" className="th-carte-note th-carte-note--encore" onClick={() => noter("encore")}>
+                          {t(lang, "thunder_cards_again")}
+                        </button>
+                        <button type="button" className="th-carte-note th-carte-note--bien" onClick={() => noter("bien")}>
+                          {t(lang, "thunder_cards_good")}
+                        </button>
+                        <button type="button" className="th-carte-note th-carte-note--facile" onClick={() => noter("facile")}>
+                          {t(lang, "thunder_cards_easy")}
+                        </button>
+                        <button type="button" className="th-carte-ignorer" onClick={ignorerCarte}>
+                          {t(lang, "thunder_cards_ignore")}
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                ) : (
+                  <p className="th-cartes-vide">{t(lang, "thunder_loading")}</p>
+                )}
+
+                <label className="th-switch">
+                  <input type="checkbox" checked={notif} onChange={(e) => basculerNotif(e.target.checked)} disabled={!revisions?.push_possible} />
+                  <Bell size={14} /> {notif ? t(lang, "thunder_notify_on") : t(lang, "thunder_notify_off")}
+                </label>
+                {notifMsg ? <p className="th-cartes-note">{notifMsg}</p> : null}
+              </div>
+            )}
 
             {mode === "quiz" && (
               <div className="th-ligne-champs th-bloc">

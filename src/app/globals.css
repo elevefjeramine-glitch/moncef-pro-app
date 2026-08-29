@@ -2109,3 +2109,155 @@ a { text-decoration: none; color: inherit; }
     transition-duration: 0.001ms !important;
   }
 }
+
+
+/* ── Le quatrième onglet : la file de révision ───────────────────────────────
+   Mêmes tokens que le reste de Thunder : les deux paires de couleurs « juste /
+   faux » sont exactement celles du verdict du QCM, déjà contrôlées en contraste
+   (9,88:1 et 8,36:1) — pas une nouvelle couleur pour le plaisir. */
+.thunder .th-cartes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.thunder .th-cartes-tete {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 8px;
+}
+.thunder .th-cartes-chiffre {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid var(--filet);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.thunder .th-cartes-chiffre > b {
+  font-size: var(--t-corps);
+  font-weight: 800;
+  color: var(--encre);
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-cartes-chiffre > span {
+  font-size: var(--t-micro);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}
+.thunder .th-cartes-vide {
+  margin: 0;
+  padding: 18px 16px;
+  border: 1px dashed var(--filet);
+  border-radius: 14px;
+  color: var(--encre-douce);
+  font-size: var(--t-petit);
+  line-height: 1.6;
+}
+.thunder .th-carte {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--tv-lien);
+  border-radius: 16px;
+  background: var(--tv-veil);
+}
+.thunder .th-cartes-boite {
+  font-size: var(--t-micro);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tv);
+  font-variant-numeric: tabular-nums;
+}
+.thunder .th-carte-question {
+  margin: 0;
+  font-size: var(--t-corps);
+  line-height: 1.55;
+  color: var(--encre);
+}
+.thunder .th-carte-erreur {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #2a0a0a;
+  color: #ffd7d7;
+  font-size: var(--t-petit);
+  line-height: 1.55;
+}
+.thunder .th-carte-erreur > span {
+  display: block;
+  font-size: var(--t-micro);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #ff8f8f;
+}
+.thunder .th-carte-reponse {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--filet);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: var(--t-petit);
+  line-height: 1.65;
+  color: var(--encre);
+}
+.thunder .th-carte-montre {
+  align-self: flex-start;
+  font-size: var(--t-petit);
+  padding: 8px 14px;
+}
+.thunder .th-carte-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.thunder .th-carte-note {
+  border: 1px solid var(--filet);
+  border-radius: 10px;
+  padding: 7px 13px;
+  font-size: var(--t-petit);
+  font-weight: 800;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--encre);
+  transition: var(--tr);
+}
+.thunder .th-carte-note:hover {
+  border-color: var(--tv-lien);
+  background: var(--tv-veil);
+}
+.thunder .th-carte-note--encore:hover {
+  border-color: #ff8f8f;
+  color: #ffd7d7;
+}
+.thunder .th-carte-note--bien:hover,
+.thunder .th-carte-note--facile:hover {
+  border-color: #4ade80;
+  color: #0b1f13;
+  background: #4ade80;
+}
+.thunder .th-carte-ignorer {
+  margin-inline-start: auto;
+  border: 0;
+  background: none;
+  color: var(--encre-faible);
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.thunder .th-carte-ignorer:hover {
+  color: var(--encre);
+}
+.thunder .th-cartes-note {
+  margin: 0;
+  font-size: var(--t-petit);
+  line-height: 1.6;
+  color: var(--encre-douce);
+}
+
