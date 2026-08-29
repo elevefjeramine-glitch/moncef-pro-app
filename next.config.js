@@ -11,13 +11,15 @@ const nextConfig = {
   // l'environnement AU BUILD et figées dans le bundle — ce qui est le bon régime pour
   // une information sur le build, pas une mesure faite à la demande.
   //
-  // ATTENTION, mesuré le 28/08/2026 sur le déploiement Netlify 6a92039d5fac : les
-  // quatre champs reviennent vides là-bas (`deployment.commit: null`), c'est-à-dire
-  // que ce mode de build ne pose pas COMMIT_REF dans son environnement. Le mécanisme
-  // est vérifié localement (COMMIT_REF passé à la main -> `commit dd6b6f7 ·
-  // docs/corps-requete · production` dans le JSON). Donc : ici ça marche quand la
-  // variable existe, et sur cette plateforme ça ne marche pas. La page /status
-  // n'affiche la ligne que si le champ est non vide — aucun chiffre n'est inventé.
+  // Piège où je suis tombé (28-29/08/2026) : ces valeurs ne sont lues CORRECTEMENT
+  // que si la route les reference EN TOUTES LETTRES. Mon premier essai passait par
+  // `process.env[nom]` avec une clé calculée — Next ne substitue pas là, donc la
+  // fonction relisait un environnement d'exécution où ces variables n'existent pas,
+  // et tout rentrait à `null`. J'en avais conclu que « Netlify ne pose pas COMMIT_REF
+  // », c'était faux : avec les références littérales, la preview 6a92d023042d renvoie
+  // `commit 33c719e · branch pull/7/head · context deploy-preview`. La plateforme les
+  // fournit donc bien ; seul mon mode de lecture était cassé. La page /status
+  // continue de n'afficher la ligne que si le champ est non vide.
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: process.env.COMMIT_REF ?? '',
     NEXT_PUBLIC_BUILD_BRANCH: process.env.BRANCH ?? '',
