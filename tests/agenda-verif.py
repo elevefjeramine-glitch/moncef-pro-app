@@ -113,6 +113,32 @@ jeton = json.loads(corps)["access_token"]
 uid = json.loads(corps)["user"]["id"]
 A = {"authorization": "Bearer " + jeton, "apikey": ANON, "content-type": "application/json", "prefer": "return=representation"}
 
+# ── le filet : une toise qui échoue ne doit rien laisser derrière elle ─────────
+# Huit comptes de test ont survécu à la campagne du jour précisément parce que le
+# script s'arrêtait sur `sys.exit(2)` AVANT sa phase de nettoyage. `atexit` court
+# aussi sur ce chemin-là, et `nettoyer()` est idempotent.
+import atexit
+def nettoyer():
+    try:
+        for table, identifiants in (globals().get("ids") or {}).items():
+            for ident in identifiants:
+                try:
+                    http("%s/rest/v1/%s?id=eq.%s" % (SUPA, table, ident), "DELETE", A)
+                except Exception:
+                    pass
+        if uid:
+            for t in ("agenda_tokens", "users"):
+                sql("delete from public.%s where user_id='%s'" % (t, uid) if t == "agenda_tokens" else "delete from public.users where id='%s'" % uid)
+        if globals().get("compte_cree"):
+            http(SUPA + "/auth/v1/admin/users/" + globals()["compte_cree"], "DELETE", {"authorization": "Bearer " + SK, "apikey": SK})
+    except Exception as e:
+        print("  · nettoyage incomplet : %s" % e)
+
+atexit.register(nettoyer)
+if os.environ.get("VERIF_ECHEC_DES_LE_DEBUT") == "1":  # pour vérifier ce filet lui-même
+    print("  · échec forcé (VERIF_ECHEC_DES_LE_DEBUT) : le filet doit tout effacer")
+    sys.exit(2)
+
 # ── 2 · un jeu de données connu, inséré puis retiré ───────────────────────────
 ids = {"schedule": [], "homework": [], "events": []}
 def inserer(table, ligne):
