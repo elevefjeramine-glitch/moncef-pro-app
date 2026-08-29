@@ -1,0 +1,22 @@
+-- 0011_index_user_id_events.sql
+-- Un index sur events(user_id), mesuré avant de l'écrire.
+--
+-- Contrôle du 29/08/2026, sur la base de travail :
+--   SELECT count(*) FROM pg_index i WHERE i.indrelid='public.events'::regclass;              --> 1   (la clé primaire)
+--   SELECT count(*) FROM pg_index i JOIN pg_attribute a ON a.attrelid=i.indrelid
+--          AND a.attnum = ANY(i.indkey)
+--        WHERE i.indrelid='public.events'::regclass AND a.attname='user_id';                  --> 0
+-- Les deux routes qui touchent l'emploi du temps filtrent par élève
+-- (/api/events-import, /api/schedule-import lisent aussi cette table pour les
+-- conflits d'horaire) : sans index, chaque requête balayait la table entière.
+--
+-- Même contrôle sur les autres tables (colonne user_id, index dessus) :
+--   conversation_members 1/2 · homework 1/2 · schedule 1/1 · thunder_sources 1/1
+--   thunder_quiz_attempts 1/1 · users n/a (clé primaire = id) · conversations et
+--   conversation_messages n'ont pas de colonne user_id (jointure par conversation_id).
+-- Seule events était nue.
+--
+-- Idempotent : relançable sans effet de bord. L'index a été créé sur la base avant
+-- cette migration, ce fichier existe pour que l'historique corresponde à la réalité.
+
+CREATE INDEX IF NOT EXISTS events_user_id_idx ON public.events (user_id);
