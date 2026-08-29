@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Bell, BookOpen, Bot, Check, Copy, FileUp, Globe, Layers, Link2, ListChecks, Mic, MicOff, Plus, Send, ShieldAlert, Trash2, Volume2, VolumeX, Zap } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Bot, Check, Copy, FileUp, Globe, Layers, Link2, ListChecks, Mic, MicOff, Plus, Scissors, Send, ShieldAlert, Trash2, Volume2, VolumeX, Zap } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
 import { useLanguage, t } from "@/utils/i18n";
@@ -136,6 +136,52 @@ export default function ThunderPage() {
     });
     setExclues((e) => e.filter((x) => x !== id));
     await chargerSources();
+  };
+
+  // ── B3 · un pavé collé devient plusieurs fiches ───────────────────────────
+  // Le découpage lui-même est dans src/lib/fiches.ts (testé sans réseau) ; ici on
+  // n'affiche que le rapport : ce qui a été créé, ce qui a été jeté, ce qui reste.
+  const [decoupe, setDecoupe] = useState<{
+    enCours: boolean;
+    erreur: string | null;
+    rapport: {
+      fiches: { fiche: number; titre: string; points: string[]; pages: number[]; caractères: number }[];
+      jetees: { index: number; motif: string }[];
+      restants: number;
+      enregistrees: number;
+      avertissement: string;
+      a_partir_de_suggéré: number | null;
+      debite: number;
+    } | null;
+  }>({ enCours: false, erreur: null, rapport: null });
+
+  const decouper = async (aPartirDe = 0) => {
+    const texte = form.texte.trim();
+    if (texte.length < 400) return;
+    setDecoupe({ enCours: true, erreur: null, rapport: null });
+    const token = await jeton();
+    try {
+      const r = await fetch("/api/thunder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          mode: "decouper",
+          a_partir_de: aPartirDe,
+          enregistrer: true,
+          matiere: form.matiere,
+          sources: [{ id: "pave", titre: form.titre || "Cours collé", matiere: form.matiere, texte }],
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setDecoupe({ enCours: false, erreur: String(d?.error ?? "Le serveur n'a pas répondu.") + (d?.motif ? ` (${d.motif})` : ""), rapport: null });
+        return;
+      }
+      setDecoupe({ enCours: false, erreur: null, rapport: d });
+      await chargerSources();
+    } catch (e: unknown) {
+      setDecoupe({ enCours: false, erreur: e instanceof Error ? e.message : "réseau", rapport: null });
+    }
   };
 
   // ── Trois modes, un seul état de rendu ────────────────────────────────────
@@ -545,6 +591,40 @@ export default function ThunderPage() {
     if (mode === "cartes") chargerRevisions();
   }, [mode, chargerRevisions]);
 
+  // ── C4 · le plan de la soirée : 0 crédit, un calcul côté serveur ──────────
+  const [plan, setPlan] = useState<{
+    journees: { jour: string; libelle: string; minutes: number; en_retard: number; blocs: { matiere: string; minutes: number; cartes: { id: string; question: string; retard_jours: number; boite: number }[] }[] }[];
+    total_cartes: number;
+    sature: boolean;
+    retard_total_minutes: number;
+    message: string;
+  } | null>(null);
+  const [reglages, setReglages] = useState({ budget: 45, horizon: 7 });
+  const [planEnCours, setPlanEnCours] = useState(false);
+  const [planErreur, setPlanErreur] = useState<string | null>(null);
+  const calculerPlan = useCallback(async () => {
+    setPlanEnCours(true);
+    setPlanErreur(null);
+    const token = await jeton();
+    try {
+      const r = await fetch("/api/revisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: "plan", budget_minutes: reglages.budget, horizon_jours: reglages.horizon }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setPlanErreur(String(d?.error ?? "Le serveur n'a pas répondu."));
+        return;
+      }
+      setPlan(d.plan ?? null);
+    } catch (e: unknown) {
+      setPlanErreur(e instanceof Error ? e.message : "réseau");
+    } finally {
+      setPlanEnCours(false);
+    }
+  }, [jeton, reglages.budget, reglages.horizon]);
+
   const noter = async (note: "encore" | "bien" | "facile") => {
     const c = revisions?.du_jour[0];
     if (!c) return;
@@ -806,9 +886,42 @@ export default function ThunderPage() {
                   {nombre(form.texte.trim().length, lang)} / 400 000 · {t(lang, "thunder_caracteres_indexes")}
                 </p>
               </div>
-              <button type="button" className="th-bouton" onClick={ajouter} disabled={majSources || form.texte.trim().length < 40}>
-                <Plus size={14} /> {majSources ? "…" : t(lang, "thunder_s_save")}
-              </button>
+              <div className="th-form-boutons">
+                <button type="button" className="th-bouton" onClick={ajouter} disabled={majSources || form.texte.trim().length < 40}>
+                  <Plus size={14} /> {majSources ? "…" : t(lang, "thunder_s_save")}
+                </button>
+                <button type="button" className="th-bouton th-bouton--second" onClick={() => decouper(0)} disabled={decoupe.enCours || form.texte.trim().length < 400}>
+                  <Scissors size={14} /> {decoupe.enCours ? t(lang, "thunder_fiches_attente") : t(lang, "thunder_fiches_lancer")}
+                </button>
+              </div>
+              <p className="th-aide">{t(lang, "thunder_fiches_aide")}</p>
+              {decoupe.erreur && <p className="th-depot-erreur">{decoupe.erreur}</p>}
+              {decoupe.rapport && (
+                <div className="th-fiches">
+                  <p className="th-fiches-tete">
+                    <b>
+                      {nombre(decoupe.rapport.enregistrees, lang)} {t(lang, "thunder_fiches_creees")}
+                    </b>
+                    {decoupe.rapport.restants > 0 && <> · {nombre(decoupe.rapport.restants, lang)} {t(lang, "thunder_fiches_restants")}</>}
+                    {decoupe.rapport.jetees.length > 0 && <> · {nombre(decoupe.rapport.jetees.length, lang)} {t(lang, "thunder_fiches_jetees")}</>}
+                  </p>
+                  <ol className="th-fiches-liste">
+                    {decoupe.rapport.fiches.map((f) => (
+                      <li key={f.fiche}>
+                        <b>{f.titre}</b>
+                        {f.pages.length > 0 && <span className="th-fiches-pages">p. {f.pages.join(", ")}</span>}
+                        <ul>{f.points.map((p, i) => <li key={i}>{p}</li>)}</ul>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="th-depot-note">{decoupe.rapport.avertissement}</p>
+                  {decoupe.rapport.a_partir_de_suggéré !== null && (
+                    <button type="button" className="th-bouton th-bouton--second" onClick={() => decouper(decoupe.rapport!.a_partir_de_suggéré!)}>
+                      {t(lang, "thunder_fiches_suite")}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </details>
           <div
@@ -891,6 +1004,63 @@ export default function ThunderPage() {
 
             {mode === "cartes" && (
               <div className="th-bloc th-cartes">
+                <div className="th-plan">
+                  <div className="th-plan-barre">
+                    <b>{t(lang, "thunder_plan")}</b>
+                    <label>
+                      {t(lang, "thunder_plan_budget")}
+                      <input
+                        type="number"
+                        min={10}
+                        max={240}
+                        step={5}
+                        value={reglages.budget}
+                        onChange={(e) => setReglages({ ...reglages, budget: Math.max(10, Math.min(240, Number(e.target.value) || 45)) })}
+                      />
+                    </label>
+                    <label>
+                      {t(lang, "thunder_plan_horizon")}
+                      <input
+                        type="number"
+                        min={1}
+                        max={21}
+                        value={reglages.horizon}
+                        onChange={(e) => setReglages({ ...reglages, horizon: Math.max(1, Math.min(21, Number(e.target.value) || 7)) })}
+                      />
+                    </label>
+                    <button type="button" className="th-bouton th-bouton--second" onClick={() => calculerPlan()} disabled={planEnCours}>
+                      {planEnCours ? "…" : t(lang, "thunder_plan_calculer")}
+                    </button>
+                  </div>
+                  <p className="th-depot-note">{t(lang, "thunder_plan_sub")} {t(lang, "thunder_plan_note")}</p>
+                  {planErreur && <p className="th-depot-erreur">{planErreur}</p>}
+                  {plan && (
+                    <>
+                      <p className="th-plan-message">{plan.message}</p>
+                      {plan.journees.map((j) => (
+                        <div key={j.jour} className={`th-plan-journee${j.en_retard > 0 ? " th-plan-journee--retard" : ""}`}>
+                          <div className="th-plan-jour">
+                            <b>{j.libelle}</b>
+                            <span>
+                              {nombre(j.minutes, lang)} {t(lang, "thunder_plan_min")}
+                              {j.en_retard > 0 && <> · {nombre(j.en_retard, lang)} {t(lang, "thunder_plan_retard")}</>}
+                            </span>
+                          </div>
+                          <div className="th-plan-blocs">
+                            {j.blocs.map((b, i) => (
+                              <div key={i} className="th-plan-bloc">
+                                <b>
+                                  {b.matiere} · {nombre(b.minutes, lang)} {t(lang, "thunder_plan_min")}
+                                </b>
+                                <ul>{b.cartes.map((c) => <li key={c.id}>{c.question}</li>)}</ul>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
                 <div className="th-cartes-tete">
                   <div className="th-cartes-chiffre">
                     <b>{nombre(revisions?.compteurs.du_aujourdhui ?? 0, lang)}</b>

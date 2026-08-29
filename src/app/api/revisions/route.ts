@@ -3,16 +3,18 @@ import { adminConfigure, makeAdminClient, todayUTC } from "@/lib/compte";
 import { LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from "@/lib/corps";
 import { boiteSuivante, compteSemaine, echeance, empreinte, estNote, serieActuelle } from "@/lib/revisions";
 import { messageRappel, notifier, pushConfigure, vapidPublic, type Abonnement } from "@/lib/push";
+import { construirePlan } from "@/lib/plan";
 
 /**
  * Les révisions espacées : ce que le QCM de Thunder a fait rater revient à une date
  * calculée, au lieu de rester une phrase qu'on a lue une fois.
  *
- * Six modes, et un seul principe comptable : AUCUN ne facture de crédit, parce qu'aucun
+ * Huit modes, et un seul principe comptable : AUCUN ne facture de crédit, parce qu'aucun
  * n'appelle un modèle. Chaque carte est une ligne de la base, relue après écriture —
  * c'est le contrat du reste du projet (le modèle ne décide pas de ce qui est stocké).
  *
  *   etat       la file du jour + les compteurs (série, notes, doublons ignorés)
+ *   plan       la soirée calculée : dans quel ordre, combien de temps, quoi reporter
  *   creer      les questions ratées du QCM deviennent des cartes
  *   noter      encore / bien / facile → boîte suivante, échéance, jour compté
  *   ignorer    suppression franche (une carte qu'on ne veut plus voir n'est pas masquée)
@@ -25,7 +27,7 @@ import { messageRappel, notifier, pushConfigure, vapidPublic, type Abonnement } 
  */
 export const maxDuration = 30;
 
-const MODES = ["etat", "creer", "noter", "ignorer", "abonner", "desabonner", "notifier"] as const;
+const MODES = ["etat", "plan", "creer", "noter", "ignorer", "abonner", "desabonner", "notifier"] as const;
 type Mode = (typeof MODES)[number];
 
 function refus(message: string, statut = 400) {
@@ -108,6 +110,35 @@ export async function POST(req: Request) {
         horloge: todayUTC(),
         cle_publique_vapid: vapidPublic() || null,
         push_possible: pushConfigure(),
+        cout: 0,
+      });
+    }
+
+    // ── C4 · le plan de révision : une soirée calculée, ZÉRO crédit, zéro modèle ────
+    //
+    // Ce mode ne lit que les cartes DUES dans l'horizon demandé : `due_at < plafond`.
+    // Une carte sans `due_at` est invisible ici comme dans `etat` (le filtre du mode
+    // etat la traite déjà comme non venue) — même convention, pas un deuxième tri.
+    if (mode === "plan") {
+      const budget = Math.max(5, Math.min(240, Math.round(Number(body?.budget_minutes ?? 45) || 45)));
+      const horizon = Math.max(1, Math.min(21, Math.round(Number(body?.horizon_jours ?? 7) || 7)));
+      const maintenant = new Date();
+      const plafond = new Date(maintenant.getTime() + (horizon + 1) * 86400000).toISOString();
+      const { data: cartes, error } = await db
+        .from("review_cards")
+        .select("id, question, matiere, boite, due_at, reps, lapses")
+        .eq("user_id", moi)
+        .lt("due_at", plafond)
+        .order("due_at", { ascending: true })
+        .limit(600);
+      if (error) return refus("Lecture impossible : " + error.message, 500);
+      const plan = construirePlan((cartes ?? []) as any, { maintenant, budgetMinutes: budget, horizonJours: horizon });
+      return NextResponse.json({
+        plan,
+        budget_minutes: budget,
+        horizon_jours: horizon,
+        cartes_chargees: (cartes ?? []).length,
+        horodatage: maintenant.toISOString(),
         cout: 0,
       });
     }

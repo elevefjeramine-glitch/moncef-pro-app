@@ -428,7 +428,8 @@ export default function AuthPage() {
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               className="btn"
               style={{ width: '100%', height: 52, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              onClick={handleAuth} disabled={loading}>
+              onClick={handleAuth} disabled={loading}
+              data-testid="auth-submit">
               {loading ? (
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                   style={{ width: 18, height: 18, border: '2px solid rgba(0,0,0,0.3)', borderTop: '2px solid #000', borderRadius: '50%' }} />

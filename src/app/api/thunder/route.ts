@@ -39,8 +39,10 @@ import {
 // erreur de passerelle au lieu de mon message « modèles indisponibles ».
 export const maxDuration = 60;
 
+import { consigneDecoupage, decouperTexte, texteBlocs, texteFiche, validerFiches, FICHES_MAX_PAR_APPEL, type Bloc } from "@/lib/fiches";
+
 const AI_TIMEOUT_MS = 24000;
-const COUT = { ask: 10, quiz: 15, links: 5, sources: 0, progress: 0 } as const;
+const COUT = { ask: 10, quiz: 15, links: 5, fiches: 10, sources: 0, progress: 0 } as const;
 
 /**
  * Combien de temps attendre avant de relancer. `retry-after` d'abord (seconde ou
@@ -104,6 +106,11 @@ type Corps = {
   total?: unknown;
   justes?: unknown;
   lignes?: unknown;
+  /** `decouper` : reprendre le découpage après un plafond de 12 fiches, enregistrer les
+   *  fiches comme sources, et matière à recopier sur chacune. */
+  a_partir_de?: unknown;
+  enregistrer?: unknown;
+  matiere?: unknown;
 };
 
 export async function POST(req: Request) {
@@ -125,8 +132,8 @@ export async function POST(req: Request) {
   }
 
   const mode = String(body?.mode ?? "ask");
-  if (!["ask", "quiz", "links", "sources", "progress"].includes(mode)) {
-    return NextResponse.json({ error: "Mode inconnu : attend `ask`, `quiz`, `links`, `sources` ou `progress`." }, { status: 400 });
+  if (!["ask", "quiz", "links", "fiches", "decouper", "sources", "progress"].includes(mode)) {
+    return NextResponse.json({ error: "Mode inconnu : attend `ask`, `quiz`, `links`, `decouper`, `sources` ou `progress`." }, { status: 400 });
   }
 
   // Écrire dans thunder_sources / users demande le rôle service : sans lui, la RLS
@@ -324,7 +331,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const question = String(body?.question ?? "").trim().slice(0, 4000);
+    const question = String(body?.question ?? "").trim().slice(0, 4000) || (mode === "decouper" ? "Découpe ce cours en fiches." : "");
     if (!question) return NextResponse.json({ error: "Champ `question` attendu." }, { status: 400 });
 
     // Plafond de contexte : au-delà, on coupe EN LE DISANT (un élève qui colle
@@ -373,7 +380,12 @@ export async function POST(req: Request) {
       pageLue: p.pageLue,
     }));
     const material = [...passages, ...passagesWeb];
-    const sansSource = reponseSansSource(material);
+    // `decouper` ne dépend PAS de la recherche lexicale : le mode lit le texte ENTIER,
+    // alors que `rechercher` ne garde que six passages pertinents pour la question posée.
+    // Sans cette exception, coller un cours dont aucun mot ne ressemble à « découpe en
+    // fiches » répondait « ce n'est pas dans tes documents » — mesuré le 29/08/2026,
+    // et c'est exactement le genre de refus poli qui passe pour une panne de l'élève.
+    const sansSource = mode === "decouper" ? null : reponseSansSource(material);
 
     // ── mode links : aucun lien inventé, aucune promesse de vidéo « exacte » ─
     if (mode === "links") {
@@ -415,8 +427,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Aucune clé IA configurée (GEMINI_API_KEY / GROQ_API_KEY)." }, { status: 503 });
     }
 
-    const consigne = mode === "quiz" ? "Tu fabriques un QCM. Tu réponds UNIQUEMENT par le tableau JSON demandé, sans texte autour." : charte(webActif);
-    const userPrompt = mode === "quiz" ? promptQuiz(String(body?.niveau ?? "lycée"), passages, Math.min(10, Math.max(3, Number(body?.n) || 5))) : promptAsk(question, material);
+    // ── `decouper` : le pavé collé devient N blocs numérotés, AVANT l'appel au modèle ──
+    // Le découpage est local (`src/lib/fiches.ts`) : le numéro de bloc est la clé de
+    // tout le reste — c'est lui qui permet de jeter une fiche inventée, et de raccorder
+    // la fiche à sa source d'origine. `a_partir_de` sert à reprendre là où le plafond
+    // de FICHES_MAX_PAR_APPEL a coupé, sans re-fabriquer ce qui est déjà fait.
+    let decoupe: { blocs: Bloc[]; sautes: number; total: number; truncate: boolean } | null = null;
+    if (mode === "decouper") {
+      const aPartirDe = Math.max(0, Math.round(Number(body?.a_partir_de ?? 0)));
+      const texteSource = retenues.map((s) => `${s.titre ? `# ${s.titre}\n` : ""}${s.texte}`).join("\n\n");
+      decoupe = decouperTexte(texteSource, { aPartirDe });
+      if (!decoupe.blocs.length) {
+        return NextResponse.json(
+          { error: "Rien à découper : le texte fourni est vide, ou tient déjà dans une seule fiche.", debite: 0, newTokens: solde },
+          { status: 400 }
+        );
+      }
+    }
+
+    const consigne =
+      mode === "quiz"
+        ? "Tu fabriques un QCM. Tu réponds UNIQUEMENT par le tableau JSON demandé, sans texte autour."
+        : mode === "decouper"
+          ? "Tu découpes un cours en fiches. Tu réponds UNIQUEMENT par le tableau JSON demandé, sans texte autour. Tu résumes ce que le bloc dit, tu n'ajoutes rien d'extérieur."
+          : charte(webActif);
+    const userPrompt =
+      mode === "quiz"
+        ? promptQuiz(String(body?.niveau ?? "lycée"), passages, Math.min(10, Math.max(3, Number(body?.n) || 5)))
+        : mode === "decouper" && decoupe
+          ? consigneDecoupage(decoupe.blocs) + texteBlocs(decoupe.blocs)
+          : promptAsk(question, material);
 
     const fournisseurs: { nom: string; appeler: () => Promise<string> }[] = [];
     if (GEMINI) {
@@ -455,7 +495,7 @@ const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1be
                 { role: "system", content: consigne },
                 { role: "user", content: userPrompt },
               ],
-              max_tokens: mode === "quiz" ? 3072 : 1024,
+              max_tokens: mode === "quiz" || mode === "decouper" ? 3072 : 1024,
               temperature: 0.4,
             }),
           });
@@ -483,6 +523,70 @@ const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1be
     if (!brut) {
       // Aucun fournisseur n'a répondu : aucun crédit débité.
       return NextResponse.json({ error: "Les modèles d'IA sont momentanément indisponibles.", details: echecs.join(" | ") }, { status: 502 });
+    }
+
+    // ── `decouper` : rien n'est débité ni enregistré si la réponse ne tient pas ────
+    if (mode === "decouper" && decoupe) {
+      const validation = validerFiches(brut, decoupe.blocs);
+      if (!validation.ok) {
+        return NextResponse.json(
+          {
+            error: "Le découpage reçu est inexploitable : rien n'est enregistré, rien n'est débité.",
+            motif: validation.motif,
+            blocs_preparés: decoupe.blocs.length,
+            debite: 0,
+            newTokens: solde,
+          },
+          { status: 502 }
+        );
+      }
+      const parIndex = new Map(decoupe.blocs.map((b) => [b.index, b]));
+      const fiches = validation.fiches.map((f) => {
+        const bloc = parIndex.get(f.fiche)!;
+        return { ...f, caractères: bloc.caractères, extrait: bloc.texte.slice(0, 900) };
+      });
+
+      // `enregistrer: true` écrit une ligne `thunder_sources` par fiche : c'est ce qui
+      // les rend ré-interrogeables (QCM, appels suivants). À 12 fiches par appel et
+      // 12 000 caractères par fiche, on reste très sous le plafond Netlify de 6 Mo —
+      // et sous le bon sens : une fiche de cours ne fait pas 60 000 caractères.
+      let enregistrees = 0;
+      const sourceIds: string[] = [];
+      if (body?.enregistrer === true) {
+        const lignes = fiches.map((f) => ({
+          user_id: user.id,
+          titre: `Fiche ${f.fiche + 1} · ${f.titre}`.slice(0, 200),
+          matiere: String(body?.matiere ?? "").trim().slice(0, 80) || null,
+          texte: texteFiche(parIndex.get(f.fiche)!, f),
+        }));
+        const { data: ecrites, error } = await admin.from("thunder_sources").insert(lignes).select("id");
+        if (error) {
+          return NextResponse.json(
+            { error: "Découpage calculé mais non enregistré : " + error.message, fiches, debite: 0, newTokens: solde },
+            { status: 500 }
+          );
+        }
+        enregistrees = (ecrites ?? []).length;
+        sourceIds.push(...(ecrites ?? []).map((r: { id: string }) => String(r.id)));
+      }
+
+      if (!illimité) await admin.from("users").update({ tokens: Math.max(0, solde - cout) }).eq("id", user.id);
+      return NextResponse.json({
+        fiches,
+        jetees: validation.jetees,
+        blocs_envoyés: decoupe.blocs.length,
+        restants: decoupe.sautes,
+        a_partir_de_suggéré: decoupe.sautes > 0 ? Number(body?.a_partir_de ?? 0) + decoupe.blocs.length : null,
+        plafond_par_appel: FICHES_MAX_PAR_APPEL,
+        enregistrees,
+        source_ids: sourceIds,
+        avertissement:
+          "Les titres et points clés viennent du modèle, le corps des fiches vient uniquement de ton texte. Les fiches ne sont pas relues : ce qu'elles omettent n'apparaît nulle part." +
+          (decoupe.truncate ? " Le texte a aussi été tronqué à la lecture : tout n'a pas été découpé." : "") +
+          (decoupe.sautes > 0 ? ` ${decoupe.sautes} bloc(s) n'ont pas été traités (plafond de ${FICHES_MAX_PAR_APPEL} fiches par appel) — relance pour la suite.` : ""),
+        debite: illimité ? 0 : cout,
+        newTokens: illimité ? solde : Math.max(0, solde - cout),
+      });
     }
 
     // ── `quiz` : validation structurelle AVANT envoi, sinon refus ────────────

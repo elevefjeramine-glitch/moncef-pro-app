@@ -39,6 +39,8 @@ export const LIMITE_CORPS = {
   alpha: 1 * MO,
   /** { confirm: true } ou { cancel: true } : quelques dizaines d'octets. */
   compte: 64 * KO,
+  /** /api/agenda : { action: "creer" | "regenerer" | "retirer" }. Un mot, ou deux. */
+  agenda: 64 * KO,
   /**
    * /api/thunder : un cours collé ou plusieurs, en texte simple (pas d'image).
    * 2 Mo = environ 1 million de caractères, soit bien au-delà d'un chapitre
