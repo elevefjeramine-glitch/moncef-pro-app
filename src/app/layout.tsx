@@ -25,11 +25,28 @@ export const metadata = {
   title: "Moncef IA — Plateforme Éducative Intelligente",
   description: "Plateforme éducative propulsée par l'Intelligence Artificielle. Gérez vos devoirs, emploi du temps et progressez avec l'IA.",
   keywords: "intelligence artificielle, éducation, devoirs, emploi du temps, lycée",
+  // PWA (lot A3) : le manifeste vit dans `public/`, donc versionné et servi par le même
+  // hôte que le site — pas de CDN tiers, aucun indicateur de présence envoyé ailleurs.
+  // `manifest` est laissé à Next : il existe un `src/app/manifest.ts`, qui sert l'URL avec
+  // le bon type. `theme_color` en revanche ne vit PAS dans `metadata` (mesuré : le meta
+  // n'arrivait pas au HTML) — il est dans `viewport`, exporté juste en dessous.
+  icons: { icon: "/icon-192.png", apple: "/icon-apple-180.png" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Moncef IA" },
+  formatDetection: { telephone: false },
   openGraph: {
     title: "Moncef IA",
     description: "La plateforme éducative IA nouvelle génération.",
     type: "website"
   }
+};
+
+export const viewport = {
+  themeColor: "#0b1f13",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  colorScheme: "dark" as const,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

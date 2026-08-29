@@ -1,3 +1,18 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- VERDICT DU 29/08/2026 — CE FICHIER N'EST VOLONTAIREMENT PAS APPLIQUÉ.
+--
+-- `pg_cron` est installé depuis (1.6.4, mesuré), donc le bloc `cron.schedule`
+-- serait exécutable. Il ne faut pas. Raison, lue dans le fichier lui-même :
+--   'reset-tokens-every-2-hours', '0 */2 * * *' → UPDATE users SET tokens = 700
+-- soit DOUZE remises de 700 crédits par jour et par compte, pour les rôles
+-- `normal` ET `moderator`. Le plancher réel de l'application
+-- (`applyDailyCreditFloor`, src/lib/compte.ts) remet 700 UNE fois par jour, à la
+-- première demande, et ne touche pas aux fondateurs. Brancher 0006 reviendrait à
+-- multiplier par douze le budget de crédits payants de chaque élève.
+--
+-- Si un jour il faut un réveil (compter les jours sans visite, purger les files),
+-- écrire une migration neuve qui APPELLE le plancher existant, et non un UPDATE brut.
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Déplacé depuis /cron_credits.sql sans modifier le contenu — sha256 3c6b44f2719d
 -- ⚠️ NE PAS RELANCER AVEUGLÉMENT : l'état réel de la base est décrit dans
 --    supabase/security-fix-rls.sql et SECURITY.md. Archivage d'historique.

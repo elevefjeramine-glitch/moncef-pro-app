@@ -44,7 +44,10 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           // aucune de ces API n'est utilisée par le site : les couper supprime la
           // surface d'un script tiers qui y parviendrait quand même
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self)' },
+          // `microphone=(self)` depuis le lot A : la dictée (A2) passe par
+          // SpeechRecognition, que notre propre en-tête bloquait à `microphone=()`.
+          // `camera` reste coupé : aucune page du site ne filme.
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self)' },
           // les lecteurs PDF/Flash tiers ne doivent pas charger nos ressources
           { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
         ],

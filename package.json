@@ -13,7 +13,11 @@
     "verif:design": "python3 tests/design-thunder.py",
     "verif:alpha": "python3 tests/alpha-perm.py",
     "verif:vitrine": "python3 tests/vitrine-espaces.py",
-    "verif:revisions": "python3 tests/revisions-verif.py"
+    "verif:revisions": "python3 tests/revisions-verif.py",
+    "verif:extraire": "npx vitest run tests/extraire.test.ts",
+    "verif:unit": "npx vitest run",
+    "verif:pwa": "python3 tests/pwa-verif.py",
+    "verif:import": "python3 tests/verif-import.py"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -29,9 +33,11 @@
     "isomorphic-dompurify": "^3.9.0",
     "lottie-react": "^2.4.1",
     "lucide-react": "^1.8.0",
+    "mammoth": "^1.12.2",
     "marked": "^18.0.2",
     "next": "16.2.3",
     "next-themes": "^0.4.6",
+    "pdfjs-dist": "^5.6.205",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "sonner": "^2.0.7",

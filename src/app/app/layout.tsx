@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu, ShieldAlert, Zap } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
+import HorsLigne from "@/components/HorsLigne";
+import { effacerSnapshots } from "@/lib/hors-ligne";
 import { useUserStore } from "@/store/useUserStore";
 import type { ReactNode } from "react";
 
@@ -84,7 +86,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', handleResize);
   }, [loadUser]);
 
-  const handleLogout = async (e: any) => { e.stopPropagation(); await supabase.auth.signOut(); window.location.href = "/"; };
+  // Déconnexion = poste rendu à l'élève suivant dans un lycée. Le cache du service
+  // worker porte le nom du compte : on le vide AVANT de quitter la page, sinon les
+  // fiches de l'un restent lisibles pour l'autre.
+  const handleLogout = async (e: any) => { e.stopPropagation(); await effacerSnapshots(user?.id ?? null); await supabase.auth.signOut(); window.location.href = "/"; };
 
   if (!user) return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'var(--bg)'}}>
     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--a)', borderRadius: '50%' }} />
@@ -216,6 +221,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </header>
         
         <div className="content-area">
+          <HorsLigne uid={user?.id ?? null} />
           {children}
         </div>
       </main>

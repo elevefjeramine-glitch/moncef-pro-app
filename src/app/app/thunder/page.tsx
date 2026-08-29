@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Bell, BookOpen, Bot, Check, Copy, Globe, Layers, Link2, ListChecks, Plus, Send, ShieldAlert, Trash2, Zap } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Bot, Check, Copy, FileUp, Globe, Layers, Link2, ListChecks, Mic, MicOff, Plus, Send, ShieldAlert, Trash2, Volume2, VolumeX, Zap } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
 import { useLanguage, t } from "@/utils/i18n";
 import { supabase } from "@/utils/supabase/client";
+import { ErreurExtraction, extraire, versSources, type Resultat } from "@/lib/extraire";
+import { choisirVoix, dicteeDisponible, etatDe, lire, syntheseDisponible, type Lecture } from "@/lib/voix";
+import { envoyerSnapshot, snapshotFiches } from "@/lib/hors-ligne";
 
 /**
  * Thunder — l'écran. Toute la logique de vérité (recherche lexicale, citations
@@ -95,6 +98,21 @@ export default function ThunderPage() {
   useEffect(() => {
     chargerSources().catch(() => {});
   }, [chargerSources]);
+
+  // Ce que l'élève pourra relire sans réseau. La liste vient du serveur, le tri et la
+  // limite (20, 7 jours) sont décidés dans src/lib/hors-ligne.ts — donc testés.
+  useEffect(() => {
+    let annule = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const uid = data.session?.user.id;
+      if (!uid || annule) return;
+      envoyerSnapshot(uid, "fiches", snapshotFiches(sources as any));
+    })().catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [sources]);
 
   const ajouter = async () => {
     setMajSources(true);
@@ -249,6 +267,176 @@ export default function ThunderPage() {
       setLiens({ recherche: d.liens?.recherche, avertissement: d.avertissement });
       setAvertissements([]);
     }
+  };
+
+  // ── Voix, dictée, import de document ──────────────────────────────────────
+  // Trois choses qui viennent du NAVIGATEUR, pas du serveur. Chacune a donc un état
+  // lisible et un message quand l'appareil ne peut pas : griser un bouton et l'expliquer
+  // vaut mieux qu'un bouton qui ne fait rien.
+  const [voix, setVoix] = useState<{ enCours: boolean; note: string | null }>({ enCours: false, note: null });
+  const lecture = useRef<Lecture | null>(null);
+  const [dispoVoix, setDispoVoix] = useState<boolean | null>(null);
+  const [dictee, setDictee] = useState<{ active: boolean; supporte: boolean }>({ active: false, supporte: false });
+  const reconnaissance = useRef<any>(null);
+  const [depot, setDepot] = useState<{ enCours: boolean; etape: string; rapport: Resultat | null; erreur: string | null; sources: number }>({
+    enCours: false,
+    etape: "",
+    rapport: null,
+    erreur: null,
+    sources: 0,
+  });
+  const [glisse, setGlisse] = useState(false);
+
+  useEffect(() => {
+    // `getVoices()` est vide au premier appel sur Chrome : les voix arrivent sur
+    // `voiceschanged`. Sans cette écoute, le bouton resterait grisé pour tout le monde.
+    const synth = typeof window !== "undefined" ? (window as any).speechSynthesis : undefined;
+    const evaluable = () => setDispoVoix(syntheseDisponible(synth) && (synth?.getVoices?.() ?? []).length > 0);
+    evaluable();
+    synth?.addEventListener?.("voiceschanged", evaluable);
+    setDictee((d) => ({ ...d, supporte: dicteeSupportee() }));
+    return () => {
+      try {
+        synth?.removeEventListener?.("voiceschanged", evaluable);
+      } catch {
+        /* un moteur qui n'écoute pas le retrait n'est pas un problème de l'élève */
+      }
+    };
+  }, []);
+
+  function dicteeSupportee() {
+    try {
+      return dicteeDisponible(navigator.userAgent, !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
+    } catch {
+      return false;
+    }
+  }
+
+  // Un onglet qui passe au second plan ne doit pas continuer à parler : c'est la règle
+  // qu'un élève attend dans un dortoir ou un bus.
+  useEffect(() => {
+    const auCache = () => {
+      if (document.visibilityState === "hidden") {
+        lecture.current?.annuler();
+        lecture.current = null;
+        setVoix((v) => ({ ...v, enCours: false }));
+        if (reconnaissance.current) {
+          try {
+            reconnaissance.current.stop();
+          } catch {
+            /* déjà arrêté */
+          }
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", auCache);
+    return () => document.removeEventListener("visibilitychange", auCache);
+  }, []);
+
+  const ecouterReponse = () => {
+    const synth = typeof window !== "undefined" ? (window as any).speechSynthesis : undefined;
+    if (!reponse) return;
+    if (voix.enCours) {
+      lecture.current?.annuler();
+      lecture.current = null;
+      setVoix({ enCours: false, note: null });
+      return;
+    }
+    if (!syntheseDisponible(synth)) {
+      setVoix({ enCours: false, note: t(lang, "thunder_voix_absente") });
+      return;
+    }
+    const r = lire(reponse, (lang as any) in { fr: 1, en: 1, es: 1, ar: 1, zh: 1 } ? (lang as any) : "fr", synth);
+    if (r.morceaux === 0) {
+      setVoix({ enCours: false, note: t(lang, "thunder_voix_aucune") });
+      return;
+    }
+    lecture.current = r;
+    setVoix({ enCours: true, note: null });
+    // La synthèse ne prévient pas toujours proprement de la fin : on se cale sur le
+    // dernier morceau, plus une seconde, et sur l'état réel de l'objet si available.
+    const fin = Math.min(90_000, r.morceaux * 9_000 + 1_500);
+    window.setTimeout(() => {
+      if (etatDe(synth) !== "en_cours") setVoix((v) => (v.enCours ? { enCours: false, note: null } : v));
+    }, fin);
+  };
+
+  const dicter = () => {
+    const Fabrique = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Fabrique) return;
+    if (reconnaissance.current) {
+      try {
+        reconnaissance.current.stop();
+      } catch {
+        /* déjà arrêté */
+      }
+      reconnaissance.current = null;
+      setDictee((d) => ({ ...d, active: false }));
+      return;
+    }
+    const r = new Fabrique();
+    r.lang = lang === "fr" ? "fr-FR" : lang === "ar" ? "ar-MA" : lang === "es" ? "es-ES" : lang === "zh" ? "zh-CN" : "en-GB";
+    r.interimResults = true;
+    r.continuous = false;
+    const depart = question.length ? question.replace(/\s$/, "") + " " : "";
+    r.onresult = (ev: any) => {
+      let dicte = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) dicte += ev.results[i][0].transcript;
+      setQuestion(depart + dicte.trim());
+    };
+    r.onerror = () => setDictee((d) => ({ ...d, active: false }));
+    r.onend = () => setDictee((d) => ({ ...d, active: false }));
+    reconnaissance.current = r;
+    setDictee((d) => ({ ...d, active: true }));
+    try {
+      r.start();
+    } catch {
+      setDictee((d) => ({ ...d, active: false }));
+    }
+  };
+
+  /** Glisser un PDF/DOCX/TXT : le fichier est LU ICI, seul son texte part, tranche par
+   *  tranche, par le même `mode:"sources"` que le collage. Aucun octet brut ne va au
+   *  serveur — c'est ce qui rend l'opération possible sous la limite de 6 Mo d'une
+   *  fonction Netlify, et ce qui fait qu'aucun document n'est stocké ailleurs que comme
+   *  texte de source, pour ce compte uniquement. */
+  const importerFichiers = async (fichiers: FileList | File[]) => {
+    const liste = Array.from(fichiers);
+    if (!liste.length) return;
+    setDepot({ enCours: true, etape: t(lang, "thunder_import_lecture"), rapport: null, erreur: null, sources: 0 });
+    const token = await jeton();
+    let totalSources = 0;
+    let avertissements: string[] = [];
+    let dernier: Resultat | null = null;
+    for (const f of liste.slice(0, 5)) {
+      try {
+        const r = await extraire({ name: f.name, type: f.type, size: f.size, arrayBuffer: () => f.arrayBuffer() });
+        dernier = r;
+        avertissements = avertissements.concat(r.avertissements);
+        const sources = versSources(r);
+        for (let i = 0; i < sources.length; i++) {
+          setDepot((etat) => ({ ...etat, etape: `${t(lang, "thunder_import_indexation")} ${i + 1}/${sources.length}` }));
+          await fetch("/api/thunder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ mode: "sources", action: "add", nouveau: { titre: sources[i]!.titre, matiere: "", texte: sources[i]!.texte } }),
+          });
+          totalSources += 1;
+        }
+      } catch (e: unknown) {
+        const message = e instanceof ErreurExtraction ? e.message : e instanceof Error ? e.message : "lecture impossible";
+        setDepot({ enCours: false, etape: "", rapport: null, erreur: message, sources: 0 });
+        return;
+      }
+    }
+    await chargerSources();
+    setDepot({
+      enCours: false,
+      etape: "",
+      rapport: dernier ? { ...dernier, tranche: [], avertissements } : null,
+      erreur: null,
+      sources: totalSources,
+    });
   };
 
   const copier = async () => {
@@ -623,6 +811,47 @@ export default function ThunderPage() {
               </button>
             </div>
           </details>
+          <div
+            className={`th-depot${glisse ? " th-depot--sur" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setGlisse(true);
+            }}
+            onDragLeave={() => setGlisse(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setGlisse(false);
+              if (e.dataTransfer?.files?.length) importerFichiers(e.dataTransfer.files);
+            }}
+          >
+            <label className="th-depot-zone">
+              <FileUp size={16} aria-hidden="true" />
+              <span>{t(lang, "thunder_import_zone")}</span>
+              <input
+                type="file"
+                accept=".pdf,.docx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                multiple
+                onChange={(e) => e.target.files && importerFichiers(e.target.files)}
+              />
+            </label>
+            <p className="th-aide">{t(lang, "thunder_import_aide")}</p>
+            {depot.enCours && (
+              <p className="th-depot-etape" role="status">
+                {depot.etape || "…"}
+              </p>
+            )}
+            {depot.erreur && <p className="th-depot-erreur">{depot.erreur}</p>}
+            {depot.rapport && !depot.erreur && (
+              <p className="th-depot-rapport">
+                {nombre(depot.rapport.pages, lang)} · {t(lang, depot.rapport.support === "pdf" ? "thunder_import_pages" : "thunder_import_sections")}{""}
+                {nombre(depot.sources, lang)} {t(lang, "thunder_import_sources")} ·{" "}
+                {nombre(depot.rapport.caracteres, lang)} {t(lang, "thunder_import_caracteres")}
+                {depot.rapport.avertissements.length > 0 && (
+                  <span className="th-depot-note"> {depot.rapport.avertissements.join(" ")}</span>
+                )}
+              </p>
+            )}
+          </div>
         </aside>
 
         {/* ── Colonne de travail ── */}
@@ -797,6 +1026,13 @@ export default function ThunderPage() {
                   }
                 }}
               />
+              {dictee.supporte ? (
+                <button type="button" className={`th-bouton th-bouton--fantome th-bouton--mini${dictee.active ? " th-bouton--dicte" : ""}`} onClick={dicter} aria-pressed={dictee.active}>
+                  {dictee.active ? <MicOff size={13} /> : <Mic size={13} />} {dictee.active ? t(lang, "thunder_dictee_stop") : t(lang, "thunder_dictee")}
+                </button>
+              ) : (
+                <p className="th-aide">{t(lang, "thunder_dictee_absente")}</p>
+              )}
             </div>
 
             <div className="th-envoi">
@@ -860,7 +1096,18 @@ export default function ThunderPage() {
                 <button type="button" className="th-bouton th-bouton--fantome th-bouton--mini th-pousser" onClick={copier}>
                   {copie === "ok" ? <Check size={13} /> : <Copy size={13} />} {copie === "ok" ? t(lang, "thunder_copie") : t(lang, "thunder_copier")}
                 </button>
+                <button
+                  type="button"
+                  className={`th-bouton th-bouton--fantome th-bouton--mini${voix.enCours ? " th-bouton--parle" : ""}`}
+                  onClick={ecouterReponse}
+                  disabled={dispoVoix === false && !voix.enCours}
+                  aria-pressed={voix.enCours}
+                  title={dispoVoix === false ? t(lang, "thunder_voix_aucune") : t(lang, "thunder_voix")}
+                >
+                  {voix.enCours ? <VolumeX size={13} /> : <Volume2 size={13} />} {voix.enCours ? t(lang, "thunder_voix_stop") : t(lang, "thunder_voix")}
+                </button>
               </div>
+              {voix.note && <p className="th-aide th-voix-note">{voix.note}</p>}
               <div className="th-corps-reponse">
                 <div className="ai-markdown" dangerouslySetInnerHTML={{ __html: markdown(reponse) }} />
               </div>
