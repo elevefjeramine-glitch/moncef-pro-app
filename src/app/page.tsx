@@ -11,17 +11,16 @@ import { useRouter } from "next/navigation";
 import { hasOAuthError, authUrlWithError } from "@/utils/oauth-errors";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AnimatePresence } from "framer-motion";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import dynamic from "next/dynamic";
+import TiltCard from "@/components/TiltCard";
 
-const TiltCard = dynamic(() => import("@/components/TiltCard"), { ssr: false, loading: () => <Skeleton className="w-[320px] h-[300px] rounded-2xl" /> });
-const InitialLangSelector = dynamic(() => import("@/components/InitialLangSelector"), { ssr: false });
-const LanguageSwitcher = dynamic(() => import("@/components/LanguageSwitcher"), { ssr: false });
+// TiltCard n''utilise ni window ni IntersectionObserver (relu dans src/components/TiltCard.tsx) :
+// il peut donc être rendu au serveur. Avant ça, la grille de fonctionnalités n''existait que des
+// Skeleton en HTML (6 « w-[320px] h-[300px] » mesurés dans le HTML de service) — si le chunk JS
+// ne s''exécute pas, le visiteur reste devant une zone vide. Composant importé statiquement :
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+const InitialLangSelector = dynamic(() => import("@/components/InitialLangSelector"), { ssr: false, loading: () => <span className="landing-lang-slot" aria-hidden /> });
+const LanguageSwitcher = dynamic(() => import("@/components/LanguageSwitcher"), { ssr: false, loading: () => <span className="landing-lang-slot" aria-hidden /> });
 
 /* ─── Variants Framer Motion ─── */
 // Les deux sections basses de la vitrine (rôles, pile technique) et le pied de page étaient écrits en dur en français, alors que la grille de fonctionnalités, elle, était déjà déclinée en cinq langues. Même régime que les pages publiques : dictionnaire local, repli sur le français si la langue manque.
@@ -39,6 +38,11 @@ type VitrineRole = VitrineTexte & { badge: string };
 const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
   roles_title: string;
   stack_title: string;
+  tiers_kicker: string;
+  tiers_title: string;
+  tiers_lede: string;
+  note_grades: string;
+  note_infra: string;
   roles: [VitrineRole, VitrineRole, VitrineRole];
   stack: [VitrineTexte, VitrineTexte, VitrineTexte, VitrineTexte];
   tagline: string;
@@ -82,6 +86,11 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
         "desc": "Architecture moderne avec rendu hybride pour des performances maximales. Animations fluides et transitions d'état animées par Framer Motion à 60 images par seconde pour une expérience utilisateur premium."
       }
     ],
+    "tiers_kicker": "Écosystème & Grades",
+    "tiers_title": "Niveaux de grade & infrastructure",
+    "tiers_lede": "Deux colonnes, une règle : ce qui est écrit ici correspond à du code qui tourne. Ni promesse, ni chiffre décoratif.",
+    "note_grades": "Le plancher de 700 crédits s'applique au premier appel de chaque journée UTC ; un modérateur peut recharger avant, jamais l'inverse.",
+    "note_infra": "Mesures du 28 août 2026 : en-tête server: Netlify, latences de la sonde /api/health, réponses relues sur les routes d'import.",
     "tagline": "Propulsé par les dernières avancées en Intelligence Artificielle pour une éducation sans frontière.",
     "links": [
       "Confidentialité",
@@ -128,6 +137,11 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
         "desc": "Modern architecture with hybrid rendering for maximum performance. Smooth animations and state transitions driven by Framer Motion at 60 frames per second."
       }
     ],
+    "tiers_kicker": "Ecosystem & grades",
+    "tiers_title": "Grade levels & infrastructure",
+    "tiers_lede": "Two columns, one rule: what is written here matches code that runs. No promises, no decorative numbers.",
+    "note_grades": "The 700-credit floor applies on the first call of each UTC day; a moderator can top up earlier, never the other way round.",
+    "note_infra": "Measured on 2026-08-28: server: Netlify header, /api/health probe latencies, replies read back from the import routes.",
     "tagline": "Built on current AI models so that schooling need not stop at a border.",
     "links": [
       "Privacy",
@@ -174,6 +188,11 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
         "desc": "Arquitectura moderna con renderizado híbrido para máximo rendimiento. Animaciones y transiciones de estado movidas por Framer Motion a 60 fotogramas por segundo."
       }
     ],
+    "tiers_kicker": "Ecosistema y grados",
+    "tiers_title": "Niveles de grado e infraestructura",
+    "tiers_lede": "Dos columnas, una regla: lo escrito aquí corresponde a código que se ejecuta. Ni promesas ni cifras decorativas.",
+    "note_grades": "El mínimo de 700 créditos se aplica con la primera llamada de cada día UTC; un moderador puede recargar antes, nunca al revés.",
+    "note_infra": "Medido el 28/08/2026: cabecera server: Netlify, latencias de la sonda /api/health y respuestas leídas en las rutas de importación.",
     "tagline": "Impulsado por los modelos actuales para que estudiar no dependa de una frontera.",
     "links": [
       "Privacidad",
@@ -220,6 +239,11 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
         "desc": "بنية حديثة بتحويل هجين لأداء أقصى، وحركات وانتقالات الحالة يحرّكها Framer Motion بستّين صورة في الثانية."
       }
     ],
+    "tiers_kicker": "النظام والرُتب",
+    "tiers_title": "مستويات الرُتب والبنية التحتية",
+    "tiers_lede": "عمودان وقاعدة واحدة: كل ما هو مكتوب هنا يقابل شيفرة تعمل. لا وعود ولا أرقام للزينة.",
+    "note_grades": "حدّ 700 اعتماد يُطبَّق عند أول استدعاء في كل يوم UTC؛ يستطيع المشرف إعادة التعبئة قبل ذلك، لا العكس.",
+    "note_infra": "قياسات 2026-08-28: الترويسة server: Netlify، أزمنة مسبار ‎/api/health، وردود مقروءة من مسارات الاستيراد.",
     "tagline": "مدعوم بنماذج الذكاء الحالية حتى لا يتوقّف التعلّم عند حدّ جغرافي.",
     "links": [
       "الخصوصية",
@@ -266,6 +290,11 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
         "desc": "采用混合渲染的现代架构以取得最佳性能；过渡与状态动画由 Framer Motion 驱动，每秒 60 帧。"
       }
     ],
+    "tiers_kicker": "生态与等级",
+    "tiers_title": "等级与基础设施",
+    "tiers_lede": "两栏，一条规则：这里写的都对应正在运行的代码，没有承诺，也没有装饰性数字。",
+    "note_grades": "700 额度的下限在每个 UTC 日首次调用时生效；管理员可以提前充值，反之则不行。",
+    "note_infra": "2026-08-28 实测：server: Netlify 响应头、/api/health 探针延迟，以及从导入接口读回的响应。",
     "tagline": "由当前的 AI 模型驱动，让学习不受地理边界限制。",
     "links": [
       "隐私",
@@ -294,6 +323,65 @@ const letterAnim: any = {
   })
 };
 
+/* Texture « grain » de l'en-tête, en URI de données base64 : rien ne sort du domaine.
+   L'ancienne version appelait grainy-gradients.vercel.app/noise.svg — un hôte tiers chargé
+   sur chaque visite, ce que /privacy ne mentionne pas (« aucun script tiers »). Le SVG fait
+   249 octets, il n'appelle ni police ni image externe ; en base64, aucun guillemet à
+   négocier entre le JS, le CSS et le SVG. */
+const BRUIT = "url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMjAnIGhlaWdodD0nMTIwJz48ZmlsdGVyIGlkPSduJz48ZmVUdXJidWxlbmNlIHR5cGU9J2ZyYWN0YWxOb2lzZScgYmFzZUZyZXF1ZW5jeT0nMC45JyBudW1PY3RhdmVzPSc0JyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9JzEyMCcgaGVpZ2h0PScxMjAnIGZpbHRlcj0ndXJsKCNuKScgb3BhY2l0eT0nMC41Jy8+PC9zdmc+\")";
+
+/* Les six cartes de la grille « Fonctionnalités », dans les cinq langues.
+   Avant ce remaniement, le littéral était recréé à chaque rendu dans une IIFE et
+   lu par `(featuresData as any)[lang] || featuresData.fr` : deux `any` qui
+   laissaient passer une langue absente, un titre manquant ou une puce en trop
+   sans que `tsc` bronche, plus 45 lignes d'objets et de JSX réallouées à chaque
+   frappe de touche. Il est maintenant au niveau module et typé : une langue
+   oubliée est une erreur de compilation, plus une grille silencieusement vide. */
+type Carte = { icon: React.ReactNode; title: string; desc: string; list?: string[]; premium?: boolean };
+
+const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
+  fr: [
+    { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir : une IA à qui tu soumets un cours, un devoir ou un concept dense, et qui répond.", list: ["Conversation libre sur tes cours", "Analyse de la photo d’un énoncé", "10 crédits par réponse"] },
+    { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Ton emploi du temps s'importe en une fois — semaines A/B, jours, matières, horaires — et se retrouve sur tous tes appareils.", list: ["Semaines A/B", "Sync Cloud temps réel", "Aucune alerte envoyée"] },
+    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que la route d'import enregistre.", list: ["Photo de l'énoncé analysée", "priority et status rangés tels quels", "Aucun tri, aucun rappel"] },
+    { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Une messagerie interne pour le travail en groupe : salons, messages privés et pièces jointes, cloisonnés par compte.", list: ["Salons de Travail", "Messages Privés", "Partage de Fichiers"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Statistiques et comptes en direct", "Analytics avancés", "Aucune console IA dans ce panneau"] },
+    { icon: <Star size={28} />, title: "Modération 2.0", desc: "Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA.", list: ["Gestion des Rôles", "Recharge et suppression de comptes", "Accès founder et moderator seulement"] }
+  ],
+  en: [
+    { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge: an AI you hand a course, a piece of work or a dense concept, and that answers.", list: ["Open conversation about your courses", "Analysis of a question photo", "10 credits per answer"] },
+    { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Your timetable is imported in one pass — A/B weeks, days, subjects, time slots — and shows up on all your devices.", list: ["A/B Weeks", "Real-time cloud sync", "No alert is sent"] },
+    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import route stores.", list: ["Question photo analysed", "priority and status stored as given", "No sorting, no reminders"] },
+    { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Internal messaging for group work: rooms, private messages and attachments, separated per account.", list: ["Work Rooms", "Private DMs", "File Sharing"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Live stats and accounts", "Advanced analytics", "No AI console in this panel"] },
+    { icon: <Star size={28} />, title: "Moderation 2.0", desc: "Sophisticated tools to maintain the integrity and security of the Moncef IA community.", list: ["Role Management", "Top-up and account deletion", "founder and moderator access only"] }
+  ],
+  es: [
+    { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento: una IA a la que entregas un curso, un trabajo o un concepto denso, y responde.", list: ["Conversación libre sobre tus cursos", "Análisis de la foto de un enunciado", "10 créditos por respuesta"] },
+    { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Tu horario se importa de una vez — semanas A/B, días, materias y franjas — y aparece en todos tus dispositivos.", list: ["Semanas A/B", "Sincronización en la nube", "No se envía ninguna alerta"] },
+    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de deberes que la ruta de importación guarda.", list: ["Foto del enunciado analizada", "priority y status guardados tal cual", "Sin orden ni recordatorios"] },
+    { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Mensajería interna para trabajar en grupo: salas, mensajes privados y adjuntos, separados por cuenta.", list: ["Salas de Trabajo", "Mensajes Privados", "Compartir Archivos"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Estadísticas y cuentas en vivo", "Analítica avanzada", "Ninguna consola de IA aquí"] },
+    { icon: <Star size={28} />, title: "Moderación 2.0", desc: "Herramientas sofisticadas para mantener la integridad y seguridad de la comunidad Moncef IA.", list: ["Gestión de Roles", "Recarga y borrado de cuentas", "Solo acceso founder y moderator"] }
+  ],
+  ar: [
+    { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك: ذكاء اصطناعي تمنحه درساً أو عملاً أو مفهوماً معقداً فيجيب.", list: ["محادثة حرة حول دروسك", "تحليل صورة نصّ التمرين", "10 اعتمادات لكل ردّ"] },
+    { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "يُستورد جدولك دفعة واحدة — أسابيع أ/ب، الأيام، المواد والتوقيتات — ويظهر على كل أجهزتك.", list: ["أسابيع أ/ب", "مزامنة سحابية فورية", "لا تُرسل أي تنبيهات"] },
+    { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات تحفظها مسار الاستيراد.", list: ["تحليل صورة نصّ التمرين", "priority وstatus يُحفظان كما هما", "بلا ترتيب ولا تذكيرات"] },
+    { icon: <MessageSquare size={28} />, title: "اتصالات كورتيكس", desc: "مراسلة داخلية للعمل الجماعي: غرف ورسائل خاصة ومرفقات، مفصولة لكل حساب.", list: ["غرف عمل", "رسائل خاصة", "مشاركة الملفات"] },
+    { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["إحصاءات وحسابات مباشرة", "تحليلات متقدمة", "لا توجد وحدة تحكم IA هنا"] },
+    { icon: <Star size={28} />, title: "إشراف 2.0", desc: "أدوات متطورة للحفاظ على نزاهة وأمان مجتمع ذكاء منصف.", list: ["إدارة الأدوار", "إعادة تعبئة وحذف الحسابات", "الوصول founder و moderator فقط"] }
+  ],
+  zh: [
+    { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心：把课程、作业或复杂概念交给它，它来回答。", list: ["围绕课程自由对话", "分析题目照片", "每次回答 10 额度"] },
+    { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "课程表一次性导入——A/B 周、星期、科目与时间——并在你的所有设备上同步显示。", list: ["A/B 周", "实时云同步", "不发送任何提醒"] },
+    { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入接口写入。", list: ["题目照片分析", "priority 与 status 原样写入", "不排序、不提醒"] },
+    { icon: <MessageSquare size={28} />, title: "Cortex 通信", desc: "面向课堂协作的内部消息：讨论区、私信与附件，按账户隔离。", list: ["讨论区", "私信", "文件分享"] },
+    { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["实时统计与账户", "高级分析", "此处没有 AI 控制台"] },
+    { icon: <Star size={28} />, title: "审核 2.0", desc: "维护 Moncef IA 社区完整性和安全性的高级工具。", list: ["角色管理", "充值与删除账户", "仅 founder 与 moderator 可访问"] }
+  ]
+};;
+
 export default function Home() {
   const router = useRouter();
 
@@ -311,25 +399,19 @@ export default function Home() {
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [loading, setLoading] = useState(true);
   const heroRef = useRef<any>(null);
-  const featuresRef = useRef<any>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   
   const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
   const heroScale   = useTransform(scrollYProgress, [0, 0.8], [1, 0.95]);
 
-  useEffect(() => {
-    let ctx = gsap.context(() => {
-      gsap.from(".card-gsap", {
-        scrollTrigger: {
-          trigger: ".features-container",
-          start: "top bottom-=100px",        },        stagger: 0.15,        y: 100,
-        opacity: 0,
-        duration: 0.8,
-        ease: "power3.out"
-      });
-    }, featuresRef);
-    return () => ctx.revert();
-  }, []);
+  // GSAP + ScrollTrigger étaient chargés pour une seule animation : `gsap.from(".card-gsap",
+  // { opacity: 0, … })`. Ce qui est en train de disparaître ``from`` : l''état de repos des cartes
+  // devenait invisible, et seule la rencontre du seuil de scroll le corrigeait. Un aperçu dans un
+  // cadre, un conteneur de scroll qui n''est pas la fenêtre, ou le chunk monté après l''effet, et la
+  // grille restait vide à l''écran alors que le HTML, lui, contenait bien les six cartes.
+  // L''entrée en scène est maintenant faite par Framer Motion avec `animate` (déclenché au montage,
+  // pas à l'observation) — voir <FeatureCard>. Le paquet gsap reste dans package.json pour les
+  // autres pages, il n'est plus importé ici.
 
   useEffect(() => {
     const saved = localStorage.getItem("site_lang");
@@ -399,7 +481,7 @@ export default function Home() {
             background: "radial-gradient(circle, var(--a) 0%, transparent 70%)", filter: "blur(100px)"
           }}
         />
-        <div style={{ position: "absolute", inset: 0, opacity: 0.02, backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')", filter: "contrast(150%) brightness(100%)" }} />
+        <div style={{ position: "absolute", inset: 0, opacity: 0.02, backgroundImage: BRUIT }} />
       </div>
 
       {/* ── NAVBAR ── */}
@@ -555,7 +637,7 @@ export default function Home() {
       </motion.section>
 
       {/* ── FEATURES ── */}
-      <section id="features" ref={featuresRef} style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
+      <section id="features" style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
         <div className="landing-section features-container">
           <div style={{ textAlign: "center", marginBottom: 80 }}>
             <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>ULTIMATE TOOLS</span>
@@ -564,190 +646,89 @@ export default function Home() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32, maxWidth: 1300, margin: "0 auto" }}>
-            {(() => {
-              const featuresData = {
-                fr: [
-                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir : une IA à qui tu soumets un cours, un devoir ou un concept dense, et qui répond.", list: ["Conversation libre sur tes cours", "Analyse de la photo d’un énoncé", "10 crédits par réponse"] },
-                  { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Ton emploi du temps s'importe en une fois — semaines A/B, jours, matières, horaires — et se retrouve sur tous tes appareils.", list: ["Semaines A/B", "Sync Cloud temps réel", "Aucune alerte envoyée"] },
-                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que la route d'import enregistre.", list: ["Photo de l'énoncé analysée", "priority et status rangés tels quels", "Aucun tri, aucun rappel"] },
-                  { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Une messagerie interne pour le travail en groupe : salons, messages privés et pièces jointes, cloisonnés par compte.", list: ["Salons de Travail", "Messages Privés", "Partage de Fichiers"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Statistiques et comptes en direct", "Analytics avancés", "Aucune console IA dans ce panneau"] },
-                  { icon: <Star size={28} />, title: "Modération 2.0", desc: "Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA.", list: ["Gestion des Rôles", "Recharge et suppression de comptes", "Accès founder et moderator seulement"] }
-                ],
-                en: [
-                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge: an AI you hand a course, a piece of work or a dense concept, and that answers.", list: ["Open conversation about your courses", "Analysis of a question photo", "10 credits per answer"] },
-                  { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Your timetable is imported in one pass — A/B weeks, days, subjects, time slots — and shows up on all your devices.", list: ["A/B Weeks", "Real-time cloud sync", "No alert is sent"] },
-                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import route stores.", list: ["Question photo analysed", "priority and status stored as given", "No sorting, no reminders"] },
-                  { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Internal messaging for group work: rooms, private messages and attachments, separated per account.", list: ["Work Rooms", "Private DMs", "File Sharing"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Live stats and accounts", "Advanced analytics", "No AI console in this panel"] },
-                  { icon: <Star size={28} />, title: "Moderation 2.0", desc: "Sophisticated tools to maintain the integrity and security of the Moncef IA community.", list: ["Role Management", "Top-up and account deletion", "founder and moderator access only"] }
-                ],
-                es: [
-                  { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento: una IA a la que entregas un curso, un trabajo o un concepto denso, y responde.", list: ["Conversación libre sobre tus cursos", "Análisis de la foto de un enunciado", "10 créditos por respuesta"] },
-                  { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Tu horario se importa de una vez — semanas A/B, días, materias y franjas — y aparece en todos tus dispositivos.", list: ["Semanas A/B", "Sincronización en la nube", "No se envía ninguna alerta"] },
-                  { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de deberes que la ruta de importación guarda.", list: ["Foto del enunciado analizada", "priority y status guardados tal cual", "Sin orden ni recordatorios"] },
-                  { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Mensajería interna para trabajar en grupo: salas, mensajes privados y adjuntos, separados por cuenta.", list: ["Salas de Trabajo", "Mensajes Privados", "Compartir Archivos"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Estadísticas y cuentas en vivo", "Analítica avanzada", "Ninguna consola de IA aquí"] },
-                  { icon: <Star size={28} />, title: "Moderación 2.0", desc: "Herramientas sofisticadas para mantener la integridad y seguridad de la comunidad Moncef IA.", list: ["Gestión de Roles", "Recarga y borrado de cuentas", "Solo acceso founder y moderator"] }
-                ],
-                ar: [
-                  { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك: ذكاء اصطناعي تمنحه درساً أو عملاً أو مفهوماً معقداً فيجيب.", list: ["محادثة حرة حول دروسك", "تحليل صورة نصّ التمرين", "10 اعتمادات لكل ردّ"] },
-                  { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "يُستورد جدولك دفعة واحدة — أسابيع أ/ب، الأيام، المواد والتوقيتات — ويظهر على كل أجهزتك.", list: ["أسابيع أ/ب", "مزامنة سحابية فورية", "لا تُرسل أي تنبيهات"] },
-                  { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات تحفظها مسار الاستيراد.", list: ["تحليل صورة نصّ التمرين", "priority وstatus يُحفظان كما هما", "بلا ترتيب ولا تذكيرات"] },
-                  { icon: <MessageSquare size={28} />, title: "اتصالات كورتيكس", desc: "مراسلة داخلية للعمل الجماعي: غرف ورسائل خاصة ومرفقات، مفصولة لكل حساب.", list: ["غرف عمل", "رسائل خاصة", "مشاركة الملفات"] },
-                  { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["إحصاءات وحسابات مباشرة", "تحليلات متقدمة", "لا توجد وحدة تحكم IA هنا"] },
-                  { icon: <Star size={28} />, title: "إشراف 2.0", desc: "أدوات متطورة للحفاظ على نزاهة وأمان مجتمع ذكاء منصف.", list: ["إدارة الأدوار", "إعادة تعبئة وحذف الحسابات", "الوصول founder و moderator فقط"] }
-                ],
-                zh: [
-                  { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心：把课程、作业或复杂概念交给它，它来回答。", list: ["围绕课程自由对话", "分析题目照片", "每次回答 10 额度"] },
-                  { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "课程表一次性导入——A/B 周、星期、科目与时间——并在你的所有设备上同步显示。", list: ["A/B 周", "实时云同步", "不发送任何提醒"] },
-                  { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入接口写入。", list: ["题目照片分析", "priority 与 status 原样写入", "不排序、不提醒"] },
-                  { icon: <MessageSquare size={28} />, title: "Cortex 通信", desc: "面向课堂协作的内部消息：讨论区、私信与附件，按账户隔离。", list: ["讨论区", "私信", "文件分享"] },
-                  { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["实时统计与账户", "高级分析", "此处没有 AI 控制台"] },
-                  { icon: <Star size={28} />, title: "审核 2.0", desc: "维护 Moncef IA 社区完整性和安全性的高级工具。", list: ["角色管理", "充值与删除账户", "仅 founder 与 moderator 可访问"] }
-                ]
-              };
-              
-              const currentFeatures = (featuresData as any)[lang] || featuresData.fr;
-              
-              return currentFeatures.map((feat: any, idx: number) => (
-                <FeatureCard 
-                  key={idx} 
-                  icon={feat.icon} 
-                  title={feat.title} 
-                  desc={feat.desc} 
-                  list={feat.list} 
-                  premium={feat.premium} 
-                  delay={0.1 + (idx * 0.1)} 
-                />
-              ));
-            })()}
+            {(FEATURES[lang as keyof typeof FEATURES] ?? FEATURES.fr).map((feat, idx) => (
+              <FeatureCard
+                key={feat.title}
+                icon={feat.icon}
+                title={feat.title}
+                desc={feat.desc}
+                list={feat.list}
+                premium={feat.premium}
+                /* Le cumul de flottants écrivait « 0.30000000000000004s » dans le DOM ;
+                   on arrondit au centième de seconde. */
+                delay={Math.round((0.1 + idx * 0.1) * 100) / 100}
+              />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── NIVEAUX DE COMPTE & TECH STACK ── */}
-      <section id="tiers-tech" style={{ padding: "100px 24px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          
-          {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: 70 }}>
+      {/* ── NIVEAUX DE GRADE & INFRASTRUCTURE ── */}
+      {/* Deux colonnes, un seul état possible : visible. L'entrée en scène est une
+          animation CSS (@keyframes rise-in) dont la dernière image est l'état au repos ;
+          elle ne dépend ni d'un IntersectionObserver (whileInView), ni de ScrollTrigger.
+          Le contenu vient du dictionnaire VITRINE, donc les 5 langues ont la même mise en
+          page — et s'il manque une langue, on retombe sur le français, jamais sur du vide. */}
+      <section id="tiers-tech" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
+        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
             <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Écosystème & Grades
+              {v.tiers_kicker}
             </span>
-            <h2 style={{ fontSize: "clamp(32px, 4vw, 52px)", marginTop: 20, fontFamily: "var(--font2)", letterSpacing: "-0.03em" }}>
-              Niveaux de Grade & Infrastructure
+            <h2 style={{ fontSize: "clamp(30px, 4vw, 50px)", marginTop: 18, fontFamily: "var(--font2)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+              {v.tiers_title}
             </h2>
-            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 16, maxWidth: 600, margin: "12px auto 0" }}>
-              Découvrez la hiérarchie des permissions de la communauté Moncef IA et l'infrastructure technologique ultra-sécurisée qui propulse l'application.
+            <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 16, maxWidth: 640, margin: "14px auto 0", lineHeight: 1.6 }}>
+              {v.tiers_lede}
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 40 }}>
-            
-            {/* Column 1: Account Tiers (Grades) */}
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: 36, display: "flex", flexDirection: "column", gap: 24 }}
-            >
-              <h3 style={{ fontSize: 24, fontWeight: 800, fontFamily: "var(--font2)", display: "flex", alignItems: "center", gap: 12 }}>
-                <Crown size={24} style={{ color: "var(--gold)" }} /> Grades & Privilèges
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 24, alignItems: "start" }}>
+
+            {/* — Colonne 1 : les trois grades, en lignes comparables — */}
+            <div className="rise-in vitrine-panel" style={{ animationDelay: "0.06s" }}>
+              <h3 className="vitrine-panel-title">
+                <span className="vitrine-chip" data-tone="gold"><Crown size={16} /></span>
+                {v.roles_title}
               </h3>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {/* Utilisateur Normal */}
-                <div style={{ background: "rgba(255,255,255,0.02)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 18 }}>👤</span>
-                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{v.roles[0].title}</h4>
-                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{v.roles[0].badge}</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>{v.roles[0].desc}</p>
-                </div>
 
-                {/* Modérateur */}
-                <div style={{ background: "rgba(167,139,250,0.03)", padding: 20, borderRadius: 16, border: "1px solid rgba(167,139,250,0.15)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 18 }}>🛡️</span>
-                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#a78bfa" }}>{v.roles[1].title}</h4>
-                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(167,139,250,0.15)", color: "#c084fc", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{v.roles[1].badge}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {v.roles.map((r, i) => (
+                  <div key={r.title} className="grade-row" data-tone={i === 2 ? "gold" : i === 1 ? "violet" : "plain"}>
+                    <div className="grade-row-head">
+                      <span aria-hidden="true" className="grade-glyph">{["👤", "🛡️", "👑"][i]}</span>
+                      <h4 className="grade-name">{r.title}</h4>
+                      <span className="grade-badge">{r.badge}</span>
+                    </div>
+                    <p className="grade-desc">{r.desc}</p>
                   </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>{v.roles[1].desc}</p>
-                </div>
-
-                {/* Fondateur */}
-                <div style={{ background: "rgba(255,215,0,0.03)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,215,0,0.15)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 18 }}>👑</span>
-                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--gold)" }}>{v.roles[2].title}</h4>
-                    <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(255,215,0,0.15)", color: "var(--gold)", padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>{v.roles[2].badge}</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.5 }}>{v.roles[2].desc}</p>
-                </div>
+                ))}
               </div>
-            </motion.div>
 
-            {/* Column 2: Tech Stack (Supabase, Cloudflare, etc.) */}
-            <motion.div 
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: 36, display: "flex", flexDirection: "column", gap: 24 }}
-            >
-              <h3 style={{ fontSize: 24, fontWeight: 800, fontFamily: "var(--font2)", display: "flex", alignItems: "center", gap: 12 }}>
-                <Zap size={24} style={{ color: "var(--a)" }} /> Technologies & Outils
+              <p className="vitrine-footnote">{v.note_grades}</p>
+            </div>
+
+            {/* — Colonne 2 : la pile technique, en carte par brique — */}
+            <div className="rise-in vitrine-panel" style={{ animationDelay: "0.12s" }}>
+              <h3 className="vitrine-panel-title">
+                <span className="vitrine-chip"><Zap size={16} /></span>
+                {v.stack_title}
               </h3>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {/* Supabase */}
-                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(0,210,182,0.05)", border: "1px solid rgba(0,210,182,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--a)", flexShrink: 0 }}>
-                    <Database size={18} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[0].title}</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[0].desc}</p>
-                  </div>
-                </div>
 
-                {/* Cloudflare */}
-                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f97316", flexShrink: 0 }}>
-                    <Globe size={18} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+                {v.stack.map((b, i) => (
+                  <div key={b.title} className="infra-item">
+                    <span className="infra-icon">
+                      {i === 0 ? <Database size={16} /> : i === 1 ? <Globe size={16} /> : i === 2 ? <Bot size={16} /> : <Lock size={16} />}
+                    </span>
+                    <h4 className="infra-name">{b.title}</h4>
+                    <p className="infra-desc">{b.desc}</p>
                   </div>
-                  <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[1].title}</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[1].desc}</p>
-                  </div>
-                </div>
-
-                {/* Multi-LLM Gateway */}
-                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(89,130,255,0.05)", border: "1px solid rgba(89,130,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--p)", flexShrink: 0 }}>
-                    <Bot size={18} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[2].title}</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[2].desc}</p>
-                  </div>
-                </div>
-
-                {/* Next.js & Framer Motion */}
-                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px 0", color: "#fff" }}>{v.stack[3].title}</h4>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>{v.stack[3].desc}</p>
-                  </div>
-                </div>
+                ))}
               </div>
-            </motion.div>
+
+              <p className="vitrine-footnote">{v.note_infra}</p>
+            </div>
 
           </div>
         </div>
@@ -780,9 +761,13 @@ export default function Home() {
   );
 }
 
-function FeatureCard({ icon, title, desc, list, premium = false, delay }: { icon: React.ReactNode, title: string, desc: string, list: string[], premium?: boolean, delay: number }) {
+/* Le `delay` descendait jusqu'à TiltCard qui le détruisait sans jamais s'en servir
+   (l'effet venait de gsap, retiré ici). Il pilote maintenant une animation CSS :
+   les cartes entrent en cascade, et — différence essentielle avec gsap.from — leur
+   état au repos est opacity: 1 ; c'est l'image de départ qui est invisible. */
+function FeatureCard({ icon, title, desc, list = [], premium = false, delay }: { icon: React.ReactNode, title: string, desc: string, list?: string[] | undefined, premium?: boolean | undefined, delay: number }) {
   return (
-    <TiltCard delay={delay} className="card card-gsap" style={{ padding: "48px 32px", position: "relative", overflow: "hidden" }}>
+    <TiltCard className="card card-gsap rise-in-fade" style={{ padding: "48px 32px", position: "relative", overflow: "hidden", animationDelay: `${delay}s` }}>
       {premium && (
         <div style={{
           position: "absolute", top: 12, right: 12, background: "var(--gold)", color: "#000",
