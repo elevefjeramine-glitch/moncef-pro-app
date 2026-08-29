@@ -129,7 +129,7 @@ export async function POST(req: Request) {
         const { data, error } = await admin
           .from("thunder_sources")
           .insert({ user_id: user.id, titre, matiere: matiere || null, texte })
-          .select("id, titre, matiere, length(texte) as longueur")
+          .select("id, titre, matiere, longueur")
           .single();
         if (error) return NextResponse.json({ error: "Enregistrement impossible : " + error.message }, { status: 500 });
         return NextResponse.json({ ajoute: data });
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
       }
       const { data, error } = await admin
         .from("thunder_sources")
-        .select("id, titre, matiere, length(texte) as longueur, created_at")
+        .select("id, titre, matiere, longueur, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -300,7 +300,7 @@ export async function POST(req: Request) {
       const liens = sujets.map((s) => ({ type: "recherche" as const, sujet: s, youtube: lienRechercheYouTube(s), web: lienRechercheWeb(s) }));
       if (!illimité) await admin.from("users").update({ tokens: Math.max(0, solde - cout) }).eq("id", user.id);
       return NextResponse.json({
-        liens,
+        liens: { recherche: liens, verifies: [] },
         avertissement:
           "Ces liens ouvrent une page de recherche, pas une vidéo précise : personne — ni moi ni le modèle — ne peut garantir le contenu d'une URL non vérifiée. Un lien direct n'est ajouté que s'il répond.",
         newTokens: illimité ? solde : Math.max(0, solde - cout),
@@ -308,7 +308,13 @@ export async function POST(req: Request) {
     }
 
     if (sansSource) {
-      // Réponse honnête, pas de consommation IA : on ne débite pas.
+      // Réponse honnête, aucun appel IA : on ne débite pas.
+      // En mode quiz, le texte de refus part dans `error` : la page affiche `error`
+      // en rouge et ne se retrouve pas devant un tableau vide, ce qui ressemblerait
+      // à une panne du générateur plutôt qu'à l'absence de cours.
+      if (mode === "quiz") {
+        return NextResponse.json({ error: sansSource, debite: 0, newTokens: solde }, { status: 400 });
+      }
       return NextResponse.json({ reponse: sansSource, citations: [], passages: 0, debite: 0, newTokens: solde });
     }
 
@@ -494,7 +500,7 @@ export async function GET(req: Request) {
   if (error || !user) return NextResponse.json({ error: "Session invalide." }, { status: 401 });
   const { data, error: err } = await admin
     .from("thunder_sources")
-    .select("id, titre, matiere, length(texte) as longueur, created_at")
+    .select("id, titre, matiere, longueur, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
