@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { useUserStore } from "@/store/useUserStore";
 import { useLanguage } from "@/utils/i18n";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -61,6 +62,14 @@ export function useAIChat(
   refreshData: () => void
 ) {
   const lang = useLanguage();
+  const queryClient = useQueryClient();
+  // Quand l'IA ajoute/modifie des devoirs, le dashboard (/app) ne s'en rendait
+  // pas compte sans rechargement manuel : l'abonnement temps réel ne suffit pas
+  // toujours. On invalide donc explicitement le cache React Query pour que la
+  // page d'accueil refetche à la prochaine visite.
+  const invalidateHomeworks = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["homeworks"] });
+  }, [queryClient]);
   const DAYS = ['d0','d1','d2','d3','d4','d5','d6'].map(k => {
     const map: Record<string,string> = { d0:'Lun', d1:'Mar', d2:'Mer', d3:'Jeu', d4:'Ven', d5:'Sam', d6:'Dim' };
     return map[k] || k;
@@ -68,7 +77,7 @@ export function useAIChat(
 
   const [messages, setMessages] = useState<Message[]>([{
     role: 'assistant',
-    content: '👋 Bonjour ! Je suis **Moncef IA**, votre assistant pédagogique tout-en-un.\n\nVoici ce que je peux faire :\n📚 **Devoirs** — Ajouter, modifier la progression, changer les dates, marquer comme terminé\n🗓️ **Emploi du temps** — Ajouter, supprimer ou déplacer des cours par simple description\n📅 **Événements** — Créer des rappels et événements dans votre calendrier\n📸 **Image EDT** — Analysez une photo de votre emploi du temps\n\nComment puis-je vous aider ?'
+    content: '👋 Bonjour ! Je suis **Moncef IA**, ton assistant pédagogique tout-en-un.\n\nVoici ce que je peux faire :\n📚 **Devoirs** — Ajouter, modifier la progression, changer les dates, marquer comme terminé\n🗓️ **Emploi du temps** — Ajouter, supprimer ou déplacer des cours par simple description\n📅 **Événements** — Créer des rappels et événements dans ton calendrier\n📸 **Image EDT** — Analyse une photo de ton emploi du temps\n\nComment puis-je t\'aider ?'
   }]);
   const [loading, setLoading] = useState(false);
   const [actions, setActions] = useState<ParsedAIActions>({
@@ -214,6 +223,7 @@ Catégories: exam homework meeting trip sport reminder general`;
           ? `✅ ${data.updated} devoir(s) mis à jour ! 📊`
           : `✅ ${data.inserted} devoir(s) ajouté(s) ! 📚`;
         setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+        invalidateHomeworks();
         refreshData();
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: `❌ Erreur : ${data.error}` }]);
@@ -221,7 +231,7 @@ Catégories: exam homework meeting trip sport reminder general`;
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: '❌ Erreur technique.' }]);
     }
-  }, [refreshData]);
+  }, [refreshData, invalidateHomeworks]);
 
   const doEventOp = useCallback(async (entries: any[]) => {
     try {
