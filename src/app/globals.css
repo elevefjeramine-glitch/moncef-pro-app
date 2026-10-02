@@ -201,6 +201,35 @@
   .hero-actions .btn { width: 100%; }
 }
 
+/* Navigation par ancres du header (vitrine) : discrète, masquée sur mobile
+   où le header n'a déjà plus beaucoup de place. */
+.landing-nav-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.landing-nav-link:hover {
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .landing-nav { display: none; }
+}
+
+/* Mouvements réduits : on coupe les animations CSS globales. Les animations
+   Framer Motion infinies (halos du hero) et le curseur custom sont déjà
+   neutralisés côté composant via useReducedMotion / matchMedia. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    8. FEATURE CARDS (.card, .card-gsap)
    ═══════════════════════════════════════════════════════════════ */
