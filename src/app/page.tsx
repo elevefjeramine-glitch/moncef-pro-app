@@ -542,8 +542,8 @@ export default function Home() {
               </Link>
             </>
           ) : (
-             <Link href="/auth" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-              {t(lang, "access_app")} <ArrowRight size={16} />
+             <Link href="/auth?tab=signup" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              {t(lang, "hero_btn_start")} <ArrowRight size={16} />
             </Link>
           )}
         </div>
@@ -846,8 +846,26 @@ export default function Home() {
           elle ne dépend ni d'un IntersectionObserver (whileInView), ni de ScrollTrigger.
           Le contenu vient du dictionnaire VITRINE, donc les 5 langues ont la même mise en
           page — et s'il manque une langue, on retombe sur le français, jamais sur du vide. */}
-      <section id="tiers-tech" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
-        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+      <section id="tiers-tech" className="grades-section" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
+        {/* Ambiance « fondant » : des orbes dérivent et fusionnent derrière le contenu
+            grâce au filtre goo (même langage visuel que le bouton Ajouter de Thunder).
+            Les orbes sont purement décoratifs : le texte reste net, seul le fond fond. */}
+        <svg className="grades-goo-defs" aria-hidden="true" focusable="false">
+          <defs>
+            <filter id="grades-goo-filtre">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="32" result="flou" />
+              <feColorMatrix in="flou" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10" result="goo" />
+              <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+            </filter>
+          </defs>
+        </svg>
+        <div className="grades-ambiance" aria-hidden="true">
+          <span className="grades-blob grades-blob--1" />
+          <span className="grades-blob grades-blob--2" />
+          <span className="grades-blob grades-blob--3" />
+          <span className="grades-blob grades-blob--4" />
+        </div>
+        <div style={{ maxWidth: 1240, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
             <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {v.tiers_kicker}
@@ -869,17 +887,27 @@ export default function Home() {
                 {v.roles_title}
               </h3>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {v.roles.map((r, i) => (
-                  <div key={r.title} className="grade-row" data-tone={i === 2 ? "gold" : i === 1 ? "violet" : "plain"}>
-                    <div className="grade-row-head">
-                      <span aria-hidden="true" className="grade-glyph">{["👤", "🛡️", "👑"][i]}</span>
-                      <h4 className="grade-name">{r.title}</h4>
-                      <span className="grade-badge">{r.badge}</span>
+              {/* Échelle de progression : les grades montent en puissance visuelle
+                  (simple → violet → or), reliés par un rail lumineux. */}
+              <div className="grades-ladder" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <span className="grades-rail" aria-hidden="true" />
+                {v.roles.map((r, i) => {
+                  const tone = i === 2 ? "gold" : i === 1 ? "violet" : "plain";
+                  return (
+                    <div key={r.title} className="grade-card" data-tone={tone}>
+                      <span className="grade-node" aria-hidden="true" />
+                      <div className="grade-top">
+                        <span className="grade-icon" aria-hidden="true">
+                          {i === 0 ? <User size={18} /> : i === 1 ? <ShieldCheck size={18} /> : <Crown size={18} />}
+                        </span>
+                        <span className="grade-level">{"0" + (i + 1)}</span>
+                        <h4 className="grade-name">{r.title}</h4>
+                        <span className="grade-badge">{r.badge}</span>
+                      </div>
+                      <p className="grade-desc">{r.desc}</p>
                     </div>
-                    <p className="grade-desc">{r.desc}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <p className="vitrine-footnote">{v.note_grades}</p>
@@ -892,7 +920,7 @@ export default function Home() {
                 {v.stack_title}
               </h3>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+              <div className="grades-infra" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
                 {v.stack.map((b, i) => (
                   <div key={b.title} className="infra-item">
                     <span className="infra-icon">
