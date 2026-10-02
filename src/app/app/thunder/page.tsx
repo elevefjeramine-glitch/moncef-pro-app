@@ -277,7 +277,6 @@ export default function ThunderPage() {
   };
 
   const retenues = useMemo(() => sources.filter((s) => !exclues.includes(s.id)).map((s) => s.id), [sources, exclues]);
-  const caracteres = useMemo(() => sources.reduce((a, s) => a + Number(s.longueur || 0), 0), [sources]);
   const urlsDemandees = useMemo(() => webUrls.split(/\n|,/).map((x) => x.trim()).filter(Boolean).slice(0, 4), [webUrls]);
   const toutEstRetenu = retenues.length === sources.length;
   // Rien à lire et pas de web demandé : la route répondrait « ce n'est pas dans tes
@@ -791,21 +790,16 @@ export default function ThunderPage() {
           </span>
           <div>
             <h1 className="th-nom">{t(lang, "thunder_title")}</h1>
-            <p className="th-sous-titre">{t(lang, "thunder_subtitle")}</p>
           </div>
         </div>
         <div className="th-compteurs">
-          <div className="th-compteur">
+          <div className="th-compteur th-compteur--vedette">
             <b>{creditsIllimites ? t(lang, "credits_unlimited") : credit === null ? "—" : nombre(credit, lang)}</b>
             <span>{t(lang, "thunder_credits_restants")}</span>
           </div>
           <div className="th-compteur">
             <b>{nombre(sources.length, lang)}</b>
             <span>{t(lang, "thunder_sources")}</span>
-          </div>
-          <div className="th-compteur">
-            <b>{nombre(caracteres, lang)}</b>
-            <span>{t(lang, "thunder_caracteres_indexes")}</span>
           </div>
           <div className="th-compteur">
             <b>{nombre(depense, lang)}</b>
@@ -891,14 +885,32 @@ export default function ThunderPage() {
                 </p>
               </div>
               <div className="th-form-boutons">
-                <button type="button" className="th-bouton" onClick={ajouter} disabled={majSources || form.texte.trim().length < 40}>
-                  <Plus size={14} /> {majSources ? "…" : t(lang, "thunder_s_save")}
-                </button>
+                {/* Bouton « fondant » : des gouttes flottent et débordent autour du bouton
+                    via un filtre goo (metaballs). Le texte du bouton reste net : seules
+                    les gouttes de la couche arrière sont filtrées. */}
+                <span className="th-goo">
+                  <svg className="th-goo-defs" aria-hidden="true" focusable="false">
+                    <defs>
+                      <filter id="th-goo-filtre">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="flou" />
+                        <feColorMatrix in="flou" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10" result="goo" />
+                        <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+                      </filter>
+                    </defs>
+                  </svg>
+                  <span className="th-goo-couche" aria-hidden="true">
+                    <span className="th-goo-goutte th-goo-goutte--1" />
+                    <span className="th-goo-goutte th-goo-goutte--2" />
+                    <span className="th-goo-goutte th-goo-goutte--3" />
+                  </span>
+                  <button type="button" className="th-bouton" onClick={ajouter} disabled={majSources || form.texte.trim().length < 40}>
+                    <Plus size={14} /> {majSources ? "…" : t(lang, "thunder_s_save")}
+                  </button>
+                </span>
                 <button type="button" className="th-bouton th-bouton--second" onClick={() => decouper(0)} disabled={decoupe.enCours || form.texte.trim().length < 400}>
                   <Scissors size={14} /> {decoupe.enCours ? t(lang, "thunder_fiches_attente") : t(lang, "thunder_fiches_lancer")}
                 </button>
               </div>
-              <p className="th-aide">{t(lang, "thunder_fiches_aide")}</p>
               {decoupe.erreur && <p className="th-depot-erreur">{decoupe.erreur}</p>}
               {decoupe.rapport && (
                 <div className="th-fiches">
@@ -951,7 +963,6 @@ export default function ThunderPage() {
                 onChange={(e) => e.target.files && importerFichiers(e.target.files)}
               />
             </label>
-            <p className="th-aide">{t(lang, "thunder_import_aide")}</p>
             {depot.enCours && (
               <p className="th-depot-etape" role="status">
                 {depot.etape || "…"}
@@ -1036,7 +1047,6 @@ export default function ThunderPage() {
                       {planEnCours ? "…" : t(lang, "thunder_plan_calculer")}
                     </button>
                   </div>
-                  <p className="th-depot-note">{t(lang, "thunder_plan_sub")} {t(lang, "thunder_plan_note")}</p>
                   {planErreur && <p className="th-depot-erreur">{planErreur}</p>}
                   {plan && (
                     <>
