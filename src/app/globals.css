@@ -1455,6 +1455,101 @@ a { text-decoration: none; color: inherit; }
   border-radius: 9px;
   letter-spacing: 0.02em;
 }
+
+/* ── bouton « fondant » (gooey) ────────────────────────────────────
+   Des gouttes flottent autour du bouton Ajouter et fusionnent entre elles
+   grâce au filtre SVG « goo » (metaballs). Le bouton lui-même n'est pas
+   filtré : son texte reste net, seules les gouttes débordent. */
+.thunder .th-goo {
+  position: relative;
+  display: inline-flex;
+}
+.thunder .th-goo-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.thunder .th-goo-couche {
+  position: absolute;
+  inset: -18px;
+  filter: url(#th-goo-filtre);
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+.thunder .th-goo-goutte {
+  position: absolute;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #cdb6ff, var(--tv));
+  opacity: 0.55;
+}
+.thunder .th-goo-goutte--1 {
+  width: 26px;
+  height: 26px;
+  left: 6%;
+  top: 30%;
+  animation: th-goo-a 6s ease-in-out infinite;
+}
+.thunder .th-goo-goutte--2 {
+  width: 18px;
+  height: 18px;
+  right: 10%;
+  top: 55%;
+  animation: th-goo-b 7.5s ease-in-out infinite;
+}
+.thunder .th-goo-goutte--3 {
+  width: 12px;
+  height: 12px;
+  left: 45%;
+  top: 70%;
+  animation: th-goo-c 5.2s ease-in-out infinite;
+}
+@keyframes th-goo-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(22px, -16px) scale(0.65); }
+}
+@keyframes th-goo-b {
+  0%, 100% { transform: translate(0, 0) scale(0.8); }
+  50% { transform: translate(-20px, 12px) scale(1.15); }
+}
+@keyframes th-goo-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(14px, 10px) scale(0.7); }
+  66% { transform: translate(-12px, -8px) scale(1.2); }
+}
+/* Bouton désactivé : les gouttes s'estompent, l'effet reste discret. */
+.thunder .th-goo:has(.th-bouton:disabled) .th-goo-couche {
+  opacity: 0.25;
+}
+/* Compteur vedette : les crédits, l'info la plus regardée, ressortent. */
+.thunder .th-compteur--vedette {
+  background: linear-gradient(160deg, rgba(167, 139, 250, 0.16), rgba(167, 139, 250, 0.05));
+  border-color: var(--tv-lien);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.18);
+}
+.thunder .th-compteur--vedette b {
+  font-size: 20px;
+  color: var(--tv-fort);
+}
+/* Hiérarchie visuelle : onglets plus présents, panneau de travail aéré. */
+.thunder .th-modes {
+  gap: 6px;
+  padding: 6px;
+}
+.thunder .th-mode {
+  padding: 10px 18px;
+}
+.thunder .th-mode[aria-selected="true"] {
+  box-shadow: inset 0 0 0 1px var(--tv-lien), 0 6px 18px rgba(124, 58, 237, 0.25);
+}
+.thunder .th-panneau--travail {
+  padding: calc(var(--rythme) * 1.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .thunder .th-goo-couche {
+    display: none;
+  }
+}
 .thunder .th-kbd {
   font: inherit;
   font-size: var(--t-micro);
