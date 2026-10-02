@@ -14,6 +14,11 @@ export default function Cursor() {
 
   useEffect(() => {
     if (!window.matchMedia("(pointer: fine)").matches) return;
+    // Accessibilité : avec « mouvements réduits », on ne masque JAMAIS le curseur
+    // natif — le composant ne rend rien et `body` garde son curseur par défaut.
+    // (Si le JS échoue entièrement, `cursor: none` n'est jamais posé non plus,
+    // car il n'est appliqué que dans cet effet.)
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     setIsMobile(false);
 
     // Smooth ring follow with lerp
