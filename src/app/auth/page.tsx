@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/utils/supabase/client";
 import { oauthErrorMessage } from "@/utils/oauth-errors";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, Phone, MapPin, Building2, Hash, Eye, EyeOff, ChevronRight } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { t } from "@/utils/i18n";
 import FlagIcon from "@/components/FlagIcon";
+import Logo from "@/components/Logo";
 
 const LABEL_STYLE = {
   display: 'block', fontSize: '11px', color: 'rgba(255,255,255,0.5)',
@@ -69,12 +70,12 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
 
   // ── Signup-only fields ─────────────────────────────────────
+  // L'inscription ne demande que le strict minimum : prénom, nom, e-mail,
+  // mot de passe. Ni téléphone ni adresse : le backend ne les stocke pas
+  // (voir la table public.users) et la politique de confidentialité dit
+  // ne pas traiter de coordonnées postales.
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [postal, setPostal] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem('site_lang');
@@ -124,7 +125,7 @@ export default function AuthPage() {
     if (error) { setErrorMsg(`${t(lang, 'auth_forgot_failed')} — ${error.message}`); return; }
     // Le serveur répond pareil que le compte existe ou non (anti-énumération) : on le
     // dit, au lieu de promettre un e-mail qui a pu être refusé par le serveur d'envoi.
-    setSuccessMsg(`${t(lang, 'auth_forgot_sent')} ${cleanEmail}`);
+    setSuccessMsg(`${t(lang, 'auth_forgot_sent')} ${cleanEmail} ${t(lang, 'auth_forgot_sent_2')}`);
   };
 
   const handleAuth = async () => {
@@ -205,14 +206,19 @@ export default function AuthPage() {
   // demande (aucun fournisseur d'configuré) : l'utilisateur restait bloqué sur
   // « Chargement… » ou voyait une erreur opaque.
   const [oauthReady, setOauthReady] = useState<Record<string, boolean>>({});
+  // `oauthChecked` : tant que la vérification n'a pas répondu, on affiche les 4
+  // boutons (état de chargement) ; une fois la réponse connue, les fournisseurs
+  // non activés sur le projet sont MASQUÉS au lieu d'être affichés grisés —
+  // un bouton désactivé qui ne marchera jamais n'a rien à faire à l'écran.
+  const [oauthChecked, setOauthChecked] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${SUPABASE_URL}/auth/v1/settings`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
     })
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then(d => { if (!cancelled) setOauthReady(d?.external || {}); })
-      .catch(() => { if (!cancelled) setOauthReady({}); });
+      .then(d => { if (!cancelled) { setOauthReady(d?.external || {}); setOauthChecked(true); } })
+      .catch(() => { if (!cancelled) { setOauthReady({}); setOauthChecked(true); } });
     return () => { cancelled = true; };
   }, []);
 
@@ -244,9 +250,12 @@ export default function AuthPage() {
       >
         {/* ── Logo ──────────────────────────────────────────── */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+            <Logo size={52} />
+          </div>
           <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
             style={{ fontSize: '32px', color: 'var(--a)', marginBottom: '8px', textShadow: '0 0 20px rgba(0,210,182,0.4)' }}>
-            🎓 Moncef IA
+            Moncef IA
           </motion.h1>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>{t(lang, 'hero_badge')}</p>
         </div>
@@ -331,48 +340,6 @@ export default function AuthPage() {
                   </Field>
                 </div>
 
-                {/* Section : Contact */}
-                <div style={{ ...SECTION_STYLE, marginTop: 4 }}>
-                  <Phone size={12} /> {t(lang, 'auth_phone')}
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{t(lang, 'auth_optional')}</span>
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ position: 'relative' }}>
-                    <Phone size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                    <input className="fi" type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                      placeholder={t(lang, 'auth_ph_phone')}
-                      style={{ height: 44, paddingLeft: 36 }} />
-                  </div>
-                </div>
-
-                {/* Section : Adresse */}
-                <div style={{ ...SECTION_STYLE, marginTop: 4 }}>
-                  <MapPin size={12} /> {t(lang, 'auth_address')}
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{t(lang, 'auth_optional')}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 14 }}>
-                  <div style={{ position: 'relative' }}>
-                    <MapPin size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                    <input className="fi" value={address} onChange={e => setAddress(e.target.value)}
-                      placeholder={t(lang, 'auth_ph_address')}
-                      style={{ height: 44, paddingLeft: 36 }} />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px', gap: 12 }}>
-                    <div style={{ position: 'relative' }}>
-                      <Building2 size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                      <input className="fi" value={city} onChange={e => setCity(e.target.value)}
-                        placeholder={t(lang, 'auth_ph_city')}
-                        style={{ height: 44, paddingLeft: 36 }} />
-                    </div>
-                    <div style={{ position: 'relative' }}>
-                      <Hash size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                      <input className="fi" value={postal} onChange={e => setPostal(e.target.value)}
-                        placeholder={t(lang, 'auth_ph_postal')}
-                        style={{ height: 44, paddingLeft: 36 }} />
-                    </div>
-                  </div>
-                </div>
-
                 <div style={DIVIDER} />
               </>
             )}
@@ -452,11 +419,20 @@ export default function AuthPage() {
             </motion.button>
 
             {/* ── OAuth ──────────────────────────────────────── */}
+            {/* Les fournisseurs non activés sont masqués (voir oauthChecked). */}
             <div className="oauth-grid" style={{ marginTop: 20 }}>
+              {(!oauthChecked || oauthReady.google) && (
               <motion.button whileHover={oauthReady.google ? { y: -2 } : {}} whileTap={oauthReady.google ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('google')} disabled={!oauthReady.google} title={oauthReady.google ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.google ? 1 : 0.4, cursor: oauthReady.google ? 'pointer' : 'not-allowed', filter: oauthReady.google ? 'none' : 'grayscale(1)' }}><IconGoogle /> Google</motion.button>
+              )}
+              {(!oauthChecked || oauthReady.azure) && (
               <motion.button whileHover={oauthReady.azure ? { y: -2 } : {}} whileTap={oauthReady.azure ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('azure')} disabled={!oauthReady.azure} title={oauthReady.azure ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.azure ? 1 : 0.4, cursor: oauthReady.azure ? 'pointer' : 'not-allowed', filter: oauthReady.azure ? 'none' : 'grayscale(1)' }}><IconMicrosoft /> Microsoft</motion.button>
+              )}
+              {(!oauthChecked || oauthReady.apple) && (
               <motion.button whileHover={oauthReady.apple ? { y: -2 } : {}} whileTap={oauthReady.apple ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('apple')} disabled={!oauthReady.apple} title={oauthReady.apple ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.apple ? 1 : 0.4, cursor: oauthReady.apple ? 'pointer' : 'not-allowed', filter: oauthReady.apple ? 'none' : 'grayscale(1)' }}><IconApple /> Apple</motion.button>
+              )}
+              {(!oauthChecked || oauthReady.github) && (
               <motion.button whileHover={oauthReady.github ? { y: -2 } : {}} whileTap={oauthReady.github ? { scale: 0.95 } : {}} className="oauth-btn" onClick={() => handleOAuth('github')} disabled={!oauthReady.github} title={oauthReady.github ? undefined : t(lang, 'auth_oauth_unavailable')} style={{ opacity: oauthReady.github ? 1 : 0.4, cursor: oauthReady.github ? 'pointer' : 'not-allowed', filter: oauthReady.github ? 'none' : 'grayscale(1)' }}><IconGitHub /> GitHub</motion.button>
+              )}
             </div>
 
           </motion.div>
