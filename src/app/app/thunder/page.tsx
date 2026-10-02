@@ -213,6 +213,9 @@ export default function ThunderPage() {
 
   // ── Ce que l'élève veut savoir sans compter lui-même ──────────────────────
   const [credit, setCredit] = useState<number | null>(null);
+  // Un fondateur/modérateur voit « Illimité » dans l'en-tête : Thunder affiche
+  // la même chose au lieu du nombre brut de jetons, pour un affichage cohérent.
+  const [creditsIllimites, setCreditsIllimites] = useState(false);
   const [depense, setDepense] = useState(0);
   const [secondes, setSecondes] = useState(0);
   const [copie, setCopie] = useState<"rien" | "ok" | "refuse">("rien");
@@ -222,6 +225,7 @@ export default function ThunderPage() {
     const { data } = await supabase.rpc("get_me");
     const ligne = Array.isArray(data) ? data[0] : data;
     if (ligne && typeof ligne.tokens === "number") setCredit(ligne.tokens);
+    if (ligne && (ligne.role === "founder" || ligne.role === "moderator")) setCreditsIllimites(true);
   }, []);
 
   useEffect(() => {
@@ -792,7 +796,7 @@ export default function ThunderPage() {
         </div>
         <div className="th-compteurs">
           <div className="th-compteur">
-            <b>{credit === null ? "—" : nombre(credit, lang)}</b>
+            <b>{creditsIllimites ? t(lang, "credits_unlimited") : credit === null ? "—" : nombre(credit, lang)}</b>
             <span>{t(lang, "thunder_credits_restants")}</span>
           </div>
           <div className="th-compteur">
