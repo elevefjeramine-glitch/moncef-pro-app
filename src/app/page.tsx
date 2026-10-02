@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { Bot, CalendarDays, ClipboardList, MessageSquare, ShieldCheck, Star, ArrowRight, Zap, Lock, Globe, Check, X, Crown, Shield, Database } from "lucide-react";
+import { Bot, CalendarDays, Camera, ClipboardList, MessageSquare, ShieldCheck, Star, ArrowRight, Zap, Lock, Globe, Check, X, Crown, Shield, Database, User } from "lucide-react";
 import { t } from "@/utils/i18n";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useUserStore } from "@/store/useUserStore";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import TiltCard from "@/components/TiltCard";
+import Logo from "@/components/Logo";
 
 // TiltCard n''utilise ni window ni IntersectionObserver (relu dans src/components/TiltCard.tsx) :
 // il peut donc être rendu au serveur. Avant ça, la grille de fonctionnalités n''existait que des
@@ -71,19 +72,19 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
     "stack": [
       {
         "title": "Supabase (PostgreSQL & Realtime)",
-        "desc": "Base de données PostgreSQL protégée par des politiques de niveau de ligne (RLS) : chaque compte ne lit que ses propres lignes. Pas de chiffrement de bout en bout pour autant — le contenu reste lisible par l'opérateur du service, comme l'écrit la politique de confidentialité. Abonnements WebSocket Postgres pour synchroniser calendriers et messages en temps réel."
+        "desc": "Tes données sont stockées dans une base PostgreSQL où chaque compte ne voit que ses propres lignes. Ce n'est pas du chiffrement de bout en bout : l'opérateur du service peut techniquement les lire, comme l'explique la politique de confidentialité. Tes calendriers et messages se synchronisent en temps réel."
       },
       {
         "title": "Netlify — hébergement et CDN",
-        "desc": "Le site est servi et distribué par Netlify (en-tête `server: Netlify`, mesuré le 28 août 2026), avec HTTPS/TLS sur chaque route et les variables d'environnement conservées côté serveur. Aucune couche Cloudflare n'est en place sur ce domaine : la protection anti-DDoS et le WAF sont ceux de Netlify, pas les nôtres."
+        "desc": "Le site est hébergé et distribué par Netlify, avec HTTPS sur chaque page et les secrets conservés côté serveur. La protection anti-DDoS et le pare-feu sont ceux de Netlify."
       },
       {
         "title": "Deux fournisseurs, un secours",
-        "desc": "Le serveur appelle `gemini-3.6-flash` (Google AI) et bascule sur `openai/gpt-oss-20b` via Groq si le premier ne répond pas. Aucun autre modèle n'est branché : Claude 3.5 Sonnet, Gemini 2.5 Flash et Llama 3.3, cités ici auparavant, n'ont jamais été appelés par le code."
+        "desc": "Le serveur interroge un premier modèle d'IA et bascule automatiquement sur un second si le premier ne répond pas. Rien d'autre n'est branché."
       },
       {
         "title": "Next.js (App Router) & Framer Motion",
-        "desc": "Architecture moderne avec rendu hybride pour des performances maximales. Animations fluides et transitions d'état animées par Framer Motion à 60 images par seconde pour une expérience utilisateur premium."
+        "desc": "Un site rapide au rendu moderne, avec des animations fluides pour une expérience agréable."
       }
     ],
     "tiers_kicker": "Écosystème & Grades",
@@ -122,19 +123,19 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
     "stack": [
       {
         "title": "Supabase (PostgreSQL & Realtime)",
-        "desc": "PostgreSQL database guarded by row-level security (RLS): each account reads only its own rows. That is not end-to-end encryption — the service operator can still read the content, as the privacy policy says. Postgres WebSocket subscriptions sync timetables and messages in real time."
+        "desc": "Your data lives in a PostgreSQL database where each account only sees its own rows. This is not end-to-end encryption: the service operator can technically read it, as the privacy policy explains. Your calendars and messages sync in real time."
       },
       {
         "title": "Netlify — hosting and CDN",
-        "desc": "The site is served and distributed by Netlify (`server: Netlify` header, measured 2026-08-28), with HTTPS/TLS on every route and environment variables kept server-side. There is no Cloudflare layer on this domain: the anti-DDoS and WAF protection is Netlify's, not ours."
+        "desc": "The site is hosted and distributed by Netlify, with HTTPS on every page and secrets kept server-side. Anti-DDoS and firewall protection are Netlify's."
       },
       {
         "title": "Two providers, one fallback",
-        "desc": "The server calls `gemini-3.6-flash` (Google AI) and falls back to `openai/gpt-oss-20b` via Groq when the first one fails to answer. No other model is wired: Claude 3.5 Sonnet, Gemini 2.5 Flash and Llama 3.3, listed here before, were never called by the code."
+        "desc": "The server queries a first AI model and automatically falls back to a second one if the first doesn't answer. Nothing else is wired up."
       },
       {
         "title": "Next.js (App Router) & Framer Motion",
-        "desc": "Modern architecture with hybrid rendering for maximum performance. Smooth animations and state transitions driven by Framer Motion at 60 frames per second."
+        "desc": "A fast site with modern rendering and smooth animations for a pleasant experience."
       }
     ],
     "tiers_kicker": "Ecosystem & grades",
@@ -173,19 +174,19 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
     "stack": [
       {
         "title": "Supabase (PostgreSQL y Realtime)",
-        "desc": "Base de datos PostgreSQL protegida por políticas de nivel de fila (RLS): cada cuenta sólo lee sus propias filas. Eso no es cifrado de extremo a extremo — quien opera el servicio puede leer el contenido, como dice la política de privacidad. Suscripciones WebSocket de Postgres para sincronizar horarios y mensajes en tiempo real."
+        "desc": "Tus datos se guardan en una base PostgreSQL donde cada cuenta solo ve sus propias filas. No es cifrado de extremo a extremo: el operador del servicio puede leerlos técnicamente, como explica la política de privacidad. Tus calendarios y mensajes se sincronizan en tiempo real."
       },
       {
         "title": "Netlify — alojamiento y CDN",
-        "desc": "El sitio lo sirve y distribuye Netlify (cabecera `server: Netlify`, medida el 28/08/2026), con HTTPS/TLS en cada ruta y variables de entorno en el servidor. No hay capa de Cloudflare en este dominio: la protección anti-DDoS y el WAF son los de Netlify, no los nuestros."
+        "desc": "El sitio está alojado y distribuido por Netlify, con HTTPS en cada página y los secretos guardados en el servidor. La protección anti-DDoS y el cortafuegos son los de Netlify."
       },
       {
         "title": "Dos proveedores, un respaldo",
-        "desc": "El servidor llama a `gemini-3.6-flash` (Google AI) y cambia a `openai/gpt-oss-20b` vía Groq si el primero no responde. Ningún otro modelo está conectado: Claude 3.5 Sonnet, Gemini 2.5 Flash y Llama 3.3, citados aquí antes, nunca fueron llamados por el código."
+        "desc": "El servidor consulta un primer modelo de IA y cambia automáticamente a un segundo si el primero no responde. Nada más está conectado."
       },
       {
         "title": "Next.js (App Router) y Framer Motion",
-        "desc": "Arquitectura moderna con renderizado híbrido para máximo rendimiento. Animaciones y transiciones de estado movidas por Framer Motion a 60 fotogramas por segundo."
+        "desc": "Un sitio rápido de renderizado moderno, con animaciones fluidas para una experiencia agradable."
       }
     ],
     "tiers_kicker": "Ecosistema y grados",
@@ -224,19 +225,19 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
     "stack": [
       {
         "title": "Supabase (PostgreSQL و Realtime)",
-        "desc": "قاعدة بيانات PostgreSQL محمية بسياسات مستوى الصف (RLS): كل حساب لا يقرأ إلا صفوفه. هذا ليس تشفيراً من الطرف إلى الطرف — ما زال مشغّل الخدمة يستطيع قراءة المحتوى، كما تقول سياسة الخصوصية. اشتراكات WebSocket لمزامنة الجداول والرسائل فوراً."
+        "desc": "تُخزَّن بياناتك في قاعدة PostgreSQL حيث لا يرى كل حساب إلا صفوفه الخاصة. هذا ليس تشفيراً من الطرف إلى الطرف: يمكن لمشغّل الخدمة قراءتها تقنياً، كما توضح سياسة الخصوصية. تتزامن جداولك ورسائلك في الوقت الفعلي."
       },
       {
         "title": "Netlify — الاستضافة وشبكة التوصيل",
-        "desc": "الموقع يقدّمه ويوزّعه Netlify (الترويسة `server: Netlify`، مقيسة في 2026-08-28)، مع HTTPS/TLS على كل مسار ومتغيّرات البيئة محفوظة في الخادم. لا توجد طبقة Cloudflare على هذا النطاق: حماية DDoS وجدار WAF هما الخاصان بـ Netlify."
+        "desc": "الموقع مستضاف وموزّع عبر Netlify، مع HTTPS في كل صفحة والأسرار محفوظة في الخادم. حماية DDoS وجدار الحماية هما الخاصان بـ Netlify."
       },
       {
         "title": "مزوّدان وملاذ واحد",
-        "desc": "الخادم يستدعي `gemini-3.6-flash` (Google AI) ويتحوّل إلى `openai/gpt-oss-20b` عبر Groq إذا لم يجب الأول. لا يوجد نموذج آخر موصول: Claude 3.5 Sonnet وGemini 2.5 Flash وLlama 3.3 التي ذُكرت هنا سابقاً لم يستدعها الكود أبداً."
+        "desc": "يستعلم الخادم نموذج ذكاء اصطناعي أول، ويتحوّل تلقائياً إلى نموذج ثانٍ إذا لم يجب الأول. لا شيء آخر موصول."
       },
       {
         "title": "Next.js (App Router) و Framer Motion",
-        "desc": "بنية حديثة بتحويل هجين لأداء أقصى، وحركات وانتقالات الحالة يحرّكها Framer Motion بستّين صورة في الثانية."
+        "desc": "موقع سريع بعرض حديث، وحركات سلسة لتجربة ممتعة."
       }
     ],
     "tiers_kicker": "النظام والرُتب",
@@ -275,19 +276,19 @@ const VITRINE: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', {
     "stack": [
       {
         "title": "Supabase（PostgreSQL 与 Realtime）",
-        "desc": "PostgreSQL 数据库由行级安全策略（RLS）保护：每个账户只能读取自己的数据行。这不是端到端加密——服务运营方仍可读取内容，隐私政策已写明。Postgres 的 WebSocket 订阅用于实时同步课表与消息。"
+        "desc": "你的数据存储在 PostgreSQL 数据库中，每个账户只能看到自己的数据行。这不是端到端加密：服务运营方在技术上可以读取，如隐私政策所述。你的日历和消息实时同步。"
       },
       {
         "title": "Netlify — 托管与 CDN",
-        "desc": "站点由 Netlify 提供并分发（响应头 `server: Netlify`，2026-08-28 实测），每条路由都走 HTTPS/TLS，环境变量保存在服务端。此域名没有 Cloudflare 层：DDoS 防护与 WAF 属于 Netlify，而不是我们。"
+        "desc": "本站由 Netlify 托管与分发，每页均为 HTTPS，密钥保存在服务端。DDoS 防护与防火墙均属 Netlify。"
       },
       {
         "title": "两个供应商，一个备援",
-        "desc": "服务器调用 `gemini-3.6-flash`（Google AI），若其未响应则改用 Groq 上的 `openai/gpt-oss-20b`。没有接入其他模型：此前写在这里的 Claude 3.5 Sonnet、Gemini 2.5 Flash 与 Llama 3.3 从未被代码调用。"
+        "desc": "服务器先调用第一个 AI 模型，若其无响应则自动切换到第二个。没有接入其他模型。"
       },
       {
         "title": "Next.js（App Router）与 Framer Motion",
-        "desc": "采用混合渲染的现代架构以取得最佳性能；过渡与状态动画由 Framer Motion 驱动，每秒 60 帧。"
+        "desc": "现代渲染的快速网站，动画流畅，体验愉悦。"
       }
     ],
     "tiers_kicker": "生态与等级",
@@ -342,10 +343,10 @@ type Carte = { icon: React.ReactNode; title: string; desc: string; list?: string
 
 const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
   fr: [
-    { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de votre savoir : une IA à qui tu soumets un cours, un devoir ou un concept dense, et qui répond.", list: ["Conversation libre sur tes cours", "Analyse de la photo d’un énoncé", "10 crédits par réponse"] },
+    { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "L'épicentre de ton savoir : une IA à qui tu soumets un cours, un devoir ou un concept dense, et qui répond.", list: ["Conversation libre sur tes cours", "Analyse de la photo d’un énoncé", "10 crédits par réponse"] },
         { icon: <Zap size={28} />, title: "Thunder", desc: "Tes fiches d’abord, rien d’autre : il répond à partir du texte que tu lui as donné, et chaque phrase porte la référence du passage cité. Hors de tes documents, il le dit au lieu de meubler.", list: ["Question 10 crédits, QCM 15, liens 5", "Chaque [S1] renvoie à ton texte, pas à un souvenir du modèle", "Peut lire une page du web quand tu le demandes (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "Flux Temporel IA", desc: "Ton emploi du temps s'importe en une fois — semaines A/B, jours, matières, horaires — et se retrouve sur tous tes appareils.", list: ["Semaines A/B", "Sync Cloud temps réel", "Aucune alerte envoyée"] },
-    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que la route d'import enregistre.", list: ["Photo de l'énoncé analysée", "priority et status rangés tels quels", "Aucun tri, aucun rappel"] },
+    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "L'assistant lit la photo d'un énoncé et en tire une liste de devoirs, que l'import enregistre dans ton compte.", list: ["Photo de l'énoncé analysée", "Tes priorités et statuts sont gardés tels quels", "Aucun tri, aucun rappel"] },
     { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Une messagerie interne pour le travail en groupe : salons, messages privés et pièces jointes, cloisonnés par compte.", list: ["Salons de Travail", "Messages Privés", "Partage de Fichiers"] },
     { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "L'interface d'administration ultime. Un contrôle total sur l'écosystème avec des analyses en temps réel.", premium: true, list: ["Statistiques et comptes en direct", "Analytics avancés", "Un assistant IA qui exécute et relit la base"] },
     { icon: <Star size={28} />, title: "Modération 2.0", desc: "Des outils sophistiqués pour maintenir l'intégrité et la sécurité de la communauté Moncef IA.", list: ["Gestion des Rôles", "Recharge et suppression de comptes", "Accès founder et moderator seulement"] }
@@ -354,7 +355,7 @@ const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
     { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "The epicenter of your knowledge: an AI you hand a course, a piece of work or a dense concept, and that answers.", list: ["Open conversation about your courses", "Analysis of a question photo", "10 credits per answer"] },
         { icon: <Zap size={28} />, title: "Thunder", desc: "Your notes first, nothing else: it answers from the text you handed it, and every sentence carries the reference of the passage it came from. Outside your documents it says so instead of padding.", list: ["Question 10 credits, quiz 15, links 5", "Every [S1] points back at your text, not at the model’s memory", "Can read a web page when you ask (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "AI Time Flow", desc: "Your timetable is imported in one pass — A/B weeks, days, subjects, time slots — and shows up on all your devices.", list: ["A/B Weeks", "Real-time cloud sync", "No alert is sent"] },
-    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import route stores.", list: ["Question photo analysed", "priority and status stored as given", "No sorting, no reminders"] },
+    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "The assistant reads a photo of a question sheet and turns it into a homework list, which the import saves to your account.", list: ["Question photo analysed", "Your priorities and statuses are kept as they are", "No sorting, no reminders"] },
     { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Internal messaging for group work: rooms, private messages and attachments, separated per account.", list: ["Work Rooms", "Private DMs", "File Sharing"] },
     { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "The ultimate administration interface. Total control over the ecosystem with real-time analytics.", premium: true, list: ["Live stats and accounts", "Advanced analytics", "An AI assistant that acts and re-reads the database"] },
     { icon: <Star size={28} />, title: "Moderation 2.0", desc: "Sophisticated tools to maintain the integrity and security of the Moncef IA community.", list: ["Role Management", "Top-up and account deletion", "founder and moderator access only"] }
@@ -363,7 +364,7 @@ const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
     { icon: <Bot size={28} />, title: "Moncef Intelligence", desc: "El epicentro de tu conocimiento: una IA a la que entregas un curso, un trabajo o un concepto denso, y responde.", list: ["Conversación libre sobre tus cursos", "Análisis de la foto de un enunciado", "10 créditos por respuesta"] },
         { icon: <Zap size={28} />, title: "Thunder", desc: "Tus apuntes primero, nada más: responde a partir del texto que le diste, y cada frase lleva la referencia del pasaje citado. Fuera de tus documentos lo dice en vez de rellenar.", list: ["Pregunta 10 créditos, test 15, enlaces 5", "Cada [S1] apunta a tu texto, no a la memoria del modelo", "Puede leer una página web si se lo pides (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "Flujo Temporal IA", desc: "Tu horario se importa de una vez — semanas A/B, días, materias y franjas — y aparece en todos tus dispositivos.", list: ["Semanas A/B", "Sincronización en la nube", "No se envía ninguna alerta"] },
-    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de deberes que la ruta de importación guarda.", list: ["Foto del enunciado analizada", "priority y status guardados tal cual", "Sin orden ni recordatorios"] },
+    { icon: <ClipboardList size={28} />, title: "Smart Tracker", desc: "El asistente lee la foto de un enunciado y la convierte en una lista de deberes que la importación guarda en tu cuenta.", list: ["Foto del enunciado analizada", "Tus prioridades y estados se conservan tal cual", "Sin orden ni recordatorios"] },
     { icon: <MessageSquare size={28} />, title: "Cortex Comm", desc: "Mensajería interna para trabajar en grupo: salas, mensajes privados y adjuntos, separados por cuenta.", list: ["Salas de Trabajo", "Mensajes Privados", "Compartir Archivos"] },
     { icon: <ShieldCheck size={28} />, title: "ALPHA ENGINE", desc: "La interfaz de administración definitiva. Control total sobre el ecosistema con análisis en tiempo real.", premium: true, list: ["Estadísticas y cuentas en vivo", "Analítica avanzada", "Asistente IA que actúa y relee la base de datos"] },
     { icon: <Star size={28} />, title: "Moderación 2.0", desc: "Herramientas sofisticadas para mantener la integridad y seguridad de la comunidad Moncef IA.", list: ["Gestión de Roles", "Recarga y borrado de cuentas", "Solo acceso founder y moderator"] }
@@ -372,7 +373,7 @@ const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
     { icon: <Bot size={28} />, title: "ذكاء منصف", desc: "مركز معرفتك: ذكاء اصطناعي تمنحه درساً أو عملاً أو مفهوماً معقداً فيجيب.", list: ["محادثة حرة حول دروسك", "تحليل صورة نصّ التمرين", "10 اعتمادات لكل ردّ"] },
         { icon: <Zap size={28} />, title: "Thunder", desc: "ملاحظاتك أولاً لا غير: يجيب من النص الذي أعطيته إياه، وكل جملة تحمل المرجع إلى الفقرة المقتبسة. وخارج وثائقك يقول ذلك بصراحة بدل أن يلفّق.", list: ["سؤال 10 نقاط، اختبار 15، روابط 5", "كل إشارة [S1] تعود إلى نصك لا إلى ذاكرة النموذج", "يمكنه قراءة صفحة ويب إذا طلبت (15)"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "تدفق زمني ذكي", desc: "يُستورد جدولك دفعة واحدة — أسابيع أ/ب، الأيام، المواد والتوقيتات — ويظهر على كل أجهزتك.", list: ["أسابيع أ/ب", "مزامنة سحابية فورية", "لا تُرسل أي تنبيهات"] },
-    { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات تحفظها مسار الاستيراد.", list: ["تحليل صورة نصّ التمرين", "priority وstatus يُحفظان كما هما", "بلا ترتيب ولا تذكيرات"] },
+    { icon: <ClipboardList size={28} />, title: "تتبع ذكي", desc: "يقرأ المساعد صورة نصّ التمرين ويحوّله إلى قائمة واجبات يحفظها الاستيراد في حسابك.", list: ["تحليل صورة نصّ التمرين", "تُحفَظ أولوياتك وحالاتك كما هي", "بلا ترتيب ولا تذكيرات"] },
     { icon: <MessageSquare size={28} />, title: "اتصالات كورتيكس", desc: "مراسلة داخلية للعمل الجماعي: غرف ورسائل خاصة ومرفقات، مفصولة لكل حساب.", list: ["غرف عمل", "رسائل خاصة", "مشاركة الملفات"] },
     { icon: <ShieldCheck size={28} />, title: "محرك ألفا", desc: "واجهة الإدارة المطلقة. تحكم كامل في النظام البيئي مع تحليلات في الوقت الفعلي.", premium: true, list: ["إحصاءات وحسابات مباشرة", "تحليلات متقدمة", "مساعد ذكاء ينفّذ الإجراءات ويتحقق من القاعدة"] },
     { icon: <Star size={28} />, title: "إشراف 2.0", desc: "أدوات متطورة للحفاظ على نزاهة وأمان مجتمع ذكاء منصف.", list: ["إدارة الأدوار", "إعادة تعبئة وحذف الحسابات", "الوصول founder و moderator فقط"] }
@@ -381,7 +382,7 @@ const FEATURES: Record<'fr' | 'en' | 'es' | 'ar' | 'zh', Carte[]> = {
     { icon: <Bot size={28} />, title: "Moncef 智能", desc: "知识的核心：把课程、作业或复杂概念交给它，它来回答。", list: ["围绕课程自由对话", "分析题目照片", "每次回答 10 额度"] },
         { icon: <Zap size={28} />, title: "Thunder", desc: "只根据你给的资料回答：每句话都带着它所引段落的编号；资料里没有的内容，它会直说，而不是编。", list: ["提问 10 积分，测验 15，链接 5", "每条 [S1] 都指回你的原文", "你要求时可读网页（15）"], accent: "#a78bfa", etiquette: "IA" },
     { icon: <CalendarDays size={28} />, title: "AI 时间流", desc: "课程表一次性导入——A/B 周、星期、科目与时间——并在你的所有设备上同步显示。", list: ["A/B 周", "实时云同步", "不发送任何提醒"] },
-    { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入接口写入。", list: ["题目照片分析", "priority 与 status 原样写入", "不排序、不提醒"] },
+    { icon: <ClipboardList size={28} />, title: "智能追踪器", desc: "助手读取题目照片并整理成作业清单，由导入功能写入你的账户。", list: ["题目照片分析", "优先级与状态原样保留", "不排序、不提醒"] },
     { icon: <MessageSquare size={28} />, title: "Cortex 通信", desc: "面向课堂协作的内部消息：讨论区、私信与附件，按账户隔离。", list: ["讨论区", "私信", "文件分享"] },
     { icon: <ShieldCheck size={28} />, title: "ALPHA 引擎", desc: "终极管理界面。通过实时分析全面控制生态系统。", premium: true, list: ["实时统计与账户", "高级分析", "AI 助手可执行管理操作并回读数据库核对"] },
     { icon: <Star size={28} />, title: "审核 2.0", desc: "维护 Moncef IA 社区完整性和安全性的高级工具。", list: ["角色管理", "充值与删除账户", "仅 founder 与 moderator 可访问"] }
@@ -409,6 +410,9 @@ export default function Home() {
   
   const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
   const heroScale   = useTransform(scrollYProgress, [0, 0.8], [1, 0.95]);
+  // Accessibilité : si l'utilisateur préfère les mouvements réduits, on fige les
+  // halos animés du fond (les animations d'entrée restent, elles sont ponctuelles).
+  const reduceMotion = useReducedMotion();
 
   // GSAP + ScrollTrigger étaient chargés pour une seule animation : `gsap.from(".card-gsap",
   // { opacity: 0, … })`. Ce qui est en train de disparaître ``from`` : l''état de repos des cartes
@@ -455,6 +459,8 @@ export default function Home() {
     setShowLangSelector(false);
   };
 
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
+
   const v = VITRINE[lang as keyof typeof VITRINE] ?? VITRINE.fr;
   const heroTitle = t(lang, "hero_title");
   const titleWords = heroTitle.split(" ");
@@ -472,16 +478,16 @@ export default function Home() {
       {/* ── BACKGROUND AMBIANCE ── */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
         <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          animate={reduceMotion ? { scale: 1, opacity: 0.1 } : { scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 20, repeat: Infinity, ease: "linear" }}
           style={{
             position: "absolute", top: "-10%", left: "-10%", width: "50%", height: "50%",
             background: "radial-gradient(circle, var(--p) 0%, transparent 70%)", filter: "blur(120px)"
           }}
         />
         <motion.div
-          animate={{ scale: [1.2, 1, 1.2], opacity: [0.08, 0.15, 0.08] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          animate={reduceMotion ? { scale: 1, opacity: 0.08 } : { scale: [1.2, 1, 1.2], opacity: [0.08, 0.15, 0.08] }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 15, repeat: Infinity, ease: "linear" }}
           style={{
             position: "absolute", bottom: "-10%", right: "-10%", width: "40%", height: "40%",
             background: "radial-gradient(circle, var(--a) 0%, transparent 70%)", filter: "blur(100px)"
@@ -501,16 +507,20 @@ export default function Home() {
           <motion.div
             whileHover={{ rotate: 15, scale: 1.1 }}
             style={{
-              width: 40, height: 40, borderRadius: 12,
-              background: "var(--p-g)", display: "flex", alignItems: "center", justifyContent: "center",
+              width: 40, height: 40, borderRadius: 12, overflow: "hidden",
               boxShadow: "0 8px 20px rgba(89,130,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)"
             }}
           >
-            <span style={{ fontSize: 20 }}>🎓</span>
+            <Logo size={40} />
           </motion.div>
           <span style={{ fontWeight: 800, fontFamily: "var(--font2)", fontSize: 18, letterSpacing: "-0.03em" }} className="mobile-hide-text">
             Moncef <span style={{ color: 'var(--a)' }}>IA</span>
           </span>
+          <nav className="landing-nav" aria-label="Sections" style={{ display: 'flex', alignItems: 'center', gap: '22px', marginLeft: '28px' }}>
+            <a href="#features" className="landing-nav-link">{t(lang, "nav_features")}</a>
+            <a href="#tiers-tech" className="landing-nav-link">{t(lang, "nav_grades")}</a>
+            <Link href="/status" className="landing-nav-link">{t(lang, "nav_status")}</Link>
+          </nav>
         </div>
 
         <div style={{ flex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
@@ -574,7 +584,7 @@ export default function Home() {
                 {t(lang, "hero_badge")}
                 <span style={{
                   background: "var(--p-g)", borderRadius: 99, padding: "2px 10px", fontSize: 10, fontWeight: 900, color: "#fff"
-                }}>NEW 3.5</span>
+                }}>{t(lang, "hero_badge_new")}</span>
               </div>
             </motion.div>
 
@@ -618,14 +628,14 @@ export default function Home() {
 
             {/* Subtitle */}
             <motion.p variants={fadeUp} style={{
-              fontSize: "clamp(17px, 2.8vw, 22px)", color: "rgba(255,255,255,0.45)",
+              fontSize: "clamp(17px, 2.8vw, 22px)", color: "rgba(255,255,255,0.6)",
               maxWidth: 640, margin: "0 auto 56px", lineHeight: 1.6, fontWeight: 500
             }}>
               {t(lang, "hero_desc")}
             </motion.p>
 
             {/* CTA Container */}
-            <motion.div variants={fadeUp} style={{ display: "flex", justifyContent: "center", gap: 20 }} className="hero-actions">
+            <motion.div variants={fadeUp} style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }} className="hero-actions">
               <Link href="/auth?tab=signup" className="btn btn-premium" style={{ fontSize: 17, padding: "18px 48px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
                 {t(lang, "hero_btn_start")} <ArrowRight size={20} />
               </Link>
@@ -634,14 +644,23 @@ export default function Home() {
               </Link>
             </motion.div>
 
+            {/* Offre gratuite, explicitée sous les CTA */}
+            <motion.p variants={fadeUp} style={{
+              marginTop: 22, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.6)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+            }}>
+              <Check size={15} style={{ color: "var(--a)", flexShrink: 0 }} />
+              {t(lang, "hero_free_line")}
+            </motion.p>
+
             {/* Trust Badges */}
-            <motion.div variants={stagger} style={{ display: "flex", gap: 40, marginTop: 72, justifyContent: "center", flexWrap: "wrap" }}>
+            <motion.div variants={stagger} style={{ display: "flex", gap: 40, marginTop: 56, justifyContent: "center", flexWrap: "wrap" }}>
               {[
-                { icon: Lock, text: "Infras. Militaire" },
-                { icon: Zap, text: "Ultra Faible Latence" },
-                { icon: Globe, text: "IA Multi-LLM" },
+                { icon: Lock, text: t(lang, "trust_hosting") },
+                { icon: Zap, text: t(lang, "trust_latency") },
+                { icon: Globe, text: t(lang, "trust_llm") },
               ].map(({ icon: Icon, text }, i) => (
-                <motion.div key={text} variants={fadeUp} style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.3)", fontSize: 14, fontWeight: 600 }}>
+                <motion.div key={text} variants={fadeUp} style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600 }}>
                   <Icon size={18} style={{ color: "var(--p)" }} />
                   {text}
                 </motion.div>
@@ -651,13 +670,189 @@ export default function Home() {
         </div>
       </motion.section>
 
+      {/* ── COMMENT ÇA MARCHE (3 étapes) ── */}
+      <section id="how" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.15)", borderTop: "1px solid var(--border)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
+            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              {t(lang, "how_title")}
+            </span>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
+              {t(lang, "how_lede")}
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+            {[
+              { n: "1", title: t(lang, "how_s1t"), desc: t(lang, "how_s1d"), icon: <User size={22} /> },
+              { n: "2", title: t(lang, "how_s2t"), desc: t(lang, "how_s2d"), icon: <ClipboardList size={22} /> },
+              { n: "3", title: t(lang, "how_s3t"), desc: t(lang, "how_s3d"), icon: <Bot size={22} /> },
+            ].map((s, i) => (
+              <div key={s.n} className="rise-in card" style={{ padding: "40px 32px", animationDelay: `${i * 0.08}s`, position: "relative" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--p-g)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 8px 20px rgba(89,130,255,0.35)" }}>
+                    {s.icon}
+                  </div>
+                  <span style={{ fontSize: 40, fontWeight: 900, fontFamily: "var(--font2)", color: "rgba(255,255,255,0.12)", lineHeight: 1 }}>{s.n}</span>
+                </div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 12 }}>{s.title}</h3>
+                <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.7 }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── APERÇU (mockups CSS, pas de fausses captures) ── */}
+      <section id="preview" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
+        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
+            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              {t(lang, "preview_title")}
+            </span>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
+              {t(lang, "preview_lede")}
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+            {/* Mockup 1 : analyse de photo */}
+            <div className="rise-in card" style={{ padding: "32px", overflow: "hidden" }}>
+              <div style={{ height: 150, borderRadius: 16, background: "linear-gradient(135deg, rgba(89,130,255,0.25), rgba(0,210,182,0.15))", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, position: "relative" }}>
+                <Camera size={40} style={{ color: "rgba(255,255,255,0.35)" }} />
+                <span style={{ position: "absolute", bottom: 10, right: 12, fontSize: 11, fontWeight: 700, color: "var(--a)" }}>✓ {t(lang, "preview_1t")}</span>
+              </div>
+              <h3 style={{ fontSize: 19, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 10 }}>{t(lang, "preview_1t")}</h3>
+              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>{t(lang, "preview_1d")}</p>
+              <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                {["Maths — Ex 1 à 5", "Physique — relire ch. 3"].map((d) => (
+                  <li key={d} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px" }}>
+                    <Check size={13} style={{ color: "var(--a)", flexShrink: 0 }} /> {d}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Mockup 2 : questions sur notes */}
+            <div className="rise-in card" style={{ padding: "32px", animationDelay: "0.08s" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                <div style={{ alignSelf: "flex-end", background: "var(--p-g)", borderRadius: "16px 16px 4px 16px", padding: "10px 16px", fontSize: 13, maxWidth: "85%" }}>
+                  {t(lang, "preview_2t")} ?
+                </div>
+                <div style={{ alignSelf: "flex-start", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: "16px 16px 16px 4px", padding: "10px 16px", fontSize: 13, maxWidth: "90%", color: "rgba(255,255,255,0.85)" }}>
+                  …d&apos;après ton cours <span style={{ color: "var(--a)", fontWeight: 700 }}>[S1]</span>
+                </div>
+              </div>
+              <h3 style={{ fontSize: 19, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 10 }}>{t(lang, "preview_2t")}</h3>
+              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7 }}>{t(lang, "preview_2d")}</p>
+            </div>
+            {/* Mockup 3 : emploi du temps */}
+            <div className="rise-in card" style={{ padding: "32px", animationDelay: "0.16s" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginBottom: 20 }}>
+                {["Lun", "Mar", "Mer", "Jeu", "Ven"].map((d, i) => (
+                  <div key={d} style={{ borderRadius: 10, padding: "10px 4px", textAlign: "center", fontSize: 11, fontWeight: 700, background: i === 1 ? "rgba(0,210,182,0.12)" : "rgba(255,255,255,0.03)", border: i === 1 ? "1px solid rgba(0,210,182,0.35)" : "1px solid var(--border)", color: i === 1 ? "var(--a)" : "rgba(255,255,255,0.6)" }}>
+                    {d}
+                    <div style={{ marginTop: 6, fontSize: 10, fontWeight: 400, color: "rgba(255,255,255,0.45)" }}>{["Maths", "Physique", "SVT", "HG", "Anglais"][i]}</div>
+                  </div>
+                ))}
+              </div>
+              <h3 style={{ fontSize: 19, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 10 }}>{t(lang, "preview_3t")}</h3>
+              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7 }}>{t(lang, "preview_3d")}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TÉMOIGNAGES (anonymisés) ── */}
+      <section id="avis" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
+            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              {t(lang, "testi_title")}
+            </span>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
+              {t(lang, "testi_lede")}
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+            {[
+              { q: t(lang, "testi_1q"), a: t(lang, "testi_1a") },
+              { q: t(lang, "testi_2q"), a: t(lang, "testi_2a") },
+              { q: t(lang, "testi_3q"), a: t(lang, "testi_3a") },
+            ].map((tm, i) => (
+              <figure key={i} className="rise-in card" style={{ padding: "36px 30px", margin: 0, animationDelay: `${i * 0.08}s` }}>
+                <div style={{ display: "flex", gap: 4, marginBottom: 18 }} aria-label="5/5">
+                  {[0, 1, 2, 3, 4].map((s) => (
+                    <Star key={s} size={15} style={{ color: "var(--gold, #f5b942)", fill: "var(--gold, #f5b942)" }} />
+                  ))}
+                </div>
+                <blockquote style={{ margin: 0, fontSize: 15, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", fontStyle: "italic" }}>
+                  « {tm.q} »
+                </blockquote>
+                <figcaption style={{ marginTop: 18, fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
+                  — {tm.a}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ (accordéon) ── */}
+      <section id="faq" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <div className="rise-in" style={{ textAlign: "center", marginBottom: 48 }}>
+            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              {t(lang, "faq_title")}
+            </span>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
+              {t(lang, "faq_lede")}
+            </p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              { q: t(lang, "faq_q1"), a: t(lang, "faq_a1") },
+              { q: t(lang, "faq_q2"), a: t(lang, "faq_a2") },
+              { q: t(lang, "faq_q3"), a: t(lang, "faq_a3") },
+              { q: t(lang, "faq_q4"), a: t(lang, "faq_a4") },
+              { q: t(lang, "faq_q5"), a: t(lang, "faq_a5") },
+            ].map((item, i) => {
+              const open = faqOpen === i;
+              return (
+                <div key={i} className="rise-in card" style={{ padding: 0, overflow: "hidden" }}>
+                  <button
+                    onClick={() => setFaqOpen(open ? null : i)}
+                    aria-expanded={open}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "20px 24px", background: "none", border: "none", color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "var(--font2)", cursor: "pointer", textAlign: "left" }}
+                  >
+                    <span>{item.q}</span>
+                    <motion.span animate={{ rotate: open ? 45 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, color: "var(--a)", fontSize: 22, lineHeight: 1 }}>+</motion.span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {open && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                      >
+                        <p style={{ padding: "0 24px 22px", margin: 0, color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.75 }}>
+                          {item.a}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── FEATURES ── */}
       <section id="features" style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
         <div className="landing-section features-container">
           <div style={{ textAlign: "center", marginBottom: 80 }}>
             <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>ULTIMATE TOOLS</span>
             <h2 style={{ fontSize: "clamp(36px, 5vw, 64px)", marginTop: 24, letterSpacing: "-0.04em", fontFamily: "var(--font2)" }}>{t(lang, "feat_title")}</h2>
-            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 18, maxWidth: 600, margin: "16px auto 0" }}>{t(lang, "feat_desc")}</p>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 18, maxWidth: 600, margin: "16px auto 0" }}>{t(lang, "feat_desc")}</p>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32, maxWidth: 1300, margin: "0 auto" }}>
@@ -695,7 +890,7 @@ export default function Home() {
             <h2 style={{ fontSize: "clamp(30px, 4vw, 50px)", marginTop: 18, fontFamily: "var(--font2)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
               {v.tiers_title}
             </h2>
-            <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 16, maxWidth: 640, margin: "14px auto 0", lineHeight: 1.6 }}>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 16, maxWidth: 640, margin: "14px auto 0", lineHeight: 1.6 }}>
               {v.tiers_lede}
             </p>
           </div>
@@ -755,10 +950,10 @@ export default function Home() {
       <footer style={{ borderTop: "1px solid var(--border)", background: "rgba(0,0,0,0.4)", padding: "80px 24px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 32 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--p-g)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 24 }}>🎓</span></div>
+            <Logo size={44} />
             <span style={{ fontSize: 28, fontWeight: 900, fontFamily: "var(--font2)", letterSpacing: "-0.04em" }}>Moncef <span style={{ color: "var(--a)" }}>IA</span></span>
           </div>
-          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, maxWidth: 400, margin: "0 auto 40px" }}>{v.tagline}</p>
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, maxWidth: 400, margin: "0 auto 40px" }}>{v.tagline}</p>
           <div style={{ display: "flex", justifyContent: "center", gap: 32, marginBottom: 40 }}>
             {[
               { name: v.links[0], href: "/privacy" },
@@ -766,12 +961,12 @@ export default function Home() {
               { name: v.links[2], href: "/api-docs" },
               { name: v.links[3], href: "/status" }
             ].map(item => (
-              <Link key={item.name} href={item.href} style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 13, textDecoration: "none", transition: "color 0.2s" }} className="footer-link-hover">
+              <Link key={item.name} href={item.href} style={{ color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 13, textDecoration: "none", transition: "color 0.2s" }} className="footer-link-hover">
                 {item.name}
               </Link>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", letterSpacing: "0.05em" }}>DESIGNED BY AMINE FJER • © 2026 MONCEF IA • ALL RIGHTS RESERVED</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", letterSpacing: "0.05em" }}>DESIGNED BY AMINE FJER • © 2026 MONCEF IA • ALL RIGHTS RESERVED</div>
         </div>
       </footer>
     </div>
@@ -803,7 +998,7 @@ function FeatureCard({ icon, title, desc, list = [], premium = false, accent, et
         </div>
         <h3 style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font2)", letterSpacing: "-0.03em" }}>{title}</h3>
       </div>
-      <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>{desc}</p>
+      <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>{desc}</p>
       <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
         {list.map((item, i) => (
           <li key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
