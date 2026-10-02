@@ -760,41 +760,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── TÉMOIGNAGES (anonymisés) ── */}
-      <section id="avis" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
-            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {t(lang, "testi_title")}
-            </span>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
-              {t(lang, "testi_lede")}
-            </p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
-            {[
-              { q: t(lang, "testi_1q"), a: t(lang, "testi_1a") },
-              { q: t(lang, "testi_2q"), a: t(lang, "testi_2a") },
-              { q: t(lang, "testi_3q"), a: t(lang, "testi_3a") },
-            ].map((tm, i) => (
-              <figure key={i} className="rise-in card" style={{ padding: "36px 30px", margin: 0, animationDelay: `${i * 0.08}s` }}>
-                <div style={{ display: "flex", gap: 4, marginBottom: 18 }} aria-label="5/5">
-                  {[0, 1, 2, 3, 4].map((s) => (
-                    <Star key={s} size={15} style={{ color: "var(--gold, #f5b942)", fill: "var(--gold, #f5b942)" }} />
-                  ))}
-                </div>
-                <blockquote style={{ margin: 0, fontSize: 15, lineHeight: 1.75, color: "rgba(255,255,255,0.85)", fontStyle: "italic" }}>
-                  « {tm.q} »
-                </blockquote>
-                <figcaption style={{ marginTop: 18, fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
-                  — {tm.a}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── FAQ (accordéon) ── */}
       <section id="faq" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
