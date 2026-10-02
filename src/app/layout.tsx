@@ -22,6 +22,7 @@ const fontMono = JetBrains_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL("https://proappmoncef.netlify.app"),
   title: "Moncef IA — Plateforme Éducative Intelligente",
   description: "Plateforme éducative propulsée par l'Intelligence Artificielle. Gérez vos devoirs, emploi du temps et progressez avec l'IA.",
   // PWA (lot A3) : le manifeste vit dans `public/`, donc versionné et servi par le même
