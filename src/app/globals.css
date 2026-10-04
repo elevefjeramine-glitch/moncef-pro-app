@@ -2824,3 +2824,49 @@ input, textarea, select {
     animation: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MESSAGERIE : pattern maître-détail responsive (audit UI/UX 2026-10-04)
+   <768px : liste OU chat actif (pas côte à côte), bouton retour.
+   ═══════════════════════════════════════════════════════════════ */
+.comm-back-btn {
+  display: none;
+}
+@media (max-width: 767px) {
+  .comm-root {
+    border-radius: 16px !important;
+  }
+  .comm-list-panel {
+    width: 100% !important;
+    border-right: none !important;
+  }
+  .comm-chat-panel {
+    display: none !important;
+  }
+  .comm-root.has-active .comm-list-panel {
+    display: none !important;
+  }
+  .comm-root.has-active .comm-chat-panel {
+    display: flex !important;
+    width: 100% !important;
+  }
+  .comm-back-btn {
+    display: flex !important;
+  }
+  /* Le panneau d'infos devient un overlay plein écran sur mobile */
+  .comm-root .info-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10000;
+    border-radius: 0;
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5);
+  }
+}
+/* Tablette : panneau latéral légèrement réduit */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .comm-list-panel {
+    width: 300px !important;
+  }
+}
