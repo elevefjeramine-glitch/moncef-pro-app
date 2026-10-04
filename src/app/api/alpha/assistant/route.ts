@@ -32,6 +32,10 @@ const GEMINI = process.env.GEMINI_API_KEY ?? "";
 const ROLES = ["normal", "moderator", "founder"] as const;
 type Role = (typeof ROLES)[number];
 
+// Volet 5 (2026-10-04) — super-admin exclusif : seul ce compte peut agir sur le
+// rôle, les crédits ou le compte D'UN FONDATEUR. Serveur uniquement.
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || "aminefjer@protonmail.com").toLowerCase();
+
 function admin() {
   if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY manquante");
   return createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -41,7 +45,7 @@ const OUTILS = [
   {
     name: "changer_role",
     description:
-      "Change réellement le rôle d'un utilisateur de la plateforme. `cible` = e-mail (ou début d'e-mail, ou identifiant). Rôles possibles : normal, moderator, founder.",
+      "Change réellement le rôle d'un utilisateur de la plateforme. `cible` = e-mail (ou début d'e-mail, ou identifiant). Rôles possibles : normal, moderator, founder. Restriction : seul le super-admin peut changer le rôle d'un fondateur ; un fondateur ne peut pas se rétrograder lui-même.",
     parameters: {
       type: "object",
       properties: {
@@ -94,7 +98,9 @@ const CHARTE =
   "(2) pour modifier quoi que ce soit, tu APPELLES la fonction correspondante, tu ne décris pas la marche à suivre ; " +
   "(3) si la demande est ambiguë (plusieurs personnes correspondent), tu demandes laquelle au lieu de choisir ; " +
   "(4) une suppression ne s'exécute jamais ici : tu appelles proposer_suppression et tu préviens que l'humain doit confirmer ; " +
-  "(5) tu réponds en français, sobrement, après avoir lu les résultats d'appels.";
+  "(5) tu réponds en français, sobrement, après avoir lu les résultats d'appels ; " +
+  "(6) règle super-admin : seul le super-admin peut modifier le rôle ou les crédits d'un FONDATEUR ou demander la suppression de son compte — si on te le demande pour un fondateur sans être le super-admin, tu refuses poliment ; " +
+  "un fondateur ne peut jamais se rétrograder ni se supprimer lui-même.";
 
 /** E-mail, nom, ou identifiant → une ligne de `public.users`, ou une liste si ambigu. */
 async function trouver(db: ReturnType<typeof admin>, cible: string) {
@@ -151,6 +157,12 @@ export async function POST(req: Request) {
     // Toujours lu en base : les gardes par action ci-dessous restent en vigueur si
     // la porte du haut venait à s'ouvrir à un autre rôle.
     const estFondateur = String(moi?.role) === "founder";
+    // Volet 5 — l'email du demandeur vient de la session vérifiée (sess.user),
+    // jamais d'un paramètre client. Capturés ici (corps principal) car le
+    // narrowing TS ne traverse pas la closure `executer`.
+    const idDemandeur = sess.user.id;
+    const estSuperAdmin =
+      estFondateur && String(sess.user.email ?? "").toLowerCase() === SUPER_ADMIN_EMAIL;
 
     const journal: { outil: string; cible?: string; resultat: Record<string, unknown> }[] = [];
     const propositions: { cible: string; id: string; email: string }[] = [];
@@ -179,6 +191,12 @@ export async function POST(req: Request) {
         if (t.rows.length !== 1) return { erreur: t.rows.length ? "plusieurs comptes correspondent, précise l'e-mail" : t.motif ?? "introuvable" };
         const u = t.rows[0];
         if (!estFondateur) return { erreur: "seul un fondateur peut demander une suppression" };
+        // Volet 5 — la cible est fondateur : seul le super-admin peut demander
+        // sa suppression, et personne ne demande la sienne (anti-blocage).
+        if (u.role === "founder") {
+          if (u.id === idDemandeur) return { erreur: "tu ne peux pas demander la suppression de ton propre compte fondateur" };
+          if (!estSuperAdmin) return { erreur: "seul le super-admin peut demander la suppression du compte d'un fondateur" };
+        }
         propositions.push({ cible: String(args?.cible ?? ""), id: u.id, email: u.email });
         const r = { en_attente_de_confirmation: true, compte: u.email, rappel: "Aucune suppression n'a été exécutée." };
         journal.push({ outil: nom, cible: u.email, resultat: r });
@@ -191,6 +209,10 @@ export async function POST(req: Request) {
         const n = Number(args?.credits);
         if (!Number.isInteger(n) || n < 0 || n > 100000) return { erreur: "`credits` doit être un entier entre 0 et 100000" };
         if (!estFondateur) return { erreur: "seul un fondateur touche le solde de crédits" };
+        // Volet 5 — cible fondateur (autre que soi) : super-admin uniquement.
+        if (u.role === "founder" && u.id !== idDemandeur && !estSuperAdmin) {
+          return { erreur: "seul le super-admin peut modifier les crédits d'un fondateur" };
+        }
         const { error } = await db.from("users").update({ tokens: n }).eq("id", u.id);
         if (error) return { erreur: error.message };
         const { data: relu } = await db.from("users").select("tokens").eq("id", u.id).single();
@@ -205,6 +227,14 @@ export async function POST(req: Request) {
         const role = String(args?.role ?? "").trim() as Role;
         if (!ROLES.includes(role)) return { erreur: `rôle inconnu (${role || "vide"}) — admis : ${ROLES.join(", ")}` };
         if (!estFondateur) return { erreur: "seul un fondateur peut changer un grade" };
+        // Volet 5 — la cible est fondateur : seul le super-admin peut changer
+        // son rôle, et personne ne se retire son propre rôle (anti-blocage).
+        if (u.role === "founder") {
+          if (u.id === idDemandeur && role !== "founder") {
+            return { erreur: "tu ne peux pas te retirer ton propre rôle de fondateur" };
+          }
+          if (!estSuperAdmin) return { erreur: "seul le super-admin peut changer le rôle d'un fondateur" };
+        }
         const maj = { role };
         let { error } = await db.from("users").update(maj).eq("id", u.id);
         let cree = false;
