@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { DAILY_CREDIT_FLOOR, adminConfigure, applyDailyCreditFloor, makeAdminClient, purgeAccount } from "@/lib/compte";
 import { CorpsTropVolumineux, LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from "@/lib/corps";
+import { reponseTropDeRequetes, verifierLimite } from "@/lib/rate-limit";
 import { rechercherSurLeWeb, type ResultatWeb } from "@/lib/web";
 import {
   charte,
@@ -154,6 +155,13 @@ export async function POST(req: Request) {
       error: erreurAuth,
     } = await admin.auth.getUser(auth.replace("Bearer ", ""));
     if (erreurAuth || !user) return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
+
+    // Rate limiting APRÈS auth : l'utilisateur est identifié (user.id). Placé ici
+    // (et pas plus bas) pour que le garde-fou s'applique avant tout travail
+    // coûteux — y compris les modes sans IA, ce qui protège aussi la base.
+    // 20 requêtes/minute/utilisateur : un usage légitime ne l'atteint pas.
+    const limite = verifierLimite(`thunder:${user.id}`);
+    if (!limite.ok) return reponseTropDeRequetes(limite.reessayerDans);
 
     // ── Gestion des sources : pas d'IA, donc pas de crédit ──────────────────
     if (mode === "sources") {
