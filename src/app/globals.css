@@ -2801,3 +2801,26 @@ a { text-decoration: none; color: inherit; }
   .grade-card { transition: none; }
   .grade-card:hover { transform: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   CORRECTIFS UI/UX — vague 1 (audit 2026-10-04)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* A1 — indicateur de focus visible global (navigation clavier, WCAG 2.2) */
+:focus-visible {
+  outline: 2px solid var(--a, #00d2b6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* J2 — inputs à 16px minimum : évite le zoom automatique sur iOS */
+input, textarea, select {
+  font-size: 16px;
+}
+
+/* Respect de prefers-reduced-motion pour les animations décoratives */
+@media (prefers-reduced-motion: reduce) {
+  .btn-premium {
+    animation: none;
+  }
+}
