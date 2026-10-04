@@ -45,6 +45,41 @@ const AIDE_IMAGE =
   'Les images voyagent en base64 dans le JSON : un fichier de 4 Mo pèse environ 5,3 Mo une fois encodé. ' +
   'Réduis la photo avant de l\'envoyer.';
 
+// === STREAMING SSE ===
+// Sous maxDuration (45 s) : le stream ne doit pas être coupé par le timeout d'appel.
+const STREAM_TIMEOUT_MS = 40000;
+async function fetchStream(url: string, init: RequestInit): Promise<Response> {
+  // Une seule tentative : re-tenter en plein stream compliquerait la reprise ;
+  // l'échec de connexion fait passer au fournisseur suivant via la boucle.
+  return fetch(url, { ...init, signal: AbortSignal.timeout(STREAM_TIMEOUT_MS) });
+}
+
+// Lit un flux SSE (Gemini `alt=sse` ou OpenAI `stream: true`) et produit les tokens.
+async function* sseTokens(res: Response, extract: (data: any) => string | null): AsyncGenerator<string> {
+  const body = res.body;
+  if (!body) return;
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const payload = t.slice(5).trim();
+      if (payload === '[DONE]') return;
+      try {
+        const tok = extract(JSON.parse(payload));
+        if (typeof tok === 'string' && tok) yield tok;
+      } catch { /* trame incomplète : ignorée */ }
+    }
+  }
+}
+
 export async function POST(req: Request) {
   // Deux garde-fous avant le travail, dans cet ordre :
   //  1) l'authentification d'abord — un appel sans jeton doit finir en 401 ;
@@ -65,10 +100,12 @@ export async function POST(req: Request) {
 
   let messages: any;
   let system: any;
+  let stream = false;
   try {
     const body = await lireJson(req, LIMITE_CORPS.chat);
     messages = body?.messages;
     system = body?.system;
+    stream = body?.stream === true;
   } catch (e: unknown) {
     const refus = reponse413(e, AIDE_IMAGE);
     if (refus) return refus;
@@ -162,43 +199,41 @@ export async function POST(req: Request) {
     // de Google faisait `throw`, on sautait directement au catch, et l'utilisateur
     // avait une erreur alors qu'un second fournisseur était payé et disponible.
     // Les fournisseurs sont maintenant essayés en ordre jusqu'au premier qui répond.
-    const providers: { name: string; run: () => Promise<string> }[] = [];
+    const providers: { name: string; run: () => Promise<string>; stream: () => AsyncGenerator<string> }[] = [];
 
     if (GEMINI_KEY) {
+      const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash";
+      const buildGeminiBody = () => ({
+        systemInstruction: { parts: [{ text: enhancedSystem }] },
+        contents: messages.map((m: any) => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: Array.isArray(m.content)
+            ? m.content.map((p: any) => {
+                if (p.type === 'text') return { text: p.text };
+                if (p.type === 'image_url') {
+                  const dataUrl: string = p.image_url?.url || '';
+                  const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+                  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+                  const base64Data = dataUrl.split(',')[1] || '';
+                  return { inlineData: { mimeType, data: base64Data } };
+                }
+                return { text: '' };
+              })
+            : [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+        })),
+      });
       providers.push({
         name: 'Gemini',
         run: async () => {
-          const geminiContents = messages.map((m: any) => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: Array.isArray(m.content)
-              ? m.content.map((p: any) => {
-                  if (p.type === 'text') return { text: p.text };
-                  if (p.type === 'image_url') {
-                    const dataUrl: string = p.image_url?.url || '';
-                    const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
-                    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-                    const base64Data = dataUrl.split(',')[1] || '';
-                    return { inlineData: { mimeType, data: base64Data } };
-                  }
-                  return { text: '' };
-                })
-              : [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
-          }));
-
           const response = await fetchWithTimeout(
-            // idem Thunder : la clé passe par l'en-tête, plus par l'URL. Une URL se retrouve
-            // dans les journaux du proxy, l'historique de la fonction et parfois dans le
-            // message d'erreur ; un en-tête non. Contrat vérifié le 29/08/2026 : une clé
-            // invalide par en-tête renvoie exactement la même réponse (400 · API_KEY_INVALID)
-            // que par `?key=`, donc seul le transport change.
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+            // La clé passe par l'en-tête x-goog-api-key, jamais par l'URL : une URL se
+            // retrouve dans les journaux du proxy, l'historique de la fonction et
+            // parfois dans le message d'erreur ; un en-tête non.
+            `${GEMINI_MODEL_URL}:generateContent`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
-              body: JSON.stringify({
-                systemInstruction: { parts: [{ text: enhancedSystem }] },
-                contents: geminiContents
-              })
+              body: JSON.stringify(buildGeminiBody())
             }
           );
 
@@ -209,59 +244,78 @@ export async function POST(req: Request) {
           }
           return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         },
+        stream: async function* () {
+          const response = await fetchStream(
+            `${GEMINI_MODEL_URL}:streamGenerateContent?alt=sse`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
+              body: JSON.stringify(buildGeminiBody())
+            }
+          );
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error?.message || `Erreur Gemini (${response.status})`);
+          }
+          yield* sseTokens(response, (d) => d.candidates?.[0]?.content?.parts?.[0]?.text ?? null);
+        },
       });
     }
 
     if (GROQ_KEY) {
+      // Le palier GRATUIT de Groq limite à 8 000 tokens par MINUTE et compte
+      // `prompt + max_tokens` là-dessus (message mesuré : « Request too large for
+      // model openai/gpt-oss-20b ... on tokens per minute (TPM): Limit 8000,
+      // Requested 8308 »). Un max_tokens fixe de 8192 faisait donc échouer le
+      // secours à COUP SÛR, quelle que soit la question posée. On estime la taille
+      // du prompt (~4 caractères par token), on rogne sur les tours les plus anciens
+      // si ça dépasse, puis on donne au modèle tout le reste.
+      const buildGroqBody = (streaming: boolean) => {
+        const aiMessages = [
+          { role: 'system', content: enhancedSystem },
+          ...messages.map((m: any) => ({
+            role: m.role,
+            content: Array.isArray(m.content)
+              ? m.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') || '(image envoyée)'
+              : (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
+          }))
+        ];
+
+        const GROQ_TPM_BUDGET = 7600; // marge sous la limite de 8000
+        const estTokens = (arr: any[]) => JSON.stringify(arr).length / 4;
+        // `any[]` explicite : sous `noUncheckedIndexedAccess`, retirer le premier tour
+        // de conversation (groqMessages[0]) aurait été typé `{…} | undefined`.
+        let groqMessages: any[] = aiMessages;
+        while (estTokens(groqMessages) + 700 > GROQ_TPM_BUDGET && groqMessages.length > 2) {
+          groqMessages = [groqMessages[0], ...groqMessages.slice(2)];
+        }
+        const groqMaxTokens = Math.max(
+          700,
+          Math.min(4096, Math.floor(GROQ_TPM_BUDGET - estTokens(groqMessages)))
+        );
+
+        return {
+          // FIX: "llama-3.1-8b-instant" n'existe plus chez Groq (model_not_found).
+          // gpt-oss-20b est le modèle de chat rapide encore joignable ; il consomme
+          // des reasoning_tokens, d'où un budget calculé ci-dessus (à 2048 la
+          // réponse était tronquée : finish=length mesuré sur un vrai prompt).
+          model: "openai/gpt-oss-20b",
+          messages: groqMessages,
+          max_tokens: groqMaxTokens,
+          temperature: 0.7,
+          ...(streaming ? { stream: true } : {}),
+        };
+      };
       providers.push({
         name: 'Groq',
         run: async () => {
-          const aiMessages = [
-            { role: 'system', content: enhancedSystem },
-            ...messages.map((m: any) => ({
-              role: m.role,
-              content: Array.isArray(m.content)
-                ? m.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') || '(image envoyée)'
-                : (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
-            }))
-          ];
-
-          // Le palier GRATUIT de Groq limite à 8 000 tokens par MINUTE et compte
-          // `prompt + max_tokens` là-dessus (message mesuré : « Request too large for
-          // model openai/gpt-oss-20b ... on tokens per minute (TPM): Limit 8000,
-          // Requested 8308 »). Un max_tokens fixe de 8192 faisait donc échouer le
-          // secours à COUP SÛR, quelle que soit la question posée. On estime la taille
-          // du prompt (~4 caractères par token), on rogne sur les tours les plus anciens
-          // si ça dépasse, puis on donne au modèle tout le reste.
-          const GROQ_TPM_BUDGET = 7600; // marge sous la limite de 8000
-          const estTokens = (arr: any[]) => JSON.stringify(arr).length / 4;
-          // `any[]` explicite : sous `noUncheckedIndexedAccess`, retirer le premier tour
-          // de conversation (groqMessages[0]) aurait été typé `{…} | undefined`.
-          let groqMessages: any[] = aiMessages;
-          while (estTokens(groqMessages) + 700 > GROQ_TPM_BUDGET && groqMessages.length > 2) {
-            groqMessages = [groqMessages[0], ...groqMessages.slice(2)];
-          }
-          const groqMaxTokens = Math.max(
-            700,
-            Math.min(4096, Math.floor(GROQ_TPM_BUDGET - estTokens(groqMessages)))
-          );
-
           const response = await fetchWithTimeout(`https://api.groq.com/openai/v1/chat/completions`, {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${GROQ_KEY}`,
               "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-              // FIX: "llama-3.1-8b-instant" n'existe plus chez Groq (model_not_found).
-              // gpt-oss-20b est le modèle de chat rapide encore joignable ; il consomme
-              // des reasoning_tokens, d'où un budget calculé ci-dessus (à 2048 la
-              // réponse était tronquée : finish=length mesuré sur un vrai prompt).
-              model: "openai/gpt-oss-20b",
-              messages: groqMessages,
-              max_tokens: groqMaxTokens,
-              temperature: 0.7
-            })
+            body: JSON.stringify(buildGroqBody(false))
           });
 
           const data = await response.json();
@@ -269,6 +323,21 @@ export async function POST(req: Request) {
             throw new Error(data.error?.message || `Erreur Groq (${response.status})`);
           }
           return data.choices?.[0]?.message?.content || "";
+        },
+        stream: async function* () {
+          const response = await fetchStream(`https://api.groq.com/openai/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${GROQ_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(buildGroqBody(true))
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error?.message || `Erreur Groq (${response.status})`);
+          }
+          yield* sseTokens(response, (d) => d.choices?.[0]?.delta?.content ?? null);
         },
       });
     }
@@ -280,6 +349,66 @@ export async function POST(req: Request) {
         { error: "Aucun fournisseur d'IA n'est configuré (GEMINI_API_KEY / GROQ_API_KEY manquants)." },
         { status: 503 }
       );
+    }
+
+    // === STREAMING SSE : le client a envoyé { stream: true } ===
+    // Protocole : `data: {"token": "..."}` par morceau, puis
+    // `data: {"done": true, "newTokens": N, "cost": 10}` à la fin,
+    // ou `data: {"error": "...", "details": "..."}` si tout a échoué.
+    // Les erreurs amont (401/402/400) restent des réponses JSON classiques.
+    if (stream) {
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          const send = (obj: Record<string, unknown>) =>
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+          const failures: string[] = [];
+          let newTokens = balance;
+          let cost = 0;
+          for (const provider of providers) {
+            try {
+              const gen = provider.stream();
+              const first = await gen.next();
+              if (first.done || !first.value) {
+                failures.push(`${provider.name}: réponse vide`);
+                continue;
+              }
+              // Premier token reçu : on débite (jamais sans réponse, comme en non-stream).
+              if (!isUnlimited) {
+                newTokens = Math.max(0, balance - 10);
+                cost = 10;
+                await supabase.from('users').update({ tokens: newTokens }).eq('id', user.id);
+              }
+              send({ token: first.value });
+              try {
+                for await (const tok of gen) send({ token: tok });
+              } catch (e: any) {
+                // Coupure en plein stream : on finalise avec le partiel reçu.
+                console.error(`[chat] ${provider.name} stream coupé:`, e?.message);
+                send({ done: true, newTokens, cost, partial: true });
+                controller.close();
+                return;
+              }
+              send({ done: true, newTokens, cost });
+              controller.close();
+              return;
+            } catch (e: any) {
+              failures.push(`${provider.name}: ${e?.message || 'erreur inconnue'}`);
+              console.error(`[chat] ${provider.name} stream a échoué, tentative du fournisseur suivant:`, e?.message);
+            }
+          }
+          // Aucun fournisseur n'a streamé : on ne débite PAS les crédits.
+          send({ error: "Les modèles d'IA sont momentanément indisponibles.", details: failures.join(' | ') });
+          controller.close();
+        },
+      });
+      return new Response(readable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+        },
+      });
     }
 
     let assistantMessage = "";
