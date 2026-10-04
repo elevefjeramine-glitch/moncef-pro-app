@@ -583,7 +583,7 @@ export default function Home() {
                 </motion.div>
                 {t(lang, "hero_badge")}
                 <span style={{
-                  background: "var(--p-g)", borderRadius: 99, padding: "2px 10px", fontSize: 10, fontWeight: 900, color: "#fff"
+                  background: "var(--p-g-deep)", borderRadius: 99, padding: "2px 10px", fontSize: 10, fontWeight: 900, color: "#fff"
                 }}>{t(lang, "hero_badge_new")}</span>
               </div>
             </motion.div>
@@ -634,12 +634,13 @@ export default function Home() {
               {t(lang, "hero_desc")}
             </motion.p>
 
-            {/* CTA Container */}
-            <motion.div variants={fadeUp} style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }} className="hero-actions">
+            {/* CTA unique : un seul appel à l'action fort (règle de conversion).
+                La connexion devient un lien discret qui ne concurrence pas l'inscription. */}
+            <motion.div variants={fadeUp} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }} className="hero-actions">
               <Link href="/auth?tab=signup" className="btn btn-premium" style={{ fontSize: 17, padding: "18px 48px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
                 {t(lang, "hero_btn_start")} <ArrowRight size={20} />
               </Link>
-              <Link href="/auth?tab=login" className="btn btn-ghost" style={{ fontSize: 17, padding: "18px 40px", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+              <Link href="/auth?tab=login" className="hero-login-link">
                 {t(lang, "hero_btn_login")}
               </Link>
             </motion.div>
@@ -674,7 +675,7 @@ export default function Home() {
       <section id="how" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.15)", borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
-            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {t(lang, "how_title")}
             </span>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
@@ -706,7 +707,7 @@ export default function Home() {
       <section id="preview" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto" }}>
           <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
-            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {t(lang, "preview_title")}
             </span>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
@@ -733,7 +734,7 @@ export default function Home() {
             {/* Mockup 2 : questions sur notes */}
             <div className="rise-in card" style={{ padding: "32px", animationDelay: "0.08s" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                <div style={{ alignSelf: "flex-end", background: "var(--p-g)", borderRadius: "16px 16px 4px 16px", padding: "10px 16px", fontSize: 13, maxWidth: "85%" }}>
+                <div style={{ alignSelf: "flex-end", background: "var(--p-g-deep)", borderRadius: "16px 16px 4px 16px", padding: "10px 16px", fontSize: 13, maxWidth: "85%" }}>
                   {t(lang, "preview_2t")} ?
                 </div>
                 <div style={{ alignSelf: "flex-start", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: "16px 16px 16px 4px", padding: "10px 16px", fontSize: 13, maxWidth: "90%", color: "rgba(255,255,255,0.85)" }}>
@@ -764,7 +765,7 @@ export default function Home() {
       <section id="faq" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <div className="rise-in" style={{ textAlign: "center", marginBottom: 48 }}>
-            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {t(lang, "faq_title")}
             </span>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
@@ -815,7 +816,7 @@ export default function Home() {
       <section id="features" style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
         <div className="landing-section features-container">
           <div style={{ textAlign: "center", marginBottom: 80 }}>
-            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>ULTIMATE TOOLS</span>
+            <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>ULTIMATE TOOLS</span>
             <h2 style={{ fontSize: "clamp(36px, 5vw, 64px)", marginTop: 24, letterSpacing: "-0.04em", fontFamily: "var(--font2)" }}>{t(lang, "feat_title")}</h2>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 18, maxWidth: 600, margin: "16px auto 0" }}>{t(lang, "feat_desc")}</p>
           </div>
@@ -867,7 +868,7 @@ export default function Home() {
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
-            <span style={{ background: "var(--p-g)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {v.tiers_kicker}
             </span>
             <h2 style={{ fontSize: "clamp(30px, 4vw, 50px)", marginTop: 18, fontFamily: "var(--font2)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
