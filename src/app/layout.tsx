@@ -39,6 +39,8 @@ export const metadata = {
     description: "La plateforme éducative IA nouvelle génération.",
     type: "website",
     url: "https://proappmoncef.netlify.app/",
+    siteName: "Moncef IA",
+    locale: "fr_FR",
     images: [
       {
         url: "/og-image.png",
@@ -57,7 +59,9 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#0b1f13",
+  // C10/SEO (audit 2026-10-04) : theme-color aligné sur le fond réel --bg (#060a14),
+  // l'ancienne valeur #0b1f13 (vert) ne correspondait à aucune couleur du site.
+  themeColor: "#060a14",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
