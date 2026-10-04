@@ -50,6 +50,8 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self)' },
           // les lecteurs PDF/Flash tiers ne doivent pas charger nos ressources
           { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+          // forcer HTTPS pendant 2 ans, sous-domaines inclus (audit sécurité 2026-10-04)
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
         ],
       },
     ]
