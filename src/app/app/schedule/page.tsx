@@ -253,6 +253,49 @@ function ScheduleContent() {
         {t(lang, 'my_schedule')} - {selectedWeek === 'A' ? t(lang, 'sch_week_a') : t(lang, 'sch_week_b')}
       </h2>
 
+      {/* Bandeau "en ce moment" (quick win audit 2026-10-04) : LA feature d'un EDT —
+          cours actuel et prochain cours calculés depuis les créneaux du jour */}
+      {(() => {
+        const _now = new Date();
+        const _todayIdx = (_now.getDay() + 6) % 7; // d0 = Lundi
+        const _nowMin = _now.getHours() * 60 + _now.getMinutes();
+        const _parseHM = (s: string): number | null => {
+          const m = s.match(/(\d{1,2})\s*[:hH]\s*(\d{2})?/);
+          if (!m || !m[1]) return null;
+          const h = parseInt(m[1], 10);
+          const min = m[2] ? parseInt(m[2], 10) : 0;
+          if (h > 23 || min > 59) return null;
+          return h * 60 + min;
+        };
+        const _fmt = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+        type _Slot = { subj: string; _start: number; _end: number | null };
+        const _todays: _Slot[] = schedule
+          .filter(s => s.day_index === _todayIdx)
+          .map(s => {
+            const parts = String(s.time_slot || '').split(/[-–—]/);
+            const start = _parseHM(parts[0] || '');
+            const end = parts[1] ? _parseHM(parts[1]) : null;
+            return { subj: String(s.subj || ''), _start: start, _end: end };
+          })
+          .filter((s): s is _Slot => s._start !== null)
+          .sort((a, b) => a._start - b._start);
+        if (_todays.length === 0) return null;
+        const _current = _todays.find(s => s._start <= _nowMin && (s._end === null || _nowMin < s._end));
+        const _next = _todays.find(s => s._start > _nowMin);
+        const _txt = _current && _next
+          ? <>📍 En ce moment : <strong style={{ color: '#fff' }}>{_current.subj}</strong>&nbsp;→ prochain : <strong style={{ color: '#fff' }}>{_next.subj}</strong> à {_fmt(_next._start)}</>
+          : _current
+            ? <>📍 En ce moment : <strong style={{ color: '#fff' }}>{_current.subj}</strong> — dernier cours de la journée</>
+            : _next
+              ? <>⏭️ Prochain cours : <strong style={{ color: '#fff' }}>{_next.subj}</strong> à {_fmt(_next._start)}</>
+              : <>🎉 Plus de cours aujourd'hui</>;
+        return (
+          <div className="no-print" style={{ marginBottom: 20, padding: '14px 20px', borderRadius: 16, background: 'linear-gradient(135deg, rgba(0,210,182,0.12), rgba(46,91,255,0.10))', border: '1px solid rgba(0,210,182,0.25)', fontSize: 15, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {_txt}
+          </div>
+        );
+      })()}
+
       <motion.div variants={itemVariants} className="schedule-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
         {DAYS.map((day, i) => {
           const slots = schedule.filter(s => s.day_index === i);
