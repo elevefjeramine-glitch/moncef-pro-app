@@ -5,7 +5,6 @@ import { supabase } from "@/utils/supabase/client";
 import { Plus, Trash2, Calendar, Clock, BookOpen, Printer } from "lucide-react";
 import { useLanguage, t } from "@/utils/i18n";
 import { motion, AnimatePresence } from "framer-motion";
-import AgendaLien from "@/components/AgendaLien";
 import { ToastProvider, useToast } from "@/components/Toast";
 import { ConfirmProvider, useConfirm } from "@/components/ConfirmDialog";
 
@@ -346,8 +345,6 @@ function ScheduleContent() {
           )
         })}
       </motion.div>
-
-      <AgendaLien />
 
       <style jsx>{`
         .only-print { display: none; }
