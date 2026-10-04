@@ -2825,3 +2825,97 @@ input, textarea, select {
     width: 300px !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFIL — effets 3D / flottants / réactifs au curseur
+   Tout est scopé sous .profil-fx : rien ne touche aux autres écrans.
+   Seuls transform/opacity sont animés. prefers-reduced-motion est
+   géré par la règle globale existante (animations tuées) + le JS
+   (useReducedMotion dans ProfilTilt et la page).
+   ═══════════════════════════════════════════════════════════════ */
+.profil-fx {
+  position: relative;
+}
+
+/* ——— Tilt 3D : la transition CSS ne touche PAS transform ———
+   (le transform est piloté par framer-motion via springs ; une
+   transition CSS dessus créerait un double lissage saccadé). */
+.profil-fx .profil-tilt {
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+  will-change: transform;
+}
+
+/* ——— Lueur radiale qui suit le curseur ———
+   --mx / --my sont posés en JS (ProfilTilt), --tilt-glow par carte. */
+.profil-fx .profil-tilt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 50%),
+    var(--tilt-glow, rgba(89, 130, 255, 0.14)),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.profil-fx .profil-tilt:hover::before {
+  opacity: 1;
+}
+/* Le contenu reste au-dessus de la lueur. */
+.profil-fx .profil-tilt > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ——— Orbes flottants "fondants" ———
+   Structure : .profil-orb (parallaxe JS via framer-motion, transform
+   écrit en ligne) > span (flottement CSS en keyframes). Les deux
+   transforment des niveaux différents : aucun conflit. */
+.profil-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  will-change: transform;
+}
+.profil-orb > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  animation: profil-float 9s ease-in-out infinite alternate;
+}
+.profil-orb.orb-2 > span { animation-duration: 12s; animation-delay: -4s; }
+.profil-orb.orb-3 > span { animation-duration: 14s; animation-delay: -7s; }
+.profil-orb.orb-4 > span { animation-duration: 11s; animation-delay: -2s; }
+@keyframes profil-float {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(36px, -44px, 0) scale(1.12); }
+}
+
+/* ——— Halo pulsant de l'avatar (animé en JS via framer-motion) ——— */
+.profil-fx .profil-halo {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid rgba(89, 130, 255, 0.55);
+  pointer-events: none;
+}
+
+/* ——— Micro-interaction : flèche des CTA texte ——— */
+.profil-fx .cta-arrow svg {
+  transition: transform 0.25s ease;
+}
+.profil-fx .cta-arrow:hover svg {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profil-fx .profil-orb > span { animation: none; }
+  .profil-fx .profil-tilt { will-change: auto; }
+}
