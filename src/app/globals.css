@@ -33,6 +33,17 @@
     --p: #5982FF;
     --a: #00D2B6;
     --p-g: linear-gradient(135deg, #5982FF 0%, #7C3AED 50%, #A855F7 100%);
+    /* C10 (audit UI/UX 2026-10-04) : le blanc sur #5982FF ne fait que 3,46:1.
+       --p-ink / --p-g-deep sont les variantes "texte" de la marque : mêmes teintes,
+       assombries pour atteindre ~5,9:1 avec du texte blanc (WCAG AA). À utiliser
+       sur TOUTE surface portant du texte (boutons, badges, pills). --p et --p-g
+       restent pour les usages non-textuels (halos, bordures, icônes ≥ 3:1). */
+    --p-ink: #3F63E8;
+    --p-g-deep: linear-gradient(135deg, #3F63E8 0%, #6D28D9 50%, #9333EA 100%);
+    /* C11 — note : les tokens Tailwind HSL (--primary, --accent) et les tokens app
+       (--p, --a) sont deux systèmes PARALLÈLES et voulus : les premiers alimentent
+       les classes utilitaires shadcn (bg-primary…), les seconds les styles inline.
+       Ne pas les fusionner : ça casserait l'un ou l'autre. */
     --font2: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
     --gold: #FFD700;
     --sb: rgba(10, 14, 26, 0.95);
@@ -144,7 +155,7 @@
 }
 
 .btn-premium {
-  background: var(--p-g);
+  background: var(--p-g-deep);
   background-size: 200% 200%;
   color: #fff;
   box-shadow: 0 6px 20px rgba(89, 130, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
@@ -153,6 +164,10 @@
 .btn-premium:hover {
   box-shadow: 0 12px 32px rgba(89, 130, 255, 0.55), inset 0 1px 0 rgba(255,255,255,0.35);
   transform: translateY(-3px) scale(1.03);
+}
+.btn-premium:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 4px 14px rgba(89, 130, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .btn-ghost {
@@ -216,6 +231,21 @@
 }
 @media (max-width: 900px) {
   .landing-nav { display: none; }
+}
+
+/* Lien de connexion discret sous le CTA principal du hero : le hero n'a qu'UN
+   seul CTA fort (règle de conversion), la connexion reste accessible sans
+   concurrencer visuellement l'inscription. */
+.hero-login-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 0.2s ease;
+}
+.hero-login-link:hover {
+  color: #fff;
 }
 
 /* Mouvements réduits : on coupe les animations CSS globales. Les animations
@@ -1047,7 +1077,7 @@ a { text-decoration: none; color: inherit; }
 }
 .vitrine-chip[data-tone="gold"] { background: rgba(255, 215, 0, 0.1); color: var(--gold); }
 .vitrine-footnote {
-  font-size: 12px; color: rgba(255, 255, 255, 0.32);
+  font-size: 12px; color: rgba(255, 255, 255, 0.6);
   margin: 16px 0 0; line-height: 1.5;
 }
 
@@ -1069,7 +1099,7 @@ a { text-decoration: none; color: inherit; }
   border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.6);
   white-space: nowrap;
 }
-.grade-desc { font-size: 13px; color: rgba(255, 255, 255, 0.45); margin: 8px 0 0; line-height: 1.55; }
+.grade-desc { font-size: 13px; color: rgba(255, 255, 255, 0.6); margin: 8px 0 0; line-height: 1.55; }
 
 .infra-item {
   border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px;
@@ -1079,7 +1109,7 @@ a { text-decoration: none; color: inherit; }
 .infra-item:hover { border-color: rgba(89, 130, 255, 0.28); transform: translateY(-3px); }
 .infra-icon { display: inline-flex; color: var(--a); margin-bottom: 8px; }
 .infra-name { font-size: 14px; font-weight: 700; margin: 0 0 6px; }
-.infra-desc { font-size: 12.5px; color: rgba(255, 255, 255, 0.42); margin: 0; line-height: 1.6; }
+.infra-desc { font-size: 12.5px; color: rgba(255, 255, 255, 0.6); margin: 0; line-height: 1.6; }
 
 @media (prefers-reduced-motion: reduce) {
   .rise-in { animation: none; }
