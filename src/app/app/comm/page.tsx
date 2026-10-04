@@ -296,10 +296,33 @@ export default function CommPage() {
     };
 
 
-    await supabase.from('conversation_messages').insert([payload]);
+    // C2 (audit UI/UX 2026-10-04) : vérifier l'erreur d'insertion — sans ça,
+    // l'utilisateur croit son message envoyé alors qu'il est perdu (message fantôme).
+    const { error: insertError } = await supabase.from('conversation_messages').insert([payload]);
+    if (insertError) {
+      console.error('Échec envoi message :', insertError);
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, failed: true } : m));
+    } else {
+      // Refresh conversations to update last message
+      loadConversations(currentUser.id);
+    }
+  };
 
-    // Refresh conversations to update last message
-    loadConversations(currentUser.id);
+  // Réessayer l'envoi d'un message en échec (C2)
+  const retryMessage = async (msg: any) => {
+    if (!activeConv || !currentUser) return;
+    setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, failed: false } : m));
+    const { error } = await supabase.from('conversation_messages').insert([{
+      id: msg.id,
+      conversation_id: activeConv.id,
+      sender_id: currentUser.id,
+      content: msg.content,
+    }]);
+    if (error) {
+      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, failed: true } : m));
+    } else {
+      loadConversations(currentUser.id);
+    }
   };
 
   // ─── Delete Message ───────────────────────────────────────
@@ -569,6 +592,14 @@ export default function CommPage() {
               )}
             </div>
             <div className="msg-timestamp">{formatMsgTime(msg.created_at)}</div>
+            {msg.failed && (
+              <button
+                onClick={() => retryMessage(msg)}
+                style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', color: '#ff6b6b', fontSize: 12, fontWeight: 600, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', marginTop: 4 }}
+              >
+                ⚠️ Non envoyé — Réessayer
+              </button>
+            )}
           </motion.div>
         </div>
       );
