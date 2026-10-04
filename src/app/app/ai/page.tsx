@@ -248,10 +248,11 @@ export default function AIPage() {
     abortRef.current?.abort();
   };
 
-  const sendMessage = async () => {
-    if ((!input.trim() && attachedImages.length === 0) || loading || streaming) return;
+  const sendMessage = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if ((!text && attachedImages.length === 0) || loading || streaming) return;
     
-    const userMsg = input.trim();
+    const userMsg = text;
     setInput("");
     
     // Build content array for OpenAI vision API (Pollinations uses OpenAI)
@@ -537,17 +538,19 @@ Exemples :
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '900px', margin: '0 auto', gap: '20px' }}>
       
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ padding: '24px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'linear-gradient(135deg, rgba(46,91,255,0.1), rgba(0,210,182,0.05))' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '50px', height: '50px', borderRadius: '16px', background: 'var(--a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', boxShadow: '0 0 20px rgba(0,210,182,0.4)' }}>
-            <Bot size={28} />
+      {/* Header compact (quick win audit 2026-10-04) : barre fine pour laisser
+          un max d'espace vertical au chat */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ padding: '10px 18px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'var(--a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', boxShadow: '0 0 16px rgba(0,210,182,0.35)', flexShrink: 0 }}>
+            <Bot size={20} />
           </div>
           <div>
-            <h2 style={{ fontSize: '24px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              Moncef IA <Sparkles size={18} color="var(--a)" />
-            </h2>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ok)' }} /> {t(lang, 'ai_status')}
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Assistant IA <Sparkles size={14} color="var(--a)" />
+            </div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)' }} /> {t(lang, 'ai_status')}
             </div>
           </div>
         </div>
@@ -957,6 +960,29 @@ Exemples :
           </div>
         )}
 
+        {/* Chips de suggestions (quick win audit 2026-10-04) : zéro page blanche —
+            visibles tant que la conversation n'a pas vraiment commencé */}
+        {messages.length <= 1 && !loading && !streaming && (
+          <div style={{ padding: '0 30px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              "Explique-moi les équations du premier degré",
+              "Fais-moi un quiz de 5 questions en physique-chimie",
+              "Résume-moi mon chapitre d'histoire-géo",
+              "Aide-moi à planifier mes révisions de la semaine",
+            ].map((chip) => (
+              <button
+                key={chip}
+                onClick={() => sendMessage(chip)}
+                style={{ background: 'rgba(0,210,182,0.07)', border: '1px solid rgba(0,210,182,0.25)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,210,182,0.15)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,210,182,0.07)'; }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div style={{ padding: '20px 30px', background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 8px 8px 16px', borderRadius: '24px' }}>
             {/* Image upload button */}
@@ -986,7 +1012,7 @@ Exemples :
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               disabled={loading || streaming}
             />
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={streaming ? stopStream : sendMessage} disabled={loading} title={streaming ? "Arrêter la réponse" : undefined}>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={() => (streaming ? stopStream() : sendMessage())} disabled={loading} title={streaming ? "Arrêter la réponse" : undefined}>
               {streaming ? <Square size={20} /> : <Send size={20} style={{ marginLeft: lang === 'ar' ? '2px' : '-2px', transform: lang === 'ar' ? 'scaleX(-1)' : 'none' }} />}
             </motion.button>
           </div>
