@@ -38,6 +38,10 @@ export default function AlphaPage() {
   const router = useRouter();
   const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
   const [userRole, setUserRole] = useState<any>(null);
+  // Volet 5 (2026-10-04) : le super-admin est le seul à pouvoir agir sur un fondateur.
+  // L'email vient de la session vérifiée ; la comparaison insensible à la casse.
+  const [userEmail, setUserEmail] = useState<string>('');
+  const isSuperAdmin = userRole === 'founder' && userEmail.toLowerCase() === 'aminefjer@protonmail.com';
   const [authToken, setAuthToken] = useState<any>(null);
   const [tab, setTab] = useState('dashboard');
   const [stats, setStats] = useState<any>(null);
@@ -68,6 +72,7 @@ export default function AlphaPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/auth'); return; }
       setAuthToken(session.access_token);
+      setUserEmail(session.user?.email ?? '');
       const { data: meRows } = await supabase.rpc('get_me');
         const data = meRows?.[0] ? { role: meRows[0].role } : null;
       if (['founder', 'moderator'].includes(data?.role)) {
@@ -440,7 +445,7 @@ export default function AlphaPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 10, background: rc.bg, color: rc.color, fontWeight: 700 }}>{rc.label}</span>
                     <span style={{ fontSize: 12, color: '#FFD700', fontWeight: 700 }}>⚡ {u.tokens}</span>
-                    {userRole === 'founder' && u.role !== 'founder' && (
+                    {userRole === 'founder' && (u.role !== 'founder' || isSuperAdmin) && (
                       <>
                         <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
                           onClick={() => { setEditingUser(u); setEditRole(u.role); setEditTokens(u.tokens); }}
