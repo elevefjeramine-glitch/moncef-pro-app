@@ -47,6 +47,175 @@ export default function DashboardPage() {
   // C5 (audit UI/UX 2026-10-04) : message d'erreur inline quand le formulaire est incomplet
   const [formError, setFormError] = useState("");
   const subjInputRef = useRef<HTMLInputElement>(null);
+  // Sections temporelles repliables (quick win audit 2026-10-04)
+  const [collapsedHwSections, setCollapsedHwSections] = useState<Record<string, boolean>>({ later: true });
+  // Carte devoir extraite pour réutilisation dans les sections temporelles (quick win 2026-10-04)
+  const renderHw = (hw: any) => {
+                const pConfig = PRIORITY_CONFIG[hw.priority as string] || PRIORITY_CONFIG.normal;
+                const sConfig = STATUS_CONFIG[hw.status as string] || STATUS_CONFIG.todo;
+                const daysRemaining = getDaysRemaining(hw.due_date);
+                const isOverdue = daysRemaining !== null && daysRemaining < 0;
+                const isDueSoon = daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 2;
+                const prog = hw.progression || 0;
+
+                return (
+                  <motion.div 
+                    key={hw.id}
+                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                    animate={{ opacity: hw.status === 'done' ? 0.6 : 1, height: 'auto', scale: 1 }}
+                    exit={{ opacity: 0, x: -50, height: 0, overflow: 'hidden' }}
+                    transition={{ duration: 0.3 }}
+                    style={{ 
+                      background: pConfig.bg, 
+                      padding: '18px 20px', 
+                      borderRadius: 18, 
+                      border: `1px solid ${pConfig.border}`,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {/* Priority bar */}
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: pConfig.color }} />
+
+                    {/* Main content */}
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                      
+                      {/* Toggle done */}
+                      <motion.div 
+                        whileHover={{ scale: 1.2 }} 
+                        whileTap={{ scale: 0.9 }} 
+                        onClick={() => updateHomework(hw.id, { status: hw.status === 'done' ? 'todo' : 'done' })} 
+                        style={{ cursor: 'pointer', color: hw.status === 'done' ? 'var(--ok)' : 'rgba(255,255,255,0.3)', marginTop: 2, flexShrink: 0 }}
+                      >
+                        {hw.status === 'done' ? <Check size={24} /> : <Circle size={24} />}
+                      </motion.div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Subject + Teacher row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, color: pConfig.color, fontWeight: 700, textTransform: 'uppercase' }}>{hw.subject}</span>
+                          {hw.teacher && (
+                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <UserIcon size={10} /> {hw.teacher}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Task */}
+                        <div style={{ fontSize: 15, color: '#fff', textDecoration: hw.status === 'done' ? 'line-through' : 'none', marginBottom: 8 }}>
+                          {hw.task}
+                        </div>
+
+                        {/* Tags row */}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {/* Priority badge */}
+                          <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', color: pConfig.color, fontWeight: 600 }}>
+                            {pConfig.label}
+                          </span>
+
+                          {/* Status badge */}
+                          <select 
+                            value={hw.status || 'todo'} 
+                            onChange={e => updateHomework(hw.id, { status: e.target.value })}
+                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', color: sConfig.color, border: 'none', cursor: 'pointer', fontWeight: 600, outline: 'none' }}
+                          >
+                            <option value="todo" style={{ color: '#000' }}>{t(lang,'hw_todo')}</option>
+                            <option value="in_progress" style={{ color: '#000' }}>{t(lang,'hw_in_progress')}</option>
+                            <option value="done" style={{ color: '#000' }}>{t(lang,'hw_done')}</option>
+                            <option value="forgotten" style={{ color: '#000' }}>{t(lang,'hw_forgotten')}</option>
+                          </select>
+
+                          {/* Due date — cliquable pour éditer */}
+                          {editingDateId === hw.id ? (
+                            <input
+                              type="date"
+                              defaultValue={hw.due_date || ''}
+                              autoFocus
+                              onBlur={e => { updateHomework(hw.id, { due_date: e.target.value || null }); setEditingDateId(null); }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); if (e.key === 'Escape') setEditingDateId(null); }}
+                              style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid var(--a)', colorScheme: 'dark', outline: 'none' }}
+                            />
+                          ) : (
+                            <span
+                              onClick={() => setEditingDateId(hw.id)}
+                              title="Cliquer pour modifier la date"
+                              style={{ 
+                                fontSize: 11, padding: '3px 10px', borderRadius: 8, 
+                                background: isOverdue ? 'rgba(255,71,87,0.3)' : isDueSoon ? 'rgba(255,165,2,0.3)' : 'rgba(0,0,0,0.3)', 
+                                color: isOverdue ? '#ff4757' : isDueSoon ? '#ffa502' : 'rgba(255,255,255,0.5)', 
+                                fontWeight: 600,
+                                display: 'flex', alignItems: 'center', gap: 4,
+                                cursor: 'pointer',
+                                border: '1px solid transparent'
+                              }}
+                            >
+                              <Clock size={10} />
+                              {hw.due_date
+                                ? isOverdue 
+                                  ? `${t(lang,'hw_overdue')} ${Math.abs(daysRemaining)}j`
+                                  : daysRemaining === 0
+                                    ? t(lang,'hw_due_today')
+                                    : daysRemaining === 1
+                                      ? t(lang,'hw_due_tomorrow')
+                                      : `${daysRemaining} ${t(lang,'hw_days_left')}`
+                                : `📅 ${t(lang,'hw_add_date')}`
+                              }
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Progression — slider inline */}
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <BarChart3 size={10} /> {t(lang,'hw_progression')}
+                            </span>
+                            <span
+                              onClick={() => setEditingProgId(editingProgId === hw.id ? null : hw.id)}
+                              style={{ fontSize: 11, color: 'var(--a)', fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}
+                              title="Cliquer pour modifier"
+                            >
+                              {prog}%
+                            </span>
+                          </div>
+                          <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${prog}%` }}
+                              style={{ height: '100%', background: 'linear-gradient(90deg, var(--p), var(--a))', borderRadius: 10 }} 
+                            />
+                          </div>
+                          {editingProgId === hw.id && (
+                            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 8 }}>
+                              <input
+                                type="range" min="0" max="100" step="5"
+                                defaultValue={prog}
+                                onMouseUp={e => { updateHomework(hw.id, { progression: Number((e.target as HTMLInputElement).value) }); setEditingProgId(null); }}
+                                onTouchEnd={e => { updateHomework(hw.id, { progression: Number((e.target as HTMLInputElement).value) }); setEditingProgId(null); }}
+                                style={{ width: '100%', accentColor: 'var(--a)', cursor: 'pointer' }}
+                              />
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                                <span>0%</span><span>50%</span><span>100%</span>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Delete button */}
+                      <motion.button 
+                        whileHover={{ scale: 1.1, color: 'var(--err)' }} 
+                        whileTap={{ scale: 0.9 }} 
+                        onClick={() => deleteHomework(hw.id)} 
+                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
+                      >
+                        <Trash2 size={18} />
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )
+  };
 
   // React Query pour le chargement et cache des devoirs
   // Triés par échéance (les plus urgents d'abord), puis par date de création.
@@ -320,174 +489,53 @@ export default function DashboardPage() {
                <div style={{ color: '#fff', fontWeight: 600 }}>{t(lang, 'empty_hw')}</div>
              </div>
           ) : (
-            <AnimatePresence>
-              {homeworks.map(hw => {
-                const pConfig = PRIORITY_CONFIG[hw.priority as string] || PRIORITY_CONFIG.normal;
-                const sConfig = STATUS_CONFIG[hw.status as string] || STATUS_CONFIG.todo;
-                const daysRemaining = getDaysRemaining(hw.due_date);
-                const isOverdue = daysRemaining !== null && daysRemaining < 0;
-                const isDueSoon = daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 2;
-                const prog = hw.progression || 0;
-
-                return (
-                  <motion.div 
-                    key={hw.id}
-                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                    animate={{ opacity: hw.status === 'done' ? 0.6 : 1, height: 'auto', scale: 1 }}
-                    exit={{ opacity: 0, x: -50, height: 0, overflow: 'hidden' }}
-                    transition={{ duration: 0.3 }}
-                    style={{ 
-                      background: pConfig.bg, 
-                      padding: '18px 20px', 
-                      borderRadius: 18, 
-                      border: `1px solid ${pConfig.border}`,
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {/* Priority bar */}
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: pConfig.color }} />
-
-                    {/* Main content */}
-                    <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                      
-                      {/* Toggle done */}
-                      <motion.div 
-                        whileHover={{ scale: 1.2 }} 
-                        whileTap={{ scale: 0.9 }} 
-                        onClick={() => updateHomework(hw.id, { status: hw.status === 'done' ? 'todo' : 'done' })} 
-                        style={{ cursor: 'pointer', color: hw.status === 'done' ? 'var(--ok)' : 'rgba(255,255,255,0.3)', marginTop: 2, flexShrink: 0 }}
-                      >
-                        {hw.status === 'done' ? <Check size={24} /> : <Circle size={24} />}
-                      </motion.div>
-
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {/* Subject + Teacher row */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 12, color: pConfig.color, fontWeight: 700, textTransform: 'uppercase' }}>{hw.subject}</span>
-                          {hw.teacher && (
-                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <UserIcon size={10} /> {hw.teacher}
-                            </span>
-                          )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(() => {
+                const _today = new Date().toISOString().slice(0, 10);
+                const _d = (n: number) => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
+                const _tomorrow = _d(1);
+                const _weekEnd = _d(7);
+                const _groups: { key: string; title: string; items: any[]; urgent?: boolean }[] = [
+                  { key: 'overdue', title: 'En retard', items: [], urgent: true },
+                  { key: 'today', title: "Aujourd'hui", items: [] },
+                  { key: 'tomorrow', title: 'Demain', items: [] },
+                  { key: 'week', title: 'Cette semaine', items: [] },
+                  { key: 'later', title: 'Plus tard', items: [] },
+                ];
+                const _g = (k: string) => _groups.find(g => g.key === k)!;
+                for (const _hw of homeworks) {
+                  const _due = _hw.due_date ? String(_hw.due_date).slice(0, 10) : null;
+                  if (!_due) _g('later').items.push(_hw);
+                  else if (_due < _today) _g('overdue').items.push(_hw);
+                  else if (_due === _today) _g('today').items.push(_hw);
+                  else if (_due === _tomorrow) _g('tomorrow').items.push(_hw);
+                  else if (_due <= _weekEnd) _g('week').items.push(_hw);
+                  else _g('later').items.push(_hw);
+                }
+                return _groups.filter(g => g.items.length > 0).map(g => (
+                  <div key={g.key} style={{ marginBottom: 6 }}>
+                    <button
+                      onClick={() => setCollapsedHwSections(prev => ({ ...prev, [g.key]: !prev[g.key] }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: '10px 4px', width: '100%', textAlign: 'left', fontFamily: 'inherit' }}
+                    >
+                      <span style={{ fontSize: 15 }}>{g.urgent ? '🔴' : '📅'}</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: g.urgent ? '#ff6b6b' : '#fff' }}>{g.title}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '2px 8px' }}>{g.items.length}</span>
+                      <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', display: 'flex' }}>
+                        {collapsedHwSections[g.key] ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                      </span>
+                    </button>
+                    {!collapsedHwSections[g.key] && (
+                      <AnimatePresence>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                          {g.items.map(hw => renderHw(hw))}
                         </div>
-
-                        {/* Task */}
-                        <div style={{ fontSize: 15, color: '#fff', textDecoration: hw.status === 'done' ? 'line-through' : 'none', marginBottom: 8 }}>
-                          {hw.task}
-                        </div>
-
-                        {/* Tags row */}
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                          {/* Priority badge */}
-                          <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', color: pConfig.color, fontWeight: 600 }}>
-                            {pConfig.label}
-                          </span>
-
-                          {/* Status badge */}
-                          <select 
-                            value={hw.status || 'todo'} 
-                            onChange={e => updateHomework(hw.id, { status: e.target.value })}
-                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', color: sConfig.color, border: 'none', cursor: 'pointer', fontWeight: 600, outline: 'none' }}
-                          >
-                            <option value="todo" style={{ color: '#000' }}>{t(lang,'hw_todo')}</option>
-                            <option value="in_progress" style={{ color: '#000' }}>{t(lang,'hw_in_progress')}</option>
-                            <option value="done" style={{ color: '#000' }}>{t(lang,'hw_done')}</option>
-                            <option value="forgotten" style={{ color: '#000' }}>{t(lang,'hw_forgotten')}</option>
-                          </select>
-
-                          {/* Due date — cliquable pour éditer */}
-                          {editingDateId === hw.id ? (
-                            <input
-                              type="date"
-                              defaultValue={hw.due_date || ''}
-                              autoFocus
-                              onBlur={e => { updateHomework(hw.id, { due_date: e.target.value || null }); setEditingDateId(null); }}
-                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); if (e.key === 'Escape') setEditingDateId(null); }}
-                              style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid var(--a)', colorScheme: 'dark', outline: 'none' }}
-                            />
-                          ) : (
-                            <span
-                              onClick={() => setEditingDateId(hw.id)}
-                              title="Cliquer pour modifier la date"
-                              style={{ 
-                                fontSize: 11, padding: '3px 10px', borderRadius: 8, 
-                                background: isOverdue ? 'rgba(255,71,87,0.3)' : isDueSoon ? 'rgba(255,165,2,0.3)' : 'rgba(0,0,0,0.3)', 
-                                color: isOverdue ? '#ff4757' : isDueSoon ? '#ffa502' : 'rgba(255,255,255,0.5)', 
-                                fontWeight: 600,
-                                display: 'flex', alignItems: 'center', gap: 4,
-                                cursor: 'pointer',
-                                border: '1px solid transparent'
-                              }}
-                            >
-                              <Clock size={10} />
-                              {hw.due_date
-                                ? isOverdue 
-                                  ? `${t(lang,'hw_overdue')} ${Math.abs(daysRemaining)}j`
-                                  : daysRemaining === 0
-                                    ? t(lang,'hw_due_today')
-                                    : daysRemaining === 1
-                                      ? t(lang,'hw_due_tomorrow')
-                                      : `${daysRemaining} ${t(lang,'hw_days_left')}`
-                                : `📅 ${t(lang,'hw_add_date')}`
-                              }
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Progression — slider inline */}
-                        <div style={{ marginTop: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <BarChart3 size={10} /> {t(lang,'hw_progression')}
-                            </span>
-                            <span
-                              onClick={() => setEditingProgId(editingProgId === hw.id ? null : hw.id)}
-                              style={{ fontSize: 11, color: 'var(--a)', fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}
-                              title="Cliquer pour modifier"
-                            >
-                              {prog}%
-                            </span>
-                          </div>
-                          <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${prog}%` }}
-                              style={{ height: '100%', background: 'linear-gradient(90deg, var(--p), var(--a))', borderRadius: 10 }} 
-                            />
-                          </div>
-                          {editingProgId === hw.id && (
-                            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 8 }}>
-                              <input
-                                type="range" min="0" max="100" step="5"
-                                defaultValue={prog}
-                                onMouseUp={e => { updateHomework(hw.id, { progression: Number((e.target as HTMLInputElement).value) }); setEditingProgId(null); }}
-                                onTouchEnd={e => { updateHomework(hw.id, { progression: Number((e.target as HTMLInputElement).value) }); setEditingProgId(null); }}
-                                style={{ width: '100%', accentColor: 'var(--a)', cursor: 'pointer' }}
-                              />
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                                <span>0%</span><span>50%</span><span>100%</span>
-                              </div>
-                            </motion.div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Delete button */}
-                      <motion.button 
-                        whileHover={{ scale: 1.1, color: 'var(--err)' }} 
-                        whileTap={{ scale: 0.9 }} 
-                        onClick={() => deleteHomework(hw.id)} 
-                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
-                      >
-                        <Trash2 size={18} />
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
+                      </AnimatePresence>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
           )}
         </div>
       </motion.div>
