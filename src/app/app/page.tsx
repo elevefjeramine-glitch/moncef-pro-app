@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Circle, Trash2, Plus, Sparkles, LayoutList, Clock, AlertTriangle, ChevronDown, ChevronUp, X, User as UserIcon, BookOpen, CalendarDays, Flag, BarChart3 } from "lucide-react";
@@ -31,7 +31,6 @@ export default function DashboardPage() {
 
   const userName = user?.first_name || "Utilisateur";
   const [showForm, setShowForm] = useState(false);
-  const [cleanedCount, setCleanedCount] = useState(0);
 
   // Inline edit states
   const [editingDateId, setEditingDateId] = useState<any>(null);
@@ -45,42 +44,25 @@ export default function DashboardPage() {
   const [newPriority, setNewPriority] = useState("normal");
   const [newStatus, setNewStatus] = useState("todo");
   const [newProgression, setNewProgression] = useState(0);
+  // C5 (audit UI/UX 2026-10-04) : message d'erreur inline quand le formulaire est incomplet
+  const [formError, setFormError] = useState("");
+  const subjInputRef = useRef<HTMLInputElement>(null);
 
   // React Query pour le chargement et cache des devoirs
-  const { data: homeworks = [], isLoading: loading } = useQuery({
+  // Triés par échéance (les plus urgents d'abord), puis par date de création.
+  const { data: homeworks = [], isLoading: loading, isError: hwError, refetch: refetchHw } = useQuery({
     queryKey: ['homeworks', user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('homework').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('homework').select('*').order('due_date', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!user?.id, // Ne lance la requête que si l'utilisateur est connu
   });
 
-  // Defect #8 fix: separate expired homework cleanup into its own useEffect
-  useEffect(() => {
-    if (homeworks.length === 0) return;
-
-    const today = new Date().toISOString().slice(0, 10);
-    const expired = homeworks.filter(hw => hw.due_date && hw.due_date < today && (hw.status === 'done' || hw.is_done));
-
-    if (expired.length === 0) return;
-
-    let cancelled = false;
-    const cleanExpired = async () => {
-      for (const hw of expired) {
-        if (cancelled) return;
-        await supabase.from('homework').delete().eq('id', hw.id);
-      }
-      if (!cancelled) {
-        setCleanedCount(expired.length);
-        setTimeout(() => setCleanedCount(0), 5000);
-        queryClient.invalidateQueries({ queryKey: ['homeworks', user?.id] });
-      }
-    };
-
-    cleanExpired();
-    return () => { cancelled = true; };
-  }, [homeworks, user?.id, queryClient]);
+  // C3 (audit UI/UX 2026-10-04) : on ne supprime PLUS automatiquement les devoirs
+  // terminés périmés — c'était une destruction de données sans consentement.
+  // Ils restent visibles (atténués) et l'élève les supprime lui-même s'il veut.
 
   useEffect(() => {
     if (!user?.id) return;
@@ -102,7 +84,14 @@ export default function DashboardPage() {
   }, [user?.id, queryClient]);
 
   const addHomework = async () => {
-    if (!newSubj || !newTask) return;
+    // C5 (audit UI/UX 2026-10-04) : plus de validation silencieuse — message
+    // inline + focus sur le premier champ manquant.
+    if (!newSubj || !newTask) {
+      setFormError(t(lang, 'hw_form_incomplete') || "Indique au moins la matière et l'intitulé du devoir.");
+      subjInputRef.current?.focus();
+      return;
+    }
+    setFormError("");
     if (!user) return;
     
     await supabase.from('homework').insert([{ 
@@ -161,18 +150,9 @@ export default function DashboardPage() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ maxWidth: '900px', margin: '0 auto', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       
-      {/* Bug #6 fix: Auto-clean toast notification */}
-      <AnimatePresence>
-        {cleanedCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, background: 'rgba(46,213,115,0.15)', border: '1px solid rgba(46,213,115,0.4)', borderRadius: 14, padding: '12px 20px', color: '#2ed573', fontSize: 14, fontWeight: 600, backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            🧹 {cleanedCount} {t(lang,'hw_auto_cleaned')}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
+      {/* Bug #6 fix: Auto-clean toast notification — retiré (audit 2026-10-04) :
+          plus de suppression automatique, donc plus de toast. */}
+
       <TiltCard delay={0.1} style={{ marginBottom: 40, background: 'linear-gradient(135deg, rgba(46,91,255,0.1), rgba(0,210,182,0.1))', padding: 30, borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
         <Sparkles size={120} style={{ position: 'absolute', right: lang === 'ar' ? 'auto' : -20, left: lang === 'ar' ? -20 : 'auto', top: -20, color: 'rgba(0,210,182,0.1)', transform: 'rotate(15deg)' }} />
         <h1 style={{ fontSize: 32, marginBottom: 8, color: '#fff' }}>{t(lang, 'hello')}, <span style={{ color: 'var(--a)' }}>{userName}</span> 👋</h1>
@@ -236,7 +216,7 @@ export default function DashboardPage() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--a)', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 1 }}>
                       <BookOpen size={13} /> {t(lang,'hw_subject')} *
                     </label>
-                    <input className="fi" placeholder={t(lang,'hw_ex_subj')} value={newSubj} onChange={e => setNewSubj(e.target.value)} style={{ height: 44 }} />
+                    <input ref={subjInputRef} className="fi" placeholder={t(lang,'hw_ex_subj')} value={newSubj} onChange={e => setNewSubj(e.target.value)} style={{ height: 44 }} aria-invalid={!!formError} />
                   </div>
                   <div style={{ flex: '1 1 200px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--a)', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 1 }}>
@@ -298,6 +278,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Submit */}
+                {formError && (
+                  <div role="alert" style={{ color: '#ff6b6b', fontSize: 14, fontWeight: 600, padding: '8px 12px', background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.25)', borderRadius: 10 }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <motion.button 
                   whileHover={{ scale: 1.02 }} 
                   whileTap={{ scale: 0.98 }} 
@@ -319,6 +304,15 @@ export default function DashboardPage() {
                <Skeleton style={{ height: 120, borderRadius: 18 }} />
                <Skeleton style={{ height: 120, borderRadius: 18 }} />
                <Skeleton style={{ height: 120, borderRadius: 18 }} />
+             </div>
+          ) : hwError ? (
+             /* C4 (audit UI/UX 2026-10-04) : ne plus confondre une erreur réseau
+                avec "aucun devoir" — état d'erreur explicite avec retry. */
+             <div className="empty-state" style={{ padding: 40, border: '1px solid rgba(255,107,107,0.25)', background: 'rgba(255,107,107,0.05)', textAlign: 'center' }}>
+               <div style={{ fontSize: 40, marginBottom: 10 }}>📡</div>
+               <div style={{ color: '#fff', fontWeight: 700, marginBottom: 6 }}>Impossible de charger tes devoirs</div>
+               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 16 }}>Vérifie ta connexion puis réessaie.</div>
+               <button className="btn" onClick={() => refetchHw()}>Réessayer</button>
              </div>
           ) : homeworks.length === 0 ? (
              <div className="empty-state" style={{ padding: 40, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
