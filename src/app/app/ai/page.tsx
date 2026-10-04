@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, Sparkles, User, RefreshCw, ImagePlus, CalendarPlus, X, Check, BookOpen, BarChart3, CalendarDays } from "lucide-react";
+import { Send, Bot, Sparkles, User, RefreshCw, ImagePlus, CalendarPlus, X, Check, BookOpen, BarChart3, CalendarDays, Square } from "lucide-react";
 import { useLanguage, t } from "@/utils/i18n";
 import { supabase } from "@/utils/supabase/client";
 import { useUserStore } from "@/store/useUserStore";
@@ -29,6 +29,11 @@ export default function AIPage() {
   const [scheduleUpdateData, setScheduleUpdateData] = useState<any>(null);
   const messagesEndRef = useRef<any>(null);
   const fileInputRef = useRef<any>(null);
+  // Streaming : état + contrôleur d'annulation + scroll intelligent
+  const [streaming, setStreaming] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollContainerRef = useRef<any>(null);
+  const nearBottomRef = useRef(true);
 
   // Build localized day names from i18n keys d0..d6
   const DAYS_FR = ['d0','d1','d2','d3','d4','d5','d6'].map(k => t(lang, k));
@@ -97,13 +102,24 @@ export default function AIPage() {
     };
   }, []);
 
+  // Ne force le scroll que si l'utilisateur était déjà en bas :
+  // pendant un stream il peut relire le haut sans être ramené de force.
+  const handleScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (nearBottomRef.current) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
+
+  // Annule un stream en cours si on quitte la page
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target?.files ?? []);
@@ -203,8 +219,37 @@ export default function AIPage() {
     }
   };
 
+  // Extrait les balises JSON structurées (<SCHEDULE_JSON>, <HOMEWORK_JSON>, …)
+  // de la réponse IA et retourne le texte nettoyé pour l'affichage.
+  const applyStructuredTags = (reply: string): string => {
+    let text = reply;
+    const take = (re: RegExp, apply: (v: any) => void) => {
+      const m = text.match(re);
+      if (m) {
+        try {
+          apply(JSON.parse((m[1] ?? '').trim()));
+          text = text.replace(re, '').trim();
+        } catch (e) {
+          console.error('structured tag parse error', e);
+        }
+      }
+    };
+    take(/<SCHEDULE_JSON>([\s\S]*?)<\/SCHEDULE_JSON>/, setScheduleData);
+    take(/<HOMEWORK_JSON>([\s\S]*?)<\/HOMEWORK_JSON>/, setHomeworkData);
+    take(/<HOMEWORK_UPDATE_JSON>([\s\S]*?)<\/HOMEWORK_UPDATE_JSON>/, setHomeworkUpdateData);
+    take(/<EVENT_JSON>([\s\S]*?)<\/EVENT_JSON>/, setEventData);
+    take(/<SCHEDULE_ADD_JSON>([\s\S]*?)<\/SCHEDULE_ADD_JSON>/, setScheduleAddData);
+    take(/<SCHEDULE_DELETE_JSON>([\s\S]*?)<\/SCHEDULE_DELETE_JSON>/, setScheduleDeleteData);
+    take(/<SCHEDULE_UPDATE_JSON>([\s\S]*?)<\/SCHEDULE_UPDATE_JSON>/, setScheduleUpdateData);
+    return text;
+  };
+
+  const stopStream = () => {
+    abortRef.current?.abort();
+  };
+
   const sendMessage = async () => {
-    if ((!input.trim() && attachedImages.length === 0) || loading) return;
+    if ((!input.trim() && attachedImages.length === 0) || loading || streaming) return;
     
     const userMsg = input.trim();
     setInput("");
@@ -332,119 +377,150 @@ Exemples :
 
       const { data: { session } } = await supabase.auth.getSession();
       
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session?.access_token || ""}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           model: 'claude-3-7-sonnet-20250219',
           messages: apiMessages,
-          system: `Tu es Moncef IA, un assistant éducatif intelligent et bienveillant créé par Amine FJER. Tu fais partie de la plateforme "Moncef IA" qui a été entièrement conçue et développée par Amine FJER. Si on te demande qui t'a créé, qui a créé ce site, qui est le fondateur, ou qui est derrière ce projet, tu dois TOUJOURS répondre que c'est Amine FJER. IMPORTANT: You must reply entirely in the language corresponding to this code: ${lang}. La date d'aujourd'hui est le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. ${schedulePrompt} ${homeworkPrompt} ${eventPrompt}`
-        })
+          system: `Tu es Moncef IA, un assistant éducatif intelligent et bienveillant créé par Amine FJER. Tu fais partie de la plateforme "Moncef IA" qui a été entièrement conçue et développée par Amine FJER. Si on te demande qui t'a créé, qui a créé ce site, qui est le fondateur, ou qui est derrière ce projet, tu dois TOUJOURS répondre que c'est Amine FJER. IMPORTANT: You must reply entirely in the language corresponding to this code: ${lang}. La date d'aujourd'hui est le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. ${schedulePrompt} ${homeworkPrompt} ${eventPrompt}`,
+          stream: true
+        }),
+        signal: controller.signal
       });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || "Désolé, une erreur est survenue." }]);
+
+      const contentType = res.headers.get('content-type') || '';
+
+      if (!res.ok || !contentType.includes('text/event-stream')) {
+        // Erreur JSON (401/402/500…) ou réponse non-stream : comportement historique.
+        let data: any = {};
+        try { data = await res.json(); } catch { /* corps illisible */ }
+        if (!res.ok) {
+          setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || "Désolé, une erreur est survenue." }]);
+          setLoading(false);
+          return;
+        }
+        if (data.newTokens !== undefined) {
+          useUserStore.getState().setCredits(data.newTokens);
+        }
+        const finalText = applyStructuredTags(data.response || "Désolé, je n'ai pas compris.");
+        setMessages(prev => [...prev, { role: 'assistant', content: finalText, cost: data.cost || 0 }]);
         setLoading(false);
         return;
       }
-      
-      // Update global credits if returned
-      if (data.newTokens !== undefined) {
-        useUserStore.getState().setCredits(data.newTokens);
-      }
 
-      let aiReply = data.response || "Désolé, je n'ai pas compris.";
-      
-      // Check if the response contains schedule JSON
-      const jsonMatch = aiReply.match(/<SCHEDULE_JSON>([\s\S]*?)<\/SCHEDULE_JSON>/);
-      if (jsonMatch) {
-        try {
-          const parsedSchedule = JSON.parse(jsonMatch[1].trim());
-          setScheduleData(parsedSchedule);
-          aiReply = aiReply.replace(/<SCHEDULE_JSON>[\s\S]*?<\/SCHEDULE_JSON>/, '').trim();
-        } catch (parseErr: any) {
-          console.error("Failed to parse schedule JSON:", parseErr);
+      // === STREAMING SSE : le texte arrive token par token ===
+      setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+      setLoading(false);
+      setStreaming(true);
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullText = '';
+      let streamInfo: any = {};
+      let aborted = false;
+
+      const pushSnapshot = (snapshot: string) => {
+        setMessages(prev => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.role === 'assistant') {
+            next[next.length - 1] = { ...last, content: snapshot, streaming: true };
+          }
+          return next;
+        });
+      };
+
+      try {
+        if (!reader) throw new Error('Flux de lecture indisponible');
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() ?? '';
+          for (const ev of events) {
+            const line = ev.trim();
+            if (!line.startsWith('data:')) continue;
+            let payload: any;
+            try { payload = JSON.parse(line.slice(5).trim()); } catch { continue; }
+            if (typeof payload.token === 'string' && payload.token) {
+              fullText += payload.token;
+              pushSnapshot(fullText);
+            } else if (payload.done) {
+              streamInfo = payload;
+            } else if (payload.error) {
+              streamInfo = { error: payload.error, details: payload.details };
+            }
+          }
         }
-      }
-
-      // Check if the response contains homework JSON (new entries)
-      const hwMatch = aiReply.match(/<HOMEWORK_JSON>([\s\S]*?)<\/HOMEWORK_JSON>/);
-      if (hwMatch) {
-        try {
-          const parsedHomework = JSON.parse(hwMatch[1].trim());
-          setHomeworkData(parsedHomework);
-          aiReply = aiReply.replace(/<HOMEWORK_JSON>[\s\S]*?<\/HOMEWORK_JSON>/, '').trim();
-        } catch (parseErr: any) {
-          console.error("Failed to parse homework JSON:", parseErr);
+      } catch (e: any) {
+        if (e?.name === 'AbortError') {
+          aborted = true; // Stop demandé : on garde le texte partiel.
+        } else {
+          throw e;
         }
+      } finally {
+        try { await reader?.cancel(); } catch { /* déjà fermé */ }
       }
 
-      // Check if the response contains homework UPDATE JSON
-      const hwUpdateMatch = aiReply.match(/<HOMEWORK_UPDATE_JSON>([\s\S]*?)<\/HOMEWORK_UPDATE_JSON>/);
-      if (hwUpdateMatch) {
-        try {
-          const parsedUpdate = JSON.parse(hwUpdateMatch[1].trim());
-          setHomeworkUpdateData(parsedUpdate);
-          aiReply = aiReply.replace(/<HOMEWORK_UPDATE_JSON>[\s\S]*?<\/HOMEWORK_UPDATE_JSON>/, '').trim();
-        } catch (parseErr: any) {
-          console.error("Failed to parse homework update JSON:", parseErr);
+      setStreaming(false);
+      abortRef.current = null;
+
+      if (streamInfo.newTokens !== undefined) {
+        useUserStore.getState().setCredits(streamInfo.newTokens);
+      }
+
+      let aiReply = fullText.trim();
+      if (!aiReply) {
+        aiReply = streamInfo.error || "Désolé, je n'ai pas compris.";
+      }
+      aiReply = applyStructuredTags(aiReply);
+
+      setMessages(prev => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last && last.role === 'assistant') {
+          next[next.length - 1] = {
+            ...last,
+            content: aiReply,
+            streaming: false,
+            stopped: aborted,
+            cost: aborted ? 0 : (streamInfo.cost || 0),
+          };
         }
-      }
-
-      // Check if the response contains EVENT JSON
-      const eventMatch = aiReply.match(/<EVENT_JSON>([\s\S]*?)<\/EVENT_JSON>/);
-      if (eventMatch) {
-        try {
-          const parsedEvents = JSON.parse(eventMatch[1].trim());
-          setEventData(parsedEvents);
-          aiReply = aiReply.replace(/<EVENT_JSON>[\s\S]*?<\/EVENT_JSON>/, '').trim();
-        } catch (parseErr: any) {
-          console.error("Failed to parse event JSON:", parseErr);
-        }
-      }
-
-      // Schedule ADD
-      const schedAddMatch = aiReply.match(/<SCHEDULE_ADD_JSON>([\s\S]*?)<\/SCHEDULE_ADD_JSON>/);
-      if (schedAddMatch) {
-        try {
-          setScheduleAddData(JSON.parse(schedAddMatch[1].trim()));
-          aiReply = aiReply.replace(/<SCHEDULE_ADD_JSON>[\s\S]*?<\/SCHEDULE_ADD_JSON>/, '').trim();
-        } catch (e: any) { console.error('SCHEDULE_ADD_JSON parse error', e); }
-      }
-
-      // Schedule DELETE
-      const schedDelMatch = aiReply.match(/<SCHEDULE_DELETE_JSON>([\s\S]*?)<\/SCHEDULE_DELETE_JSON>/);
-      if (schedDelMatch) {
-        try {
-          setScheduleDeleteData(JSON.parse(schedDelMatch[1].trim()));
-          aiReply = aiReply.replace(/<SCHEDULE_DELETE_JSON>[\s\S]*?<\/SCHEDULE_DELETE_JSON>/, '').trim();
-        } catch (e: any) { console.error('SCHEDULE_DELETE_JSON parse error', e); }
-      }
-
-      // Schedule UPDATE
-      const schedUpdMatch = aiReply.match(/<SCHEDULE_UPDATE_JSON>([\s\S]*?)<\/SCHEDULE_UPDATE_JSON>/);
-      if (schedUpdMatch) {
-        try {
-          setScheduleUpdateData(JSON.parse(schedUpdMatch[1].trim()));
-          aiReply = aiReply.replace(/<SCHEDULE_UPDATE_JSON>[\s\S]*?<\/SCHEDULE_UPDATE_JSON>/, '').trim();
-        } catch (e: any) { console.error('SCHEDULE_UPDATE_JSON parse error', e); }
-      }
-      
-      setMessages(prev => [...prev, { role: 'assistant', content: aiReply }]);
+        return next;
+      });
     } catch (err: any) {
       console.error(err);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Désolé, une erreur technique est survenue." }]);
+      setMessages(prev => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        // Si un stream était en cours, on remplace son placeholder plutôt
+        // que d'empiler un second message d'erreur.
+        if (last && last.role === 'assistant' && last.streaming) {
+          next[next.length - 1] = { ...last, content: "Désolé, une erreur technique est survenue.", streaming: false };
+          return next;
+        }
+        return [...prev, { role: 'assistant', content: "Désolé, une erreur technique est survenue." }];
+      });
     } finally {
       setLoading(false);
+      setStreaming(false);
+      abortRef.current = null;
     }
   };
 
   const clearChat = () => {
+    abortRef.current?.abort();
+    setStreaming(false);
     setMessages([{ role: 'assistant', content: t(lang, 'ai_chat_reset_msg') }]);
     setScheduleData(null);
     setScheduleAddData(null);
@@ -482,7 +558,7 @@ Exemples :
 
       <div className="card" style={{ flex: 1, borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        <div style={{ flex: 1, overflowY: 'auto', padding: '30px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '30px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <AnimatePresence>
             {messages.map((msg, idx) => {
               const isAi = msg.role === 'assistant';
@@ -524,6 +600,19 @@ Exemples :
                     }}
                     dangerouslySetInnerHTML={{ __html: isAi ? DOMPurify.sanitize(marked.parse(msg.content || '') as string) : msg.content }}
                   />
+                    {isAi && msg.streaming && (
+                      <motion.span
+                        animate={{ opacity: [1, 0.15, 1] }}
+                        transition={{ repeat: Infinity, duration: 0.9 }}
+                        style={{ width: 8, height: 16, background: 'var(--a)', borderRadius: 2, marginTop: 6 }}
+                      />
+                    )}
+                    {isAi && !msg.streaming && (msg.cost > 0 || msg.stopped) && (
+                      <div style={{ display: 'flex', gap: 8, fontSize: '11px', color: 'rgba(255,255,255,0.35)', paddingLeft: 4 }}>
+                        {msg.cost > 0 && <span>−{msg.cost} crédits</span>}
+                        {msg.stopped && <span>⏹ Réponse arrêtée</span>}
+                      </div>
+                    )}
                   </div>
 
                   {!isAi && (
@@ -895,10 +984,10 @@ Exemples :
               value={input} 
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              disabled={loading}
+              disabled={loading || streaming}
             />
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={sendMessage} disabled={loading}>
-              <Send size={20} style={{ marginLeft: lang === 'ar' ? '2px' : '-2px', transform: lang === 'ar' ? 'scaleX(-1)' : 'none' }} />
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={streaming ? stopStream : sendMessage} disabled={loading} title={streaming ? "Arrêter la réponse" : undefined}>
+              {streaming ? <Square size={20} /> : <Send size={20} style={{ marginLeft: lang === 'ar' ? '2px' : '-2px', transform: lang === 'ar' ? 'scaleX(-1)' : 'none' }} />}
             </motion.button>
           </div>
           <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
