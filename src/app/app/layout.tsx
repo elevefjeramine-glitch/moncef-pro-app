@@ -5,9 +5,11 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Crown, Menu, ShieldAlert, Zap } from "lucide-react";
+import { Home, Bot, CalendarDays, MessageSquare, LogOut, Settings, X, Palette, UserCircle, Save, Menu, ShieldAlert, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { LanguageContext, t } from "@/utils/i18n";
 import HorsLigne from "@/components/HorsLigne";
+import CommandPalette from "@/components/CommandPalette";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { effacerSnapshots } from "@/lib/hors-ligne";
 import { useUserStore } from "@/store/useUserStore";
 import type { ReactNode } from "react";
@@ -17,6 +19,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [showSettings, setShowSettings] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showCreditsInfo, setShowCreditsInfo] = useState(false);
+  // Sidebar repliable (quick win audit 2026-10-04) : 260px -> 72px, persistée
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('moncef-sidebar-collapsed') === '1'; } catch { return false; }
+  });
+  const toggleCollapsed = () => {
+    setCollapsed(c => {
+      const next = !c;
+      try { localStorage.setItem('moncef-sidebar-collapsed', next ? '1' : '0'); } catch {}
+      return next;
+    });
+  };
   const pathname = usePathname();
   const channelRef = useRef<any>(null);
 
@@ -101,19 +116,32 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const lang = user.language || 'fr';
 
-  // `isAlpha` porte le doré, `accent` la couleur du module : Thunder est violet
-  // de bout en bout (menu, page, citations web), comme ALPHA est doré.
-  let navItems: { name: string; path: string; icon: any; isAlpha?: boolean; accent?: string; badge?: string }[] = [
-    { name: t(lang, 'home'), path: '/app', icon: Home },
-    { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
-    { name: t(lang, 'thunder'), path: '/app/thunder', icon: Zap, accent: '#a78bfa', badge: 'IA' },
-    { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
-    { name: t(lang, 'messages'), path: '/app/comm', icon: MessageSquare }
+  // Navigation organisée en sections labellisées (quick win audit 2026-10-04).
+  // L'ordre suit le workflow du lycéen : étudier d'abord.
+  type NavItem = { name: string; path: string; icon: any; isAlpha?: boolean; accent?: string; badge?: string };
+  const navSections: { label: string; items: NavItem[] }[] = [
+    { label: 'ÉTUDIER', items: [
+      { name: t(lang, 'home'), path: '/app', icon: Home },
+      { name: t(lang, 'thunder'), path: '/app/thunder', icon: Zap, accent: '#a78bfa', badge: 'IA' },
+      { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
+    ]},
+    { label: 'ORGANISER', items: [
+      { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
+    ]},
+    { label: 'SOCIAL', items: [
+      { name: t(lang, 'messages'), path: '/app/comm', icon: MessageSquare },
+      { name: 'Profil', path: '/app/profil', icon: UserCircle },
+    ]},
   ];
 
   if (['founder', 'moderator'].includes(user.role)) {
-    navItems.splice(2, 0, { name: user.role === 'founder' ? '👑 ALPHA AI' : '🛡️ ALPHA AI', path: '/app/alpha', icon: Crown, isAlpha: true });
+    // "Administration" sobre (fini les emojis 👑/🛡️ dans la nav), en bas, discrète
+    navSections.push({ label: '', items: [
+      { name: 'Administration', path: '/app/alpha', icon: ShieldCheck, isAlpha: true },
+    ]});
   }
+
+  const sideMargin = collapsed && !isMobile ? 72 : 260;
 
   return (
     <LanguageContext.Provider value={lang}>
@@ -128,26 +156,52 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         onClick={() => setIsMobileMenuOpen(false)} 
       />
       
-      <motion.nav initial={isMobile ? false : { x: lang === 'ar' ? 300 : -300 }} animate={isMobile ? false : { x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
-        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: '0 0 10px rgba(0,210,182,0.3)' }} />
-          Moncef <span style={{ color: 'var(--a)' }}>IA</span>
+      <motion.nav initial={isMobile ? false : { x: lang === 'ar' ? 300 : -300 }} animate={isMobile ? false : { x: 0 }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', width: collapsed && !isMobile ? 72 : undefined, transition: 'width 0.25s ease' }}>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: collapsed && !isMobile ? 'center' : undefined, padding: collapsed && !isMobile ? '0 8px' : undefined }}>
+          <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: '0 0 10px rgba(0,210,182,0.3)', flexShrink: 0 }} />
+          {!(collapsed && !isMobile) && (<>Moncef <span style={{ color: 'var(--a)' }}>IA</span></>)}
+          {!(collapsed && !isMobile) && !isMobile && (
+            <button onClick={toggleCollapsed} title="Replier la barre latérale" aria-label="Replier la barre latérale" style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 6, display: 'flex' }}>
+              <PanelLeftClose size={16} />
+            </button>
+          )}
         </div>
-        <div className="nav-items" style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {navItems.map((item, i) => {
-            const isActive = pathname === item.path || (item.path !== '/app' && pathname.startsWith(item.path));
-            const Icon = item.icon;
-            return (
-              <Link href={item.path} key={item.path}>
-                <motion.div whileHover={{ scale: 1.02, x: 5 }} whileTap={{ scale: 0.98 }} className={`nav-item ${isActive ? 'active' : ''}`} style={item.isAlpha ? { background: isActive ? 'linear-gradient(90deg, rgba(255,215,0,0.15), transparent)' : 'rgba(255,215,0,0.05)', color: isActive ? '#FFD700' : 'rgba(255,215,0,0.7)', border: '1px solid rgba(255,215,0,0.1)' } : item.accent ? { background: isActive ? 'linear-gradient(90deg, ' + item.accent + '26, transparent)' : item.accent + '0d', color: isActive ? item.accent : 'rgba(255,255,255,0.72)', border: '1px solid ' + item.accent + '1f' } : {}}>
-                  <Icon size={20} style={{ color: isActive ? (item.isAlpha ? '#FFD700' : item.accent ?? 'var(--a)') : item.accent ? item.accent + 'b3' : 'rgba(255,255,255,0.5)' }} />
-                  <span style={{ fontWeight: item.isAlpha ? 700 : (isActive ? 600 : 500) }}>{item.name}</span>
-                  {item.isAlpha && <div style={{ marginLeft: 'auto', background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>PRO</div>}
-                  {item.badge && !item.isAlpha && <div style={{ marginLeft: 'auto', background: item.accent, color: '#0b0b12', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>{item.badge}</div>}
-                </motion.div>
-              </Link>
-            )
-          })}
+        {collapsed && !isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 8px' }}>
+            <button onClick={toggleCollapsed} title="Déplier la barre latérale" aria-label="Déplier la barre latérale" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 6, display: 'flex' }}>
+              <PanelLeftOpen size={16} />
+            </button>
+          </div>
+        )}
+        <div className="nav-items" style={{ flex: 1, padding: collapsed && !isMobile ? '0 10px' : '0 16px', display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
+          {navSections.map((section) => (
+            <div key={section.label || 'admin'} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {section.label && !(collapsed && !isMobile) && (
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', padding: '14px 12px 2px' }}>{section.label}</div>
+              )}
+              {section.label && (collapsed && !isMobile) && (
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '10px 8px 2px' }} />
+              )}
+              {section.items.map((item) => {
+                const isActive = pathname === item.path || (item.path !== '/app' && pathname.startsWith(item.path));
+                const Icon = item.icon;
+                const isCollapsed = collapsed && !isMobile;
+                return (
+                  <Link href={item.path} key={item.path} title={isCollapsed ? item.name : undefined}>
+                    <motion.div whileHover={{ scale: 1.02, x: isCollapsed ? 0 : 5 }} whileTap={{ scale: 0.98 }} className={`nav-item ${isActive ? 'active' : ''}`} style={Object.assign(
+                      item.isAlpha ? { background: isActive ? 'linear-gradient(90deg, rgba(255,215,0,0.15), transparent)' : 'rgba(255,215,0,0.05)', color: isActive ? '#FFD700' : 'rgba(255,215,0,0.7)', border: '1px solid rgba(255,215,0,0.1)' } : item.accent ? { background: isActive ? 'linear-gradient(90deg, ' + item.accent + '26, transparent)' : item.accent + '0d', color: isActive ? item.accent : 'rgba(255,255,255,0.72)', border: '1px solid ' + item.accent + '1f' } : {},
+                      isCollapsed ? { justifyContent: 'center', padding: '12px 0' } : {}
+                    )}>
+                      <Icon size={20} style={{ color: isActive ? (item.isAlpha ? '#FFD700' : item.accent ?? 'var(--a)') : item.accent ? item.accent + 'b3' : 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
+                      {!isCollapsed && <span style={{ fontWeight: item.isAlpha ? 700 : (isActive ? 600 : 500) }}>{item.name}</span>}
+                      {!isCollapsed && item.isAlpha && <div style={{ marginLeft: 'auto', background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>PRO</div>}
+                      {!isCollapsed && item.badge && !item.isAlpha && <div style={{ marginLeft: 'auto', background: item.accent, color: '#0b0b12', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>{item.badge}</div>}
+                    </motion.div>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </div>
         
         {/* Separator */}
@@ -159,19 +213,22 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowSettings(true)}
           className="user-profile" 
-          style={{ cursor: 'pointer', position: 'relative', margin: '12px 16px 8px' }}
+          title={collapsed && !isMobile ? (user.first_name || 'Profil') : undefined}
+          style={{ cursor: 'pointer', position: 'relative', margin: collapsed && !isMobile ? '12px 10px 8px' : '12px 16px 8px', justifyContent: collapsed && !isMobile ? 'center' : undefined }}
         >
-          <motion.div className="av" style={{ overflow: 'hidden' }}>
+          <motion.div className="av" style={{ overflow: 'hidden', flexShrink: 0 }}>
             {user.avatar_url ? (
               <img src={user.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               user.first_name ? user.first_name[0] : '?'
             )}
           </motion.div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
-            <div className="role-badge">{user.role === 'founder' ? '👑 ALPHA' : user.role === 'moderator' ? '🛡️ Modérateur' : '👤 Normal'}</div>
-          </div>
+          {!(collapsed && !isMobile) && (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.first_name || 'Utilisateur'}</div>
+              <div className="role-badge">{user.role === 'founder' ? 'Fondateur' : user.role === 'moderator' ? 'Modérateur' : 'Membre'}</div>
+            </div>
+          )}
         </motion.div>
 
         {/* Logout button — separated */}
@@ -181,19 +238,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           onClick={handleLogout}
           title={t(lang, 'logout')}
           style={{ 
-            margin: '0 16px 16px', padding: '10px 16px', 
+            margin: collapsed && !isMobile ? '0 10px 16px' : '0 16px 16px', padding: '10px 16px', 
             background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', 
             borderRadius: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', 
-            display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500,
+            display: 'flex', alignItems: 'center', justifyContent: collapsed && !isMobile ? 'center' : undefined, gap: 10, fontSize: 13, fontWeight: 500,
             fontFamily: 'DM Sans, sans-serif', transition: 'var(--tr)'
           }}
         >
           <LogOut size={16} style={{ color: 'var(--err)' }} />
-          <span>{t(lang, 'logout')}</span>
+          {!(collapsed && !isMobile) && <span>{t(lang, 'logout')}</span>}
         </motion.button>
       </motion.nav>
 
-      <main className="main-content" style={{ flex: 1, position: 'relative', marginLeft: lang === 'ar' ? 0 : 'var(--sw)', marginRight: lang === 'ar' ? 'var(--sw)' : 0 }}>
+      <main className="main-content" style={{ flex: 1, position: 'relative', marginLeft: lang === 'ar' ? 0 : sideMargin, marginRight: lang === 'ar' ? sideMargin : 0, transition: 'margin 0.25s ease' }}>
         <header className="glass-header" style={{ padding: lang === 'ar' ? '0 40px 0 20px' : '0 40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
@@ -204,28 +261,43 @@ export default function AppLayout({ children }: { children: ReactNode }) {
              : pathname === '/app/ai' ? t(lang, 'ai') 
              : pathname === '/app/alpha' ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFD700' }}>
-                  <Crown size={22} /> ALPHA AI
+                  <ShieldCheck size={22} /> Administration
                 </span>
              )
              : pathname === '/app/schedule' ? t(lang, 'my_schedule') 
              : pathname === '/app/comm' ? t(lang, 'internal_msg')
+             : pathname === '/app/profil' ? 'Mon profil'
                : 'Moncef IA'}
             </motion.h2>
           </div>
           
-          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="header-actions">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14 }}>
+          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="header-actions" style={{ position: 'relative' }}>
+            <button onClick={() => setShowCreditsInfo(v => !v)} aria-label="Infos sur les crédits" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
                ⚡ {['founder', 'co-founder', 'moderator'].includes(user?.role) ? t(lang, 'credits_unlimited') : `${tokens} cr.`}
-            </div>
+            </button>
+            {showCreditsInfo && (
+              <>
+                <div onClick={() => setShowCreditsInfo(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+                <div role="dialog" aria-label="Crédits IA" style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 270, zIndex: 999, background: 'rgba(12,18,34,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 18, boxShadow: '0 16px 48px rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)' }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: '#fff', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>⚡ Tes crédits IA</div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, margin: '0 0 12px' }}>
+                    Chaque réponse de l'IA coûte <strong style={{ color: 'var(--a)' }}>10 crédits</strong>. Ton solde se recharge automatiquement chaque jour. Les devoirs, l'emploi du temps et les messages sont illimités.
+                  </p>
+                  <button onClick={() => setShowCreditsInfo(false)} className="btn-ghost btn" style={{ width: '100%', minHeight: 40, fontSize: 13 }}>Compris</button>
+                </div>
+              </>
+            )}
           </motion.div>
         </header>
         
         <div className="content-area">
+          <OnboardingChecklist />
           <HorsLigne uid={user?.id ?? null} />
           {children}
         </div>
       </main>
 
+      <CommandPalette />
       {/* MODALE PARAMÈTRES */}
       <AnimatePresence>
         {showSettings && (
