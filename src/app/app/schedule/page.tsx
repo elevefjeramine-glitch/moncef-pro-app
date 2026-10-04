@@ -21,6 +21,9 @@ export default function SchedulePage() {
   const [selectedDay, setSelectedDay] = useState(0);
   const [newSubj, setNewSubj] = useState("");
   const [newTime, setNewTime] = useState("");
+  // C5 (audit UI/UX 2026-10-04) : message d'erreur inline au lieu d'un return silencieux
+  const [slotError, setSlotError] = useState("");
+  const slotSubjRef = useRef<HTMLInputElement>(null);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -86,7 +89,12 @@ export default function SchedulePage() {
   }, []);
 
   const addSlot = async () => {
-    if (!newSubj || !newTime) return;
+    if (!newSubj || !newTime) {
+      setSlotError("Indique la matière et l'horaire du cours.");
+      slotSubjRef.current?.focus();
+      return;
+    }
+    setSlotError("");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
@@ -217,8 +225,14 @@ export default function SchedulePage() {
 
         <div style={{ flex: '3 1 250px' }}>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--a)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 }}><BookOpen size={14} style={{ display:'inline', verticalAlign:'middle', marginRight:4 }}/> {t(lang, 'sch_subj')}</label>
-          <input className="fi" placeholder={t(lang, 'sch_subj_ph')} value={newSubj} onChange={(e) => setNewSubj(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addSlot()} />
+          <input ref={slotSubjRef} className="fi" placeholder={t(lang, 'sch_subj_ph')} value={newSubj} onChange={(e) => setNewSubj(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addSlot()} aria-invalid={!!slotError} />
         </div>
+
+        {slotError && (
+          <div role="alert" style={{ flex: '1 1 100%', color: '#ff6b6b', fontSize: 14, fontWeight: 600, padding: '8px 12px', background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.25)', borderRadius: 10 }}>
+            ⚠️ {slotError}
+          </div>
+        )}
 
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ height: 50, padding: '0 24px', flex: '0 0 auto' }} onClick={addSlot}>
           <Plus size={18} /> {t(lang, 'sch_add')}
