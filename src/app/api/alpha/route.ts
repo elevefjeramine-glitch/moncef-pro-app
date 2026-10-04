@@ -57,6 +57,12 @@ export async function POST(req: Request) {
     // champ par champ. GET_STATS / GET_USERS / GET_ALL_HOMEWORK / DELETE_HOMEWORK
     // restent ouverts au modérateur : rien de demandé ici ne les concerne.
     const EST_FONDATEUR = profile?.role === 'founder';
+    // Volet 5 (2026-10-04) — super-admin exclusif : seul ce compte peut agir sur
+    // le rôle, les crédits ou le compte D'UN FONDATEUR. Constante serveur
+    // uniquement (process.env en priorité), jamais exposée au client. L'email
+    // vient de la session vérifiée côté serveur (auth.getUser ci-dessus).
+    const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'aminefjer@protonmail.com').toLowerCase();
+    const EST_SUPER_ADMIN = EST_FONDATEUR && String(user.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
     const RESERVE_FONDATEUR = new Set(['UPDATE_USER', 'DELETE_USER', 'RESET_TOKENS', 'PURGE_DUE_DELETIONS']);
     if (!EST_FONDATEUR && RESERVE_FONDATEUR.has(String(action))) {
       return NextResponse.json({
@@ -126,6 +132,21 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: 'Seul un fondateur peut changer un grade.' }, { status: 403 });
         }
 
+        // Volet 5 — super-admin exclusif : on lit le rôle ACTUEL de la cible AVANT
+        // d'écrire. Si la cible est fondateur et que la requête touche `role` ou
+        // `tokens`, seul le super-admin peut le faire. Garde-fou anti-blocage :
+        // personne ne se retire son propre rôle de fondateur.
+        const { data: cibleActuelle } = await admin.from('users').select('role').eq('id', userId).single();
+        if (cibleActuelle?.role === 'founder' && ('role' in safe || 'tokens' in safe)) {
+          const agitSurSoi = String(userId) === user.id;
+          if (agitSurSoi && 'role' in safe && safe.role !== 'founder') {
+            return NextResponse.json({ error: 'Interdit : tu ne peux pas te retirer ton propre rôle de fondateur.' }, { status: 403 });
+          }
+          if (!EST_SUPER_ADMIN) {
+            return NextResponse.json({ error: 'Réservé au super-admin : seul le super-admin peut modifier le rôle ou les crédits d\u2019un fondateur.' }, { status: 403 });
+          }
+        }
+
         const { error, count } = await admin.from('users').update(safe).eq('id', userId).select('id');
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -179,6 +200,19 @@ export async function POST(req: Request) {
         // quel que soit le rôle de la cible. La suppression reste un geste de
         // fondateur, avec la double confirmation de l'interface.
         const { userId } = payload;
+
+        // Volet 5 — super-admin exclusif : supprimer le compte d'un fondateur
+        // exige le super-admin ; personne ne supprime son propre compte fondateur
+        // (anti-blocage : sinon plus aucun super-admin ne subsiste).
+        const { data: cibleDel } = await admin.from('users').select('role').eq('id', userId).single();
+        if (cibleDel?.role === 'founder') {
+          if (String(userId) === user.id) {
+            return NextResponse.json({ error: 'Interdit : tu ne peux pas supprimer ton propre compte fondateur.' }, { status: 403 });
+          }
+          if (!EST_SUPER_ADMIN) {
+            return NextResponse.json({ error: 'Réservé au super-admin : seul le super-admin peut supprimer le compte d\u2019un fondateur.' }, { status: 403 });
+          }
+        }
         
         // 1. Force delete all related records to avoid Foreign Key constraints
         await Promise.all([
@@ -218,6 +252,12 @@ export async function POST(req: Request) {
 
       case 'RESET_TOKENS': {
         const { userId, amount } = payload;
+        // Volet 5 — super-admin exclusif : réinitialiser les crédits d'un
+        // fondateur (autre que soi-même) exige le super-admin.
+        const { data: cibleTok } = await admin.from('users').select('role').eq('id', userId).single();
+        if (cibleTok?.role === 'founder' && String(userId) !== user.id && !EST_SUPER_ADMIN) {
+          return NextResponse.json({ error: 'Réservé au super-admin : seul le super-admin peut modifier les crédits d\u2019un fondateur.' }, { status: 403 });
+        }
         const { error } = await admin.from('users').update({ tokens: amount ?? 700 }).eq('id', userId);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
