@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Les zones authentifiées et les API sont de toute façon protégées par
+# authentification ; on les exclut explicitement du crawl.
+Disallow: /app/
+Disallow: /api/
+
+Sitemap: https://proappmoncef.netlify.app/sitemap.xml
