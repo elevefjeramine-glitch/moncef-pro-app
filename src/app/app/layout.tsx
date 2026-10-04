@@ -123,7 +123,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { label: 'ÉTUDIER', items: [
       { name: t(lang, 'home'), path: '/app', icon: Home },
       { name: t(lang, 'thunder'), path: '/app/thunder', icon: Zap, accent: '#a78bfa', badge: 'IA' },
-      { name: t(lang, 'ai'), path: '/app/ai', icon: Bot },
+      { name: 'Moncef', path: '/app/ai', icon: Bot, accent: '#5982FF', badge: 'AI' },
     ]},
     { label: 'ORGANISER', items: [
       { name: t(lang, 'calendar'), path: '/app/schedule', icon: CalendarDays },
