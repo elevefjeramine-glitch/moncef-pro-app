@@ -124,7 +124,8 @@ export default function ProfilPage() {
     { icon: Brain, label: "Quiz Thunder", value: stats.quizThunder, color: "#a78bfa" },
     { icon: BookOpen, label: "Sources Thunder", value: stats.sourcesThunder, color: "#00d2b6" },
     { icon: Layers, label: "Cartes révision", value: stats.cartesRevision, color: "#ffb020" },
-    { icon: Zap, label: "Crédits", value: credits, color: "#FFD700" },
+    // Fondateurs et modérateurs = crédits illimités (même logique que l'API Thunder)
+    { icon: Zap, label: "Crédits", value: ["founder", "moderator"].includes(roleId) ? "Illimité" : credits, color: "#FFD700" },
   ];
 
   return (
