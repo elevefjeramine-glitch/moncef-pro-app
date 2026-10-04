@@ -6,9 +6,13 @@ import { Plus, Trash2, Calendar, Clock, BookOpen, Printer } from "lucide-react";
 import { useLanguage, t } from "@/utils/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import AgendaLien from "@/components/AgendaLien";
+import { ToastProvider, useToast } from "@/components/Toast";
+import { ConfirmProvider, useConfirm } from "@/components/ConfirmDialog";
 
-export default function SchedulePage() {
+function ScheduleContent() {
   const lang = useLanguage();
+  const toastApi = useToast();
+  const confirm = useConfirm();
   const [schedule, setSchedule] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState('A');
@@ -110,7 +114,7 @@ export default function SchedulePage() {
     
     if (error) {
       console.error("Error adding slot:", error);
-      alert("Erreur lors de l'ajout du cours");
+      toastApi.error("Erreur lors de l'ajout du cours");
       return;
     }
     
@@ -120,7 +124,13 @@ export default function SchedulePage() {
   };
 
   const deleteSlot = async (id: any) => {
-    if (!window.confirm(t(lang, 'sch_confirm_delete'))) return;
+    const ok = await confirm({
+      title: "Supprimer ce cours ?",
+      message: t(lang, 'sch_confirm_delete'),
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
     await supabase.from('schedule').delete().eq('id', id);
     loadScheduleForWeek(selectedWeek);
   };
@@ -304,5 +314,16 @@ export default function SchedulePage() {
       `}</style>
 
     </motion.div>
+  );
+}
+
+// ─── WRAPPERS : providers Toast + Confirm ────────────────────
+export default function SchedulePage() {
+  return (
+    <ToastProvider>
+      <ConfirmProvider>
+        <ScheduleContent />
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
