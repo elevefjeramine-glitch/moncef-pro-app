@@ -7,9 +7,13 @@ import { Send, Users, Plus, X, Search, MessageCircle, UserPlus, Hash, LogOut, In
 import { useLanguage, t } from "@/utils/i18n";
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
+import { ToastProvider, useToast } from "@/components/Toast";
+import { ConfirmProvider, useConfirm } from "@/components/ConfirmDialog";
 
-export default function CommPage() {
+function CommContent() {
   const lang = useLanguage();
+  const toastApi = useToast();
+  const confirm = useConfirm();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -327,7 +331,13 @@ export default function CommPage() {
 
   // ─── Delete Message ───────────────────────────────────────
   const deleteMessage = async (msgId: any) => {
-    if (!window.confirm("Supprimer ce message définitivement ?")) return;
+    const ok = await confirm({
+      title: "Supprimer le message ?",
+      message: "Supprimer ce message définitivement ?",
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
     
     // Optimistic remove
     setMessages(prev => prev.filter(m => m.id !== msgId));
@@ -335,7 +345,7 @@ export default function CommPage() {
     const { error } = await supabase.from('conversation_messages').delete().eq('id', msgId);
     if (error) {
       console.error('Error deleting message:', error);
-      alert("Erreur lors de la suppression du message.");
+      toastApi.error("Erreur lors de la suppression du message.");
     }
     
     loadConversations(currentUser.id);
@@ -362,7 +372,7 @@ export default function CommPage() {
     }]).select().single();
     
     if (error || !conv) { 
-      alert("Erreur base de données: Impossible de créer la conversation.\n\nVeuillez exécuter le script 'supabase/security-fix-rls.sql' dans votre SQL Editor Supabase pour corriger ce bug !");
+      toastApi.error("Impossible de créer la conversation. Exécutez le script 'supabase/security-fix-rls.sql' dans votre SQL Editor Supabase pour corriger ce bug.");
       console.error('Error creating DM:', error); 
       return; 
     }
@@ -396,7 +406,7 @@ export default function CommPage() {
       c.type === 'group' && c.name?.toLowerCase() === groupName.trim().toLowerCase()
     );
     if (existingGroup) {
-      alert("Un groupe avec ce nom existe déjà. Veuillez choisir un autre nom !");
+      toastApi.error("Un groupe avec ce nom existe déjà. Veuillez choisir un autre nom !");
       return;
     }
     
@@ -408,9 +418,9 @@ export default function CommPage() {
     
     if (error || !conv) { 
       if (error?.code === '23505') {
-        alert("Ce nom de groupe est déjà pris par un autre utilisateur dans la base de données.");
+        toastApi.error("Ce nom de groupe est déjà pris par un autre utilisateur dans la base de données.");
       } else {
-        alert("Erreur base de données: Impossible de créer le groupe.\n\nVeuillez exécuter le script SQL dans votre Supabase !");
+        toastApi.error("Impossible de créer le groupe. Exécutez le script SQL dans votre Supabase !");
       }
       console.error('Error creating group:', error); 
       return; 
@@ -445,11 +455,17 @@ export default function CommPage() {
   // ─── Delete Conversation ──────────────────────────────────
   const deleteConversation = async (convId: any) => {
     if (!currentUser) return;
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette conversation définitivement ? Cette action est irréversible pour tous les membres.")) return;
+    const ok = await confirm({
+      title: "Supprimer la conversation ?",
+      message: "Cette action est irréversible pour tous les membres.",
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
     
     const { error } = await supabase.from('conversations').delete().eq('id', convId);
     if (error) {
-      alert("Erreur lors de la suppression. Vous n'avez peut-être pas les droits (seul le créateur ou l'admin peut supprimer).");
+      toastApi.error("Erreur lors de la suppression. Vous n'avez peut-être pas les droits (seul le créateur ou l'admin peut supprimer).");
       console.error(error);
       return;
     }
@@ -610,11 +626,12 @@ export default function CommPage() {
   return (
     <motion.div 
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className={`comm-root${activeConv ? " has-active" : ""}`}
       style={{ display: 'flex', height: 'calc(100vh - var(--hh) - 60px)', gap: 0, borderRadius: 24, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,15,30,0.4)' }}
     >
       
       {/* ═══ LEFT PANEL: Conversations List ═══ */}
-      <div style={{ width: 340, borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', background: 'rgba(6,10,20,0.3)' }}>
+      <div className="comm-list-panel" style={{ width: 340, borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', background: 'rgba(6,10,20,0.3)' }}>
         
         {/* Header with search + FAB */}
         <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -717,11 +734,20 @@ export default function CommPage() {
       </div>
 
       {/* ═══ CENTER PANEL: Chat Area ═══ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="comm-chat-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {activeConv ? (
           <div className="chat-area">
             {/* Chat Header */}
             <div className="chat-header">
+              <motion.button
+                className="comm-back-btn"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setActiveConv(null); setShowInfoPanel(false); }}
+                aria-label="Retour aux conversations"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, width: 40, height: 40, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}
+              >
+                <ChevronLeft size={20} />
+              </motion.button>
               <div className={`conv-avatar ${activeConv.type === 'group' ? 'group' : ''}`} style={{ width: 42, height: 42, fontSize: 16, position: 'relative' }}>
                 {getConvAvatar(activeConv)}
                 {activeConv.type === 'dm' && activeConv.dmPartner && isUserOnline(activeConv.dmPartner.id) && (
@@ -1069,5 +1095,16 @@ export default function CommPage() {
       </AnimatePresence>
 
     </motion.div>
+  );
+}
+
+// ─── WRAPPERS : providers Toast + Confirm ────────────────────
+export default function CommPage() {
+  return (
+    <ToastProvider>
+      <ConfirmProvider>
+        <CommContent />
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
