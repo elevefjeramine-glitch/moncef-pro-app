@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { CorpsTropVolumineux, LIMITE_CORPS, lireJson, reponse413, rejeterSiAnnonceTropGrosse } from "@/lib/corps";
+import { reponseTropDeRequetes, verifierLimite } from "@/lib/rate-limit";
 // Six tentatives au pire (2 fournisseurs × 2 canaux) avec un timeout court chacune :
 // sans budget explicite, Netlify coupe la fonction à son défaut de 10 s et l'élève
 // ne voit jamais le message « aucune action exécutée ».
@@ -131,6 +132,11 @@ export async function POST(req: Request) {
     });
     const { data: sess, error: errAuth } = await anon.auth.getUser();
     if (errAuth || !sess?.user) return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
+    // Rate limiting APRÈS auth : l'utilisateur est identifié (sess.user.id).
+    // Placé avant le contrôle de rôle : même un appel rejeté plus loin compte,
+    // pour qu'un compte compromis ne puisse pas mitrailler la route.
+    const limiteAlpha = verifierLimite(`alpha:${sess.user.id}`);
+    if (!limiteAlpha.ok) return reponseTropDeRequetes(limiteAlpha.reessayerDans);
     const db = admin();
     const { data: moi } = await db.from("users").select("role").eq("id", sess.user.id).single();
     // La console IA n'est plus un outil de modération : elle APPUIE sur des boutons
