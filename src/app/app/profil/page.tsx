@@ -11,6 +11,7 @@ import { supabase } from "@/utils/supabase/client";
 import { useUserStore } from "@/store/useUserStore";
 import AvatarUpload from "@/components/AvatarUpload";
 import ProfilTilt from "@/components/ProfilTilt";
+import { useLanguage, t } from "@/utils/i18n";
 
 const MotionLink = motion(Link);
 
@@ -54,24 +55,24 @@ const INITIAL_STATS: Stats = { devoirsSemaine: 0, quizThunder: 0, cartesRevision
 
 type RoleId = "normal" | "moderator" | "founder";
 
-const ROLES: Record<RoleId, { label: string; icon: any; color: string; privileges: string[] }> = {
+const ROLES: Record<RoleId, { labelKey: string; icon: any; color: string; privilegesKeys: string[] }> = {
   normal: {
-    label: "Membre",
+    labelKey: "profil_role_normal",
     icon: User,
     color: "#8b9bb4",
-    privileges: ["Assistant Moncef IA", "Quiz et révisions Thunder IA", "Devoirs et emploi du temps"],
+    privilegesKeys: ["profil_priv_assistant", "profil_priv_thunder", "profil_priv_homework"],
   },
   moderator: {
-    label: "Modérateur",
+    labelKey: "profil_role_moderator",
     icon: ShieldCheck,
     color: "#a78bfa",
-    privileges: ["Panneau d'administration ALPHA", "Crédits IA illimités", "Modération de la communauté"],
+    privilegesKeys: ["profil_priv_admin_alpha", "profil_priv_unlimited_credits", "profil_priv_moderation"],
   },
   founder: {
-    label: "Fondateur",
+    labelKey: "profil_role_founder",
     icon: Crown,
     color: "#FFD700",
-    privileges: ["Panneau d'administration ALPHA", "Crédits IA illimités", "Gestion des rôles et utilisateurs"],
+    privilegesKeys: ["profil_priv_admin_alpha", "profil_priv_unlimited_credits", "profil_priv_roles"],
   },
 };
 
@@ -126,23 +127,26 @@ type NextAction =
 
 export default function ProfilPage() {
   const { user, credits, setUser } = useUserStore();
+  const lang = useLanguage();
   const [stats, setStats] = useState<Stats>(INITIAL_STATS);
   const [nextAction, setNextAction] = useState<NextAction | null>(null);
   const [loading, setLoading] = useState(true);
   const reduceMotion = useReducedMotion();
 
-  const firstName = user?.first_name || "Élève";
+  const firstName = user?.first_name || t(lang, "profil_default_first_name");
   const lastName = user?.last_name || "";
   const fullName = `${firstName} ${lastName}`.trim();
   const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase() || "?";
   const roleId = (["normal", "moderator", "founder"].includes(user?.role) ? user.role : "normal") as RoleId;
   const role = ROLES[roleId];
   const RoleIcon = role.icon;
+  const roleLabel = t(lang, role.labelKey);
+  const rolePrivileges = role.privilegesKeys.map((k) => t(lang, k));
   const createdAt = user?.created_at
     ? new Date(user.created_at).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
     : null;
   // Fondateurs et modérateurs = crédits illimités (même logique que l'API Thunder).
-  const creditsLabel = ["founder", "moderator"].includes(roleId) ? "Illimité" : String(credits);
+  const creditsLabel = ["founder", "moderator"].includes(roleId) ? t(lang, "profil_unlimited") : String(credits);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,7 +187,7 @@ export default function ProfilPage() {
           setNextAction({
             kind: "devoirs",
             count: upcoming.length,
-            nearest: n.subject || "Devoir",
+            nearest: n.subject || t(lang, "profil_next_subject_fallback"),
             nearestDate: formatDue(n.due_date ?? null),
           });
         } else if (quizThunder === 0) {
@@ -238,24 +242,24 @@ export default function ProfilPage() {
 
   const statCards = [
     {
-      icon: CheckCircle2, color: "#2ed573", label: "Devoirs terminés",
-      sub: "cette semaine", value: stats.devoirsSemaine,
-      emptyCta: stats.devoirsSemaine === 0 ? { label: "Ajouter un devoir", href: "/app/ai" } : null,
+      icon: CheckCircle2, color: "#2ed573", label: t(lang, "profil_stat_homework_done"),
+      sub: t(lang, "profil_stat_homework_sub"), value: stats.devoirsSemaine,
+      emptyCta: stats.devoirsSemaine === 0 ? { label: t(lang, "profil_cta_add_homework"), href: "/app/ai" } : null,
     },
     {
-      icon: Brain, color: "#a78bfa", label: "Quiz Thunder",
-      sub: "au total", value: stats.quizThunder,
-      emptyCta: stats.quizThunder === 0 ? { label: "Faire mon premier quiz", href: "/app/thunder" } : null,
+      icon: Brain, color: "#a78bfa", label: t(lang, "profil_stat_quiz"),
+      sub: t(lang, "profil_stat_quiz_sub"), value: stats.quizThunder,
+      emptyCta: stats.quizThunder === 0 ? { label: t(lang, "profil_cta_first_quiz"), href: "/app/thunder" } : null,
     },
     {
-      icon: Layers, color: "#ffb020", label: "Cartes révisées",
-      sub: "au total", value: stats.cartesRevision,
-      emptyCta: stats.cartesRevision === 0 ? { label: "Créer des cartes", href: "/app/thunder" } : null,
+      icon: Layers, color: "#ffb020", label: t(lang, "profil_stat_cards"),
+      sub: t(lang, "profil_stat_cards_sub"), value: stats.cartesRevision,
+      emptyCta: stats.cartesRevision === 0 ? { label: t(lang, "profil_cta_create_cards"), href: "/app/thunder" } : null,
     },
     {
-      icon: Flame, color: "#ff7828", label: "Série",
-      sub: stats.streak > 1 ? "jours d'affilée" : "jour d'affilée", value: stats.streak,
-      emptyCta: stats.streak === 0 ? { label: "Commencer aujourd'hui", href: "/app/ai" } : null,
+      icon: Flame, color: "#ff7828", label: t(lang, "profil_stat_streak"),
+      sub: t(lang, stats.streak > 1 ? "profil_days_plur" : "profil_days_sing"), value: stats.streak,
+      emptyCta: stats.streak === 0 ? { label: t(lang, "profil_cta_start_today"), href: "/app/ai" } : null,
     },
   ];
 
@@ -264,29 +268,28 @@ export default function ProfilPage() {
     switch (nextAction.kind) {
       case "devoirs":
         return {
-          title: `${nextAction.count} devoir${nextAction.count > 1 ? "s" : ""} en cours`,
-          text: nextAction.nearestDate
-            ? `Le plus proche : ${nextAction.nearest} — ${nextAction.nearestDate}`
-            : `Le plus proche : ${nextAction.nearest}`,
-          cta: "Voir mes devoirs", href: "/app",
+          title: nextAction.count + " " + t(lang, nextAction.count > 1 ? "profil_next_devoirs_plur" : "profil_next_devoirs_sing"),
+          text: t(lang, "profil_next_nearest_prefix") + " " + nextAction.nearest
+            + (nextAction.nearestDate ? " — " + nextAction.nearestDate : ""),
+          cta: t(lang, "profil_cta_view_homework"), href: "/app",
         };
       case "quiz":
         return {
-          title: "Bienvenue sur Moncef IA",
-          text: "Lance ton premier quiz Thunder pour démarrer ta progression.",
-          cta: "Découvrir Thunder", href: "/app/thunder",
+          title: t(lang, "profil_next_welcome_title"),
+          text: t(lang, "profil_next_welcome_text"),
+          cta: t(lang, "profil_next_welcome_cta"), href: "/app/thunder",
         };
       case "streak":
         return {
-          title: "Lance ta série",
-          text: "Fais une activité aujourd'hui — devoir ou quiz — pour allumer la flamme.",
-          cta: "Discuter avec Moncef", href: "/app/ai",
+          title: t(lang, "profil_next_streak_title"),
+          text: t(lang, "profil_next_streak_text"),
+          cta: t(lang, "profil_next_streak_cta"), href: "/app/ai",
         };
       case "ok":
         return {
-          title: `${nextAction.streak} jour${nextAction.streak > 1 ? "s" : ""} d'affilée`,
-          text: "Belle régularité — continue comme ça.",
-          cta: "Voir mes devoirs", href: "/app",
+          title: nextAction.streak + " " + t(lang, nextAction.streak > 1 ? "profil_days_plur" : "profil_days_sing"),
+          text: t(lang, "profil_next_ok_text"),
+          cta: t(lang, "profil_cta_view_homework"), href: "/app",
         };
     }
   })();
@@ -364,7 +367,7 @@ export default function ProfilPage() {
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#fff" }}>{fullName}</h1>
           <p style={{ margin: "4px 0 0", color: "rgba(255,255,255,0.55)", fontSize: 14 }}>
             {user?.email ?? ""}
-            {createdAt ? ` · Compte créé en ${createdAt}` : ""}
+            {createdAt ? " · " + t(lang, "profil_created_in") + " " + createdAt : ""}
           </p>
           <div
             style={{
@@ -374,14 +377,14 @@ export default function ProfilPage() {
             }}
             title={
               roleId === "founder"
-                ? "Statut attribué par l'équipe : accès complet à la plateforme"
+                ? t(lang, "profil_status_title_founder")
                 : roleId === "moderator"
-                  ? "Statut attribué par l'équipe : aide à modérer la plateforme"
-                  : "Statut de ton compte"
+                  ? t(lang, "profil_status_title_moderator")
+                  : t(lang, "profil_status_title_default")
             }
           >
             <RoleIcon size={14} />
-            {role.label}
+            {roleLabel}
           </div>
         </div>
         {/* Flamme visible uniquement quand la série a démarré */}
@@ -392,13 +395,13 @@ export default function ProfilPage() {
               borderRadius: 16, background: "rgba(255,120,40,0.08)",
               border: "1px solid rgba(255,120,40,0.2)",
             }}
-            title="Jours consécutifs avec au moins une activité (devoir ou quiz)"
+            title={t(lang, "profil_flame_title")}
           >
             <Flame size={28} color="#ff7828" />
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{stats.streak}</div>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
-                jour{stats.streak > 1 ? "s" : ""} d'affilée
+                {t(lang, stats.streak > 1 ? "profil_days_plur" : "profil_days_sing")}
               </div>
             </div>
           </div>
@@ -436,7 +439,7 @@ export default function ProfilPage() {
 
       {/* ——— Ton activité : grille 2x2 ——— */}
       <section>
-        <h2 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 800, color: "#fff" }}>Ton activité</h2>
+        <h2 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 800, color: "#fff" }}>{t(lang, "profil_activity_title")}</h2>
         {loading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
             {[0, 1, 2, 3].map((i) => (
@@ -491,9 +494,9 @@ export default function ProfilPage() {
 
       {/* ——— Mon statut : attribué, pas une progression ——— */}
       <ProfilTilt className="card" maxTilt={5} glowColor="rgba(255,215,0,0.10)" style={{ padding: 24 }}>
-        <h2 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 800, color: "#fff" }}>Mon statut</h2>
+        <h2 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 800, color: "#fff" }}>{t(lang, "profil_status_heading")}</h2>
         <p style={{ margin: "0 0 16px", fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
-          Attribué par l'équipe Moncef IA — ce n'est pas un niveau à débloquer.
+          {t(lang, "profil_status_desc")}
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
           <span style={{
@@ -503,10 +506,10 @@ export default function ProfilPage() {
           }}>
             <RoleIcon size={22} />
           </span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{role.label}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{roleLabel}</span>
         </div>
         <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
-          {role.privileges.map((p) => (
+          {rolePrivileges.map((p) => (
             <li key={p} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "rgba(255,255,255,0.75)" }}>
               <Check size={15} color="#2ed573" style={{ flexShrink: 0 }} /> {p}
             </li>
@@ -532,14 +535,14 @@ export default function ProfilPage() {
           <Zap size={22} color="#FFD700" />
         </span>
         <div style={{ flex: 1, minWidth: 180 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Mes crédits</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>{t(lang, "profil_credits_heading")}</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>
             {loading ? "…" : creditsLabel}
           </div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 4 }}>
             {["founder", "moderator"].includes(roleId)
-              ? `En tant que ${role.label.toLowerCase()}, tes crédits IA sont illimités.`
-              : "Solde disponible pour les réponses de Moncef IA."}
+              ? t(lang, "profil_credits_unlimited_prefix") + " " + roleLabel.toLowerCase() + t(lang, "profil_credits_unlimited_suffix")
+              : t(lang, "profil_credits_balance_desc")}
           </div>
         </div>
       </ProfilTilt>
