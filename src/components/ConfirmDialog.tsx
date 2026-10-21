@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { ReactNode, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
+import { useLanguage, t } from "@/utils/i18n";
 
 export interface ConfirmOptions {
   title: string;
@@ -30,6 +31,7 @@ interface PendingRequest {
 }
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const lang = useLanguage();
   const [pending, setPending] = useState<PendingRequest | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -78,7 +80,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const { title, message, confirmLabel = "Confirmer", cancelLabel = "Annuler", danger = false } =
+  const { title, message, confirmLabel = t(lang, "btn_confirm"), cancelLabel = t(lang, "btn_cancel"), danger = false } =
     pending?.opts ?? { title: "", message: "" };
 
   return (
