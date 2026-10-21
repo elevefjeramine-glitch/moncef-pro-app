@@ -1,6 +1,7 @@
 import "./globals.css";
 import Cursor from "@/components/Cursor";
 import Loader from "@/components/Loader";
+import SeoJsonLd from "@/components/SeoJsonLd";
 import QueryProvider from "@/providers/QueryProvider";
 import { Toaster } from "sonner";
 
@@ -23,8 +24,10 @@ const fontMono = JetBrains_Mono({
 
 export const metadata = {
   metadataBase: new URL("https://proappmoncef.netlify.app"),
-  title: "Moncef IA — Plateforme Éducative Intelligente",
-  description: "Plateforme éducative propulsée par l'Intelligence Artificielle. Gérez vos devoirs, emploi du temps et progressez avec l'IA.",
+  // SEO (2026-10-04) : la marque en premier, puis l'accroche réelle —
+  // gratuit + devoirs/révisions (public cible : élèves francophones).
+  title: "Moncef IA — L'IA gratuite pour tes devoirs et révisions",
+  description: "Moncef IA, la plateforme éducative propulsée par l'intelligence artificielle : organise tes devoirs, révise avec Thunder IA et suis ton emploi du temps. 700 crédits IA offerts chaque jour, sans carte bancaire.",
   // PWA (lot A3) : le manifeste vit dans `public/`, donc versionné et servi par le même
   // hôte que le site — pas de CDN tiers, aucun indicateur de présence envoyé ailleurs.
   // `manifest` est laissé à Next : il existe un `src/app/manifest.ts`, qui sert l'URL avec
@@ -33,10 +36,14 @@ export const metadata = {
   icons: { icon: "/icon-192.png", apple: "/icon-apple-180.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Moncef IA" },
   formatDetection: { telephone: false },
+  // Search Console (2026-10-04) : validation de la propriété
+  // https://proappmoncef.netlify.app/ — cliquer "Valider" dans la Search
+  // Console une fois déployé (21/10).
+  verification: { google: "_QhgrMgDvmRY-PRJnPKlQTxeCv0fPuGJ9aC7bwXZShg" },
   alternates: { canonical: "https://proappmoncef.netlify.app/" },
   openGraph: {
-    title: "Moncef IA",
-    description: "La plateforme éducative IA nouvelle génération.",
+    title: "Moncef IA — L'IA gratuite pour tes devoirs et révisions",
+    description: "Organise tes devoirs, révise avec Thunder IA et suis ton emploi du temps. 700 crédits IA offerts chaque jour, sans carte bancaire.",
     type: "website",
     url: "https://proappmoncef.netlify.app/",
     siteName: "Moncef IA",
@@ -46,14 +53,14 @@ export const metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Moncef IA — la plateforme éducative IA nouvelle génération",
+        alt: "Moncef IA — la plateforme éducative IA pour tes devoirs et révisions",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Moncef IA",
-    description: "La plateforme éducative IA nouvelle génération.",
+    title: "Moncef IA — L'IA gratuite pour tes devoirs et révisions",
+    description: "Organise tes devoirs, révise avec Thunder IA et suis ton emploi du temps. 700 crédits IA offerts chaque jour, sans carte bancaire.",
     images: ["/og-image.png"],
   },
 };
@@ -73,6 +80,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" dir="ltr" suppressHydrationWarning className={`${fontSans.variable} ${fontHeading.variable} ${fontMono.variable}`}>
       <head>
+        {/* Données structurées schema.org : Organization + WebApplication + FAQPage */}
+        <SeoJsonLd />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
