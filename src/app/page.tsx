@@ -2,7 +2,7 @@
 
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { Bot, CalendarDays, Camera, ClipboardList, MessageSquare, ShieldCheck, Star, ArrowRight, Zap, Lock, Globe, Check, X, Crown, Shield, Database, User } from "lucide-react";
+import { Bot, CalendarDays, Camera, ClipboardList, MessageSquare, ShieldCheck, Star, Zap, Lock, Globe, Check, X, Crown, Shield, Database, User } from "lucide-react";
 import { t } from "@/utils/i18n";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useUserStore } from "@/store/useUserStore";
@@ -14,6 +14,18 @@ import { AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import TiltCard from "@/components/TiltCard";
 import Logo from "@/components/Logo";
+// Chantier 3D (19/10/2026) : primitives de mouvement (Lenis, reveals GSAP,
+// boutons magnétiques, compteurs, preloader, transitions glimm) + gradient
+// shader du hero. Les canvas R3F sont chargés en dynamique ssr:false (WebGL).
+import { SmoothScroll, Reveal, AnimatedCounter, Preloader, RouteTransitions, ScrollTrigger } from "@/components/motion";
+import { MeshGradient } from "@/components/three";
+// Direction artistique raffinée (19/10/2026) : CTA créatifs, marquee, grain,
+// stickers — voir design-direction.md à la racine.
+import { CreativeButton, Marquee, GrainOverlay, Sticker } from "@/components/design";
+
+// Canvas R3F : jamais dans le bundle SSR — WebGL + window uniquement.
+const HeroScene = dynamic(() => import("@/components/three").then((m) => m.HeroScene), { ssr: false });
+const JourneySection = dynamic(() => import("@/components/three/JourneySection"), { ssr: false });
 
 // TiltCard n''utilise ni window ni IntersectionObserver (relu dans src/components/TiltCard.tsx) :
 // il peut donc être rendu au serveur. Avant ça, la grille de fonctionnalités n''existait que des
@@ -315,12 +327,18 @@ const fadeUp: any = {
   show:   { opacity: 1, y: 0,  filter: "blur(0px)", transition: { type: "spring", stiffness: 70, damping: 20 } }
 };
 
+/* Titre héro cinétique (chantier 3D) : révélation masquée mot à mot — le
+   clipPath évite le wrapper `overflow: hidden` qui, en inline-block, rognerait
+   l'espace inter-mots (cf. le commentaire sous le h1). Easing custom, jamais
+   l'easing CSS par défaut. Le `<span className="sr-only">` de la marque reste
+   intact, hors animation. */
 const letterAnim: any = {
-  hidden: { opacity: 0, y: 50 },
+  hidden: { opacity: 0, y: "0.55em", clipPath: "inset(-10% 0 110% 0)" },
   show: (i: number) => ({
     opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.03, duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+    y: "0em",
+    clipPath: "inset(-10% 0 -10% 0)",
+    transition: { delay: 0.15 + i * 0.035, duration: 0.9, ease: [0.16, 1, 0.3, 1] }
   })
 };
 
@@ -424,6 +442,12 @@ export default function Home() {
   // autres pages, il n'est plus importé ici.
 
   useEffect(() => {
+    // Le pin 3D (JourneySection) et Lenis calculent leurs positions au montage :
+    // on recalcule après le chargement complet (polices, images) pour éviter
+    // des déclencheurs ScrollTrigger décalés.
+    const refreshTriggers = () => ScrollTrigger.refresh();
+    window.addEventListener("load", refreshTriggers);
+
     const saved = localStorage.getItem("site_lang");
     if (saved) {
       setLang(saved);
@@ -450,6 +474,7 @@ export default function Home() {
       }
     };
     loadUser();
+    return () => window.removeEventListener("load", refreshTriggers);
   }, [setUser, setCredits]);
 
   const switchLang = (l: any) => {
@@ -461,6 +486,41 @@ export default function Home() {
 
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
+  /* ── Hiérarchie CTA (polish 19/10) : le hero n'a qu'UN CTA fort. Le CTA du
+     header s'efface tant que le bloc d'actions du hero est à l'écran — jamais
+     deux boutons dominants dans le même viewport.
+     Mesure directe au scroll (pas d'IntersectionObserver) : le nœud est remonté
+     une fois à l'hydratation, le listener lit toujours le DOM courant. ── */
+  const heroActionsRef = useRef<HTMLDivElement | null>(null);
+  const [heroCtaInView, setHeroCtaInView] = useState(true);
+  useEffect(() => {
+    let raf = 0;
+    let last = true;
+    const measure = (): void => {
+      const el = heroActionsRef.current;
+      if (!el || el.getBoundingClientRect === undefined) return;
+      const r = el.getBoundingClientRect();
+      const visibleH = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+      const inView = visibleH > Math.min(r.height, window.innerHeight) * 0.2;
+      if (inView !== last) {
+        last = inView;
+        setHeroCtaInView(inView);
+      }
+    };
+    const onScroll = (): void => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
   const v = VITRINE[lang as keyof typeof VITRINE] ?? VITRINE.fr;
   const heroTitle = t(lang, "hero_title");
   const titleWords = heroTitle.split(" ");
@@ -468,8 +528,12 @@ export default function Home() {
   const firstWords = titleWords.slice(0, -2).join(" ");
 
   return (
+    <SmoothScroll>
+      <RouteTransitions>
+        <Preloader />
+        <GrainOverlay />
     <div style={{ overflowX: "hidden", background: "var(--bg)", minHeight: "100vh" }}>
-      
+
       <AnimatePresence>
         {showLangSelector && (
           <InitialLangSelector onSelect={switchLang} />
@@ -537,14 +601,18 @@ export default function Home() {
               >
                 <Zap size={11} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : `${credits} credits`}
               </motion.div>
-              <Link href="/app" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                {t(lang, "dashboard")} <ArrowRight size={16} />
-              </Link>
+              <span className={`navbar-cta${heroCtaInView ? " navbar-cta--hidden" : ""}`} aria-hidden={heroCtaInView}>
+                <CreativeButton href="/app" className="creative-btn-compact" ariaLabel={t(lang, "dashboard")}>
+                  {t(lang, "dashboard")}
+                </CreativeButton>
+              </span>
             </>
           ) : (
-             <Link href="/auth?tab=signup" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-              {t(lang, "hero_btn_start")} <ArrowRight size={16} />
-            </Link>
+             <span className={`navbar-cta${heroCtaInView ? " navbar-cta--hidden" : ""}`} aria-hidden={heroCtaInView}>
+               <CreativeButton href="/auth?tab=signup" className="creative-btn-compact" ariaLabel={t(lang, "hero_btn_start")}>
+                {t(lang, "hero_btn_start")}
+              </CreativeButton>
+             </span>
           )}
         </div>
 
@@ -566,7 +634,26 @@ export default function Home() {
           justifyContent: "center", alignItems: "center",
           padding: "160px 24px 100px", textAlign: "center", position: "relative"
         }}>
-          
+          {/* ── Couches 3D du hero : gradient shader animé (fond) + scène R3F
+              (blob à droite). Chaque composant gère son repli statique sur
+              mobile / WebGL indisponible / mouvements réduits. ── */}
+          <div className="hero-mesh" aria-hidden="true"><MeshGradient /></div>
+          <div className="hero-3d-canvas" aria-hidden="true"><HeroScene /></div>
+
+          {/* Stickers flottants (direction artistique 19/10) : contenu réel,
+              dupliqué plus bas en clair pour les lecteurs d'écran. */}
+          <div className="hero-stickers" aria-hidden="true">
+            <Sticker tilt={-6} drift="a" className="hero-sticker hero-sticker-left">
+              <Zap size={14} /> {t(lang, "hero_badge_new")}
+            </Sticker>
+            <Sticker tilt={5} drift="b" className="hero-sticker hero-sticker-right">
+              <Globe size={14} /> 5 {t(lang, "stats_langs")}
+            </Sticker>
+          </div>
+
+          {/* Mot fantôme géant derrière le titre : la marque, neutre en 5 langues. */}
+          <div className="hero-ghost-word" aria-hidden="true">MONCEF</div>
+
           <motion.div variants={stagger} initial="hidden" animate="show" style={{ position: "relative", zIndex: 1, maxWidth: 1000 }}>
             
             {/* Badge */}
@@ -590,9 +677,12 @@ export default function Home() {
 
             {/* Headline with Animation */}
             <motion.h1 style={{
-              fontSize: "clamp(48px, 8vw, 102px)", lineHeight: 0.95, marginBottom: 32,
+              fontSize: "clamp(54px, 10vw, 148px)", lineHeight: 0.95, marginBottom: 32,
               fontFamily: "var(--font2)", fontWeight: 800, letterSpacing: "-0.051em"
             }}>
+              {/* SEO : la marque dans le h1 (sr-only = aucun changement visuel,
+                  mais le nom "Moncef IA" est associé au titre principal). */}
+              <span className="sr-only">Moncef IA — </span>
               <span style={{ color: "#fff", display: "inline-block" }}>
                 {firstWords.split(" ").map((word: any, i: any) => (
                   // LE `<span>` porteur NE DOIT PAS être en `inline-block` : un espace
@@ -636,13 +726,15 @@ export default function Home() {
 
             {/* CTA unique : un seul appel à l'action fort (règle de conversion).
                 La connexion devient un lien discret qui ne concurrence pas l'inscription. */}
-            <motion.div variants={fadeUp} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }} className="hero-actions">
-              <Link href="/auth?tab=signup" className="btn btn-premium" style={{ fontSize: 17, padding: "18px 48px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                {t(lang, "hero_btn_start")} <ArrowRight size={20} />
-              </Link>
-              <Link href="/auth?tab=login" className="hero-login-link">
-                {t(lang, "hero_btn_login")}
-              </Link>
+            <motion.div ref={heroActionsRef} variants={fadeUp} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }} className="hero-actions">
+              <CreativeButton href={user ? "/app" : "/auth?tab=signup"} ariaLabel={user ? t(lang, "dashboard") : t(lang, "hero_btn_start")}>
+                {user ? t(lang, "dashboard") : t(lang, "hero_btn_start")}
+              </CreativeButton>
+              {!user && (
+                <Link href="/auth?tab=login" className="hero-login-link">
+                  {t(lang, "hero_btn_login")}
+                </Link>
+              )}
             </motion.div>
 
             {/* Offre gratuite, explicitée sous les CTA */}
@@ -667,14 +759,37 @@ export default function Home() {
                 </motion.div>
               ))}
             </motion.div>
+
+            {/* Chiffres réels, comptés à l'apparition (700 crédits/jour, 5 langues, 7 outils) */}
+            <motion.div variants={fadeUp} style={{ display: "flex", gap: 56, marginTop: 52, justifyContent: "center", flexWrap: "wrap" }}>
+              <AnimatedCounter value={700} label={t(lang, "stats_credits")} />
+              <AnimatedCounter value={5} label={t(lang, "stats_langs")} />
+              <AnimatedCounter value={7} label={t(lang, "stats_tools")} />
+            </motion.div>
           </motion.div>
         </div>
       </motion.section>
 
+      {/* ── Bandeau marquee : rythme + chiffres réels (direction artistique 19/10) ── */}
+      <div className="landing-marquee-band">
+        <Marquee
+          speed={32}
+          items={[
+            "Moncef IA",
+            `700 ${t(lang, "stats_credits")}`,
+            `5 ${t(lang, "stats_langs")}`,
+            `7 ${t(lang, "stats_tools")}`,
+            t(lang, "hero_badge"),
+          ]}
+        />
+      </div>
+
       {/* ── COMMENT ÇA MARCHE (3 étapes) ── */}
-      <section id="how" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.15)", borderTop: "1px solid var(--border)" }}>
+      <section id="how" className="landing-vspace" style={{ background: "rgba(0,0,0,0.15)", borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
+          <Reveal variant="mask">
+          <div style={{ textAlign: "center", marginBottom: 56 }}>
+            <div className="ghost-numeral" aria-hidden="true" style={{ marginBottom: -36 }}>01</div>
             <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {t(lang, "how_title")}
             </span>
@@ -682,13 +797,18 @@ export default function Home() {
               {t(lang, "how_lede")}
             </p>
           </div>
+          </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
             {[
               { n: "1", title: t(lang, "how_s1t"), desc: t(lang, "how_s1d"), icon: <User size={22} /> },
               { n: "2", title: t(lang, "how_s2t"), desc: t(lang, "how_s2d"), icon: <ClipboardList size={22} /> },
               { n: "3", title: t(lang, "how_s3t"), desc: t(lang, "how_s3d"), icon: <Bot size={22} /> },
             ].map((s, i) => (
-              <div key={s.n} className="rise-in card" style={{ padding: "40px 32px", animationDelay: `${i * 0.08}s`, position: "relative" }}>
+              /* Entrée au scroll (Reveal) + inclinaison 3D au survol (TiltCard).
+                 On ne garde PAS `rise-in` ici : son fill `both` fige
+                 `transform: none` et écraserait le tilt de react-spring. */
+              <Reveal key={s.n} variant="fade-up" delay={Math.round(i * 0.08 * 100) / 100}>
+              <TiltCard className="card card-glare" style={{ padding: "40px 32px", position: "relative", height: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
                   <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--p-g)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 8px 20px rgba(89,130,255,0.35)" }}>
                     {s.icon}
@@ -697,74 +817,34 @@ export default function Home() {
                 </div>
                 <h3 style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 12 }}>{s.title}</h3>
                 <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.7 }}>{s.desc}</p>
-              </div>
+              </TiltCard>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── APERÇU (mockups CSS, pas de fausses captures) ── */}
-      <section id="preview" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
-        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
-            <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {t(lang, "preview_title")}
-            </span>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 17, maxWidth: 620, margin: "18px auto 0", lineHeight: 1.6 }}>
-              {t(lang, "preview_lede")}
-            </p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
-            {/* Mockup 1 : analyse de photo */}
-            <div className="rise-in card" style={{ padding: "32px", overflow: "hidden" }}>
-              <div style={{ height: 150, borderRadius: 16, background: "linear-gradient(135deg, rgba(89,130,255,0.25), rgba(0,210,182,0.15))", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, position: "relative" }}>
-                <Camera size={40} style={{ color: "rgba(255,255,255,0.35)" }} />
-                <span style={{ position: "absolute", bottom: 10, right: 12, fontSize: 11, fontWeight: 700, color: "var(--a)" }}>✓ {t(lang, "preview_1t")}</span>
-              </div>
-              <h3 style={{ fontSize: 19, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 10 }}>{t(lang, "preview_1t")}</h3>
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>{t(lang, "preview_1d")}</p>
-              <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
-                {["Maths — Ex 1 à 5", "Physique — relire ch. 3"].map((d) => (
-                  <li key={d} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px" }}>
-                    <Check size={13} style={{ color: "var(--a)", flexShrink: 0 }} /> {d}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Mockup 2 : questions sur notes */}
-            <div className="rise-in card" style={{ padding: "32px", animationDelay: "0.08s" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                <div style={{ alignSelf: "flex-end", background: "var(--p-g-deep)", borderRadius: "16px 16px 4px 16px", padding: "10px 16px", fontSize: 13, maxWidth: "85%" }}>
-                  {t(lang, "preview_2t")} ?
-                </div>
-                <div style={{ alignSelf: "flex-start", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: "16px 16px 16px 4px", padding: "10px 16px", fontSize: 13, maxWidth: "90%", color: "rgba(255,255,255,0.85)" }}>
-                  …d&apos;après ton cours <span style={{ color: "var(--a)", fontWeight: 700 }}>[S1]</span>
-                </div>
-              </div>
-              <h3 style={{ fontSize: 19, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 10 }}>{t(lang, "preview_2t")}</h3>
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7 }}>{t(lang, "preview_2d")}</p>
-            </div>
-            {/* Mockup 3 : emploi du temps */}
-            <div className="rise-in card" style={{ padding: "32px", animationDelay: "0.16s" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginBottom: 20 }}>
-                {["Lun", "Mar", "Mer", "Jeu", "Ven"].map((d, i) => (
-                  <div key={d} style={{ borderRadius: 10, padding: "10px 4px", textAlign: "center", fontSize: 11, fontWeight: 700, background: i === 1 ? "rgba(0,210,182,0.12)" : "rgba(255,255,255,0.03)", border: i === 1 ? "1px solid rgba(0,210,182,0.35)" : "1px solid var(--border)", color: i === 1 ? "var(--a)" : "rgba(255,255,255,0.6)" }}>
-                    {d}
-                    <div style={{ marginTop: 6, fontSize: 10, fontWeight: 400, color: "rgba(255,255,255,0.45)" }}>{["Maths", "Physique", "SVT", "HG", "Anglais"][i]}</div>
-                  </div>
-                ))}
-              </div>
-              <h3 style={{ fontSize: 19, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 10 }}>{t(lang, "preview_3t")}</h3>
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.7 }}>{t(lang, "preview_3d")}</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── APERÇU : section signature — caméra 3D pilotée par le scroll
+          (chantier 3D, 19/10/2026). Sur mobile / sans WebGL / mouvements
+          réduits : cartes simples, sans pin ni canvas. ── */}
+      <div id="preview">
+        <JourneySection
+          kicker={t(lang, "preview_title")}
+          lede={t(lang, "preview_lede")}
+          items={[
+            { icon: <Camera size={22} />, title: t(lang, "preview_1t"), desc: t(lang, "preview_1d"), accent: "#5982ff" },
+            { icon: <MessageSquare size={22} />, title: t(lang, "preview_2t"), desc: t(lang, "preview_2d"), accent: "#00d2b6" },
+            { icon: <CalendarDays size={22} />, title: t(lang, "preview_3t"), desc: t(lang, "preview_3d"), accent: "#a78bfa" },
+          ]}
+        />
+      </div>
 
       {/* ── FAQ (accordéon) ── */}
-      <section id="faq" style={{ padding: "110px 24px", borderTop: "1px solid var(--border)" }}>
+      <section id="faq" className="landing-vspace" style={{ borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          <div className="rise-in" style={{ textAlign: "center", marginBottom: 48 }}>
+          <Reveal variant="mask">
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div className="ghost-numeral" aria-hidden="true" style={{ marginBottom: -36 }}>02</div>
             <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {t(lang, "faq_title")}
             </span>
@@ -772,6 +852,7 @@ export default function Home() {
               {t(lang, "faq_lede")}
             </p>
           </div>
+          </Reveal>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[
               { q: t(lang, "faq_q1"), a: t(lang, "faq_a1") },
@@ -782,7 +863,7 @@ export default function Home() {
             ].map((item, i) => {
               const open = faqOpen === i;
               return (
-                <div key={i} className="rise-in card" style={{ padding: 0, overflow: "hidden" }}>
+                <div key={i} className="rise-in card card-glare" style={{ padding: 0, overflow: "hidden" }}>
                   <button
                     onClick={() => setFaqOpen(open ? null : i)}
                     aria-expanded={open}
@@ -813,13 +894,16 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
+      <section id="features" className="landing-vspace" style={{ background: "rgba(0,0,0,0.2)", borderTop: "1px solid var(--border)" }}>
         <div className="landing-section features-container">
+          <Reveal variant="mask">
           <div style={{ textAlign: "center", marginBottom: 80 }}>
+            <div className="ghost-numeral" aria-hidden="true" style={{ marginBottom: -36 }}>03</div>
             <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>ULTIMATE TOOLS</span>
             <h2 style={{ fontSize: "clamp(36px, 5vw, 64px)", marginTop: 24, letterSpacing: "-0.04em", fontFamily: "var(--font2)" }}>{t(lang, "feat_title")}</h2>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 18, maxWidth: 600, margin: "16px auto 0" }}>{t(lang, "feat_desc")}</p>
           </div>
+          </Reveal>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32, maxWidth: 1300, margin: "0 auto" }}>
             {(FEATURES[lang as keyof typeof FEATURES] ?? FEATURES.fr).map((feat, idx) => (
@@ -847,7 +931,7 @@ export default function Home() {
           elle ne dépend ni d'un IntersectionObserver (whileInView), ni de ScrollTrigger.
           Le contenu vient du dictionnaire VITRINE, donc les 5 langues ont la même mise en
           page — et s'il manque une langue, on retombe sur le français, jamais sur du vide. */}
-      <section id="tiers-tech" className="grades-section" style={{ padding: "110px 24px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
+      <section id="tiers-tech" className="grades-section landing-vspace" style={{ background: "rgba(0,0,0,0.3)", borderTop: "1px solid var(--border)", position: "relative" }}>
         {/* Ambiance « fondant » : des orbes dérivent et fusionnent derrière le contenu
             grâce au filtre goo (même langage visuel que le bouton Ajouter de Thunder).
             Les orbes sont purement décoratifs : le texte reste net, seul le fond fond. */}
@@ -867,7 +951,9 @@ export default function Home() {
           <span className="grades-blob grades-blob--4" />
         </div>
         <div style={{ maxWidth: 1240, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div className="rise-in" style={{ textAlign: "center", marginBottom: 56 }}>
+          <Reveal variant="mask">
+          <div style={{ textAlign: "center", marginBottom: 56 }}>
+            <div className="ghost-numeral" aria-hidden="true" style={{ marginBottom: -36 }}>04</div>
             <span style={{ background: "var(--p-g-deep)", color: "#fff", fontSize: 12, fontWeight: 900, padding: "6px 16px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.1em" }}>
               {v.tiers_kicker}
             </span>
@@ -878,6 +964,7 @@ export default function Home() {
               {v.tiers_lede}
             </p>
           </div>
+          </Reveal>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 24, alignItems: "start" }}>
 
@@ -940,8 +1027,25 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── APPEL FINAL (polish 19/10) : un seul CTA de clôture. Règle : à
+          chaque position de scroll, un seul bouton dominant. ── */}
+      <section className="landing-vspace final-cta">
+        <Reveal variant="mask">
+          <div style={{ textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
+            <span className="kicker-pill">{t(lang, "final_kicker")}</span>
+            <h2 className="final-cta-title">{t(lang, "final_title")}</h2>
+            <p className="final-cta-lede">{t(lang, "final_lede")}</p>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <CreativeButton href={user ? "/app" : "/auth?tab=signup"} ariaLabel={user ? t(lang, "dashboard") : t(lang, "hero_btn_start")}>
+                {user ? t(lang, "dashboard") : t(lang, "hero_btn_start")}
+              </CreativeButton>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: "1px solid var(--border)", background: "rgba(0,0,0,0.4)", padding: "80px 24px" }}>
+      <footer className="footer-pad" style={{ borderTop: "1px solid var(--border)", background: "rgba(0,0,0,0.4)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 32 }}>
             <Logo size={44} />
@@ -964,6 +1068,8 @@ export default function Home() {
         </div>
       </footer>
     </div>
+      </RouteTransitions>
+    </SmoothScroll>
   );
 }
 
@@ -976,7 +1082,7 @@ function FeatureCard({ icon, title, desc, list = [], premium = false, accent, et
   // Thunder passe au violet avec une étiquette « IA » qui dit ce qu'elle est.
   const teinte = accent ?? (premium ? "var(--gold)" : "var(--p)");
   return (
-    <TiltCard className="card card-gsap rise-in-fade" style={{ padding: "48px 32px", position: "relative", overflow: "hidden", animationDelay: `${delay}s` }}>
+    <TiltCard className="card card-gsap rise-in-fade card-glare" style={{ padding: "48px 32px", position: "relative", overflow: "hidden", animationDelay: `${delay}s` }}>
       {(premium || etiquette) && (
         <div style={{
           position: "absolute", top: 12, right: 12, background: teinte, color: "#000",
