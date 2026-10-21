@@ -256,7 +256,7 @@ export default function DashboardPage() {
     // C5 (audit UI/UX 2026-10-04) : plus de validation silencieuse — message
     // inline + focus sur le premier champ manquant.
     if (!newSubj || !newTask) {
-      setFormError(t(lang, 'hw_form_incomplete') || "Indique au moins la matière et l'intitulé du devoir.");
+      setFormError(t(lang, 'hw_form_incomplete'));
       subjInputRef.current?.focus();
       return;
     }
@@ -479,9 +479,9 @@ export default function DashboardPage() {
                 avec "aucun devoir" — état d'erreur explicite avec retry. */
              <div className="empty-state" style={{ padding: 40, border: '1px solid rgba(255,107,107,0.25)', background: 'rgba(255,107,107,0.05)', textAlign: 'center' }}>
                <div style={{ fontSize: 40, marginBottom: 10 }}>📡</div>
-               <div style={{ color: '#fff', fontWeight: 700, marginBottom: 6 }}>Impossible de charger tes devoirs</div>
-               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 16 }}>Vérifie ta connexion puis réessaie.</div>
-               <button className="btn" onClick={() => refetchHw()}>Réessayer</button>
+               <div style={{ color: '#fff', fontWeight: 700, marginBottom: 6 }}>{t(lang, 'dash_hw_load_error')}</div>
+               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 16 }}>{t(lang, 'dash_check_connection')}</div>
+               <button className="btn" onClick={() => refetchHw()}>{t(lang, 'dash_retry')}</button>
              </div>
           ) : homeworks.length === 0 ? (
              <div className="empty-state" style={{ padding: 40, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
