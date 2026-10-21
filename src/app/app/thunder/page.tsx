@@ -169,18 +169,18 @@ export default function ThunderPage() {
           a_partir_de: aPartirDe,
           enregistrer: true,
           matiere: form.matiere,
-          sources: [{ id: "pave", titre: form.titre || "Cours collé", matiere: form.matiere, texte }],
+          sources: [{ id: "pave", titre: form.titre || t(lang, "thunder_default_title"), matiere: form.matiere, texte }],
         }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setDecoupe({ enCours: false, erreur: String(d?.error ?? "Le serveur n'a pas répondu.") + (d?.motif ? ` (${d.motif})` : ""), rapport: null });
+        setDecoupe({ enCours: false, erreur: String(d?.error ?? t(lang, "thunder_server_no_response")) + (d?.motif ? ` (${d.motif})` : ""), rapport: null });
         return;
       }
       setDecoupe({ enCours: false, erreur: null, rapport: d });
       await chargerSources();
     } catch (e: unknown) {
-      setDecoupe({ enCours: false, erreur: e instanceof Error ? e.message : "réseau", rapport: null });
+      setDecoupe({ enCours: false, erreur: e instanceof Error ? e.message : t(lang, "thunder_err_network"), rapport: null });
     }
   };
 
@@ -258,7 +258,7 @@ export default function ThunderPage() {
       });
       const d = await r.json();
       if (!r.ok) {
-        setErreur([d.error, d.motif, d.details].filter(Boolean).join(" — ") || `Erreur ${r.status}`);
+        setErreur([d.error, d.motif, d.details].filter(Boolean).join(" — ") || `${t(lang, "thunder_error_label")} ${r.status}`);
         return null;
       }
       const db = typeof d.debite === "number" ? d.debite : 0;
@@ -269,7 +269,7 @@ export default function ThunderPage() {
       }
       return d;
     } catch (e) {
-      setErreur("Thunder est injoignable : " + (e instanceof Error ? e.message : "réseau"));
+      setErreur(t(lang, "thunder_unreachable") + (e instanceof Error ? e.message : t(lang, "thunder_err_network")));
       return null;
     } finally {
       setEnCours(false);
@@ -617,12 +617,12 @@ export default function ThunderPage() {
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setPlanErreur(String(d?.error ?? "Le serveur n'a pas répondu."));
+        setPlanErreur(String(d?.error ?? t(lang, "thunder_server_no_response")));
         return;
       }
       setPlan(d.plan ?? null);
     } catch (e: unknown) {
-      setPlanErreur(e instanceof Error ? e.message : "réseau");
+      setPlanErreur(e instanceof Error ? e.message : t(lang, "thunder_err_network"));
     } finally {
       setPlanEnCours(false);
     }
@@ -1168,10 +1168,10 @@ export default function ThunderPage() {
                     {t(lang, "thunder_niveau")}
                   </label>
                   <select id="th-niveau" className="th-champ" value={niveaux} onChange={(e) => setNiveau(e.target.value)}>
-                    <option value="collège">collège</option>
-                    <option value="lycée">lycée</option>
-                    <option value="terminale">terminale</option>
-                    <option value="supérieur">supérieur</option>
+                    <option value="collège">{t(lang, "thunder_level_college")}</option>
+                    <option value="lycée">{t(lang, "thunder_level_lycee")}</option>
+                    <option value="terminale">{t(lang, "thunder_level_terminale")}</option>
+                    <option value="supérieur">{t(lang, "thunder_level_superieur")}</option>
                   </select>
                 </div>
               </div>
@@ -1223,7 +1223,7 @@ export default function ThunderPage() {
               <button type="button" className="th-bouton" onClick={demander} disabled={enCours || question.trim().length < 3 || rienALire}>
                 <Bot size={15} /> {enCours ? "…" : t(lang, "thunder_send")}
               </button>
-              {cout !== null && <span className="th-pastille th-pastille--or">−{nombre(cout, lang)} cr.</span>}
+              {cout !== null && <span className="th-pastille th-pastille--or">−{nombre(cout, lang)} {t(lang, "thunder_credits_short")}</span>}
               <span className="th-kbd">{t(lang, "thunder_hint")}</span>
             </div>
 
