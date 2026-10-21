@@ -60,6 +60,7 @@ const content = {
     status_bad: "en défaut",
     status_na: "non mesuré",
     last_observed: "Relevé serveur à",
+    request_impossible: "requête impossible",
   },
   en: {
     title: "Service status",
@@ -91,6 +92,7 @@ const content = {
     status_bad: "failing",
     status_na: "not measured",
     last_observed: "Server measured at",
+    request_impossible: "request impossible",
   },
   es: {
     title: "Estado del servicio",
@@ -122,6 +124,7 @@ const content = {
     status_bad: "en fallo",
     status_na: "no medido",
     last_observed: "Medido por el servidor a las",
+    request_impossible: "solicitud imposible",
   },
   ar: {
     title: "حالة الخدمة",
@@ -153,6 +156,7 @@ const content = {
     status_bad: "معطوب",
     status_na: "غير مقاس",
     last_observed: "قياس الخادم في",
+    request_impossible: "تعذر الطلب",
   },
   zh: {
     title: "服务状态",
@@ -184,6 +188,7 @@ const content = {
     status_bad: "故障",
     status_na: "未测量",
     last_observed: "服务器测量时间",
+    request_impossible: "请求失败",
   },
 };
 
@@ -233,7 +238,7 @@ export default function StatusPage() {
       setFailed(null);
     } catch (e: any) {
       // Un échec réseau est une information, pas un blanc : on l'affiche.
-      setFailed(e?.message ? String(e.message) : "requête impossible");
+      setFailed(e?.message ? String(e.message) : t.request_impossible);
       setSamples((prev) => [...prev, Math.round(performance.now() - started)].slice(-SAMPLE_TARGET));
     } finally {
       busy.current = false;
