@@ -93,7 +93,7 @@ function ScheduleContent() {
 
   const addSlot = async () => {
     if (!newSubj || !newTime) {
-      setSlotError("Indique la matière et l'horaire du cours.");
+      setSlotError(t(lang,'sch_slot_error'));
       slotSubjRef.current?.focus();
       return;
     }
@@ -113,7 +113,7 @@ function ScheduleContent() {
     
     if (error) {
       console.error("Error adding slot:", error);
-      toastApi.error("Erreur lors de l'ajout du cours");
+      toastApi.error(t(lang,'sch_error_add'));
       return;
     }
     
@@ -282,12 +282,12 @@ function ScheduleContent() {
         const _current = _todays.find(s => s._start <= _nowMin && (s._end === null || _nowMin < s._end));
         const _next = _todays.find(s => s._start > _nowMin);
         const _txt = _current && _next
-          ? <>📍 En ce moment : <strong style={{ color: '#fff' }}>{_current.subj}</strong>&nbsp;→ prochain : <strong style={{ color: '#fff' }}>{_next.subj}</strong> à {_fmt(_next._start)}</>
+          ? <>📍 {t(lang,'sch_now_label')} <strong style={{ color: '#fff' }}>{_current.subj}</strong>&nbsp;→ {t(lang,'sch_next_label')} <strong style={{ color: '#fff' }}>{_next.subj}</strong> {t(lang,'sch_at')} {_fmt(_next._start)}</>
           : _current
-            ? <>📍 En ce moment : <strong style={{ color: '#fff' }}>{_current.subj}</strong> — dernier cours de la journée</>
+            ? <>📍 {t(lang,'sch_now_label')} <strong style={{ color: '#fff' }}>{_current.subj}</strong> — {t(lang,'sch_last_today')}</>
             : _next
-              ? <>⏭️ Prochain cours : <strong style={{ color: '#fff' }}>{_next.subj}</strong> à {_fmt(_next._start)}</>
-              : <>🎉 Plus de cours aujourd'hui</>;
+              ? <>⏭️ {t(lang,'sch_next_course')} <strong style={{ color: '#fff' }}>{_next.subj}</strong> {t(lang,'sch_at')} {_fmt(_next._start)}</>
+              : <>🎉 {t(lang,'sch_no_more_today')}</>;
         return (
           <div className="no-print" style={{ marginBottom: 20, padding: '14px 20px', borderRadius: 16, background: 'linear-gradient(135deg, rgba(0,210,182,0.12), rgba(46,91,255,0.10))', border: '1px solid rgba(0,210,182,0.25)', fontSize: 15, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: 8 }}>
             {_txt}
