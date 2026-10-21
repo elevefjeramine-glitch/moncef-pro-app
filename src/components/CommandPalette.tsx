@@ -7,6 +7,7 @@ import {
   Home, Bot, Zap, CalendarDays, MessageSquare, UserCircle,
   Plus, MessageCircle, Search, CornerDownLeft,
 } from "lucide-react";
+import { useLanguage, t } from "@/utils/i18n";
 
 type Action = {
   id: string;
@@ -44,19 +45,20 @@ export default function CommandPalette() {
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const lang = useLanguage();
 
   const actions: Action[] = useMemo(
     () => [
-      { id: "home", label: "Accueil", hint: "Devoirs du jour", keywords: "accueil home dashboard devoirs", icon: Home, run: () => router.push("/app") },
-      { id: "ai", label: "Assistant IA", hint: "Discuter", keywords: "assistant ia ai chat discuter moncef", icon: Bot, run: () => router.push("/app/ai") },
-      { id: "thunder", label: "Thunder", hint: "Révisions", keywords: "thunder revisions qcm fiches quiz", icon: Zap, run: () => router.push("/app/thunder") },
-      { id: "schedule", label: "Emploi du temps", hint: "Planning", keywords: "emploi temps edt planning schedule cours", icon: CalendarDays, run: () => router.push("/app/schedule") },
-      { id: "comm", label: "Messages", hint: "Discussions", keywords: "messages discussions comm chat amis", icon: MessageSquare, run: () => router.push("/app/comm") },
-      { id: "profil", label: "Profil", hint: "Grade et stats", keywords: "profil profile grade stats compte", icon: UserCircle, run: () => router.push("/app/profil") },
-      { id: "new-hw", label: "Nouveau devoir", hint: "Accueil", keywords: "nouveau devoir ajouter homework add", icon: Plus, run: () => router.push("/app") },
-      { id: "new-chat", label: "Nouveau chat IA", hint: "Assistant", keywords: "nouveau chat ia discuter question", icon: MessageCircle, run: () => router.push("/app/ai") },
+      { id: "home", label: t(lang, "home"), hint: t(lang, "palette_hint_devoirs_jour"), keywords: "accueil home dashboard devoirs", icon: Home, run: () => router.push("/app") },
+      { id: "ai", label: t(lang, "palette_assistant_ia"), hint: t(lang, "palette_hint_discuter"), keywords: "assistant ia ai chat discuter moncef", icon: Bot, run: () => router.push("/app/ai") },
+      { id: "thunder", label: t(lang, "thunder"), hint: t(lang, "palette_hint_revisions"), keywords: "thunder revisions qcm fiches quiz", icon: Zap, run: () => router.push("/app/thunder") },
+      { id: "schedule", label: t(lang, "palette_emploi_temps"), hint: t(lang, "palette_hint_planning"), keywords: "emploi temps edt planning schedule cours", icon: CalendarDays, run: () => router.push("/app/schedule") },
+      { id: "comm", label: t(lang, "palette_messages"), hint: t(lang, "palette_hint_discussions"), keywords: "messages discussions comm chat amis", icon: MessageSquare, run: () => router.push("/app/comm") },
+      { id: "profil", label: t(lang, "palette_profil"), hint: t(lang, "palette_hint_grade_stats"), keywords: "profil profile grade stats compte", icon: UserCircle, run: () => router.push("/app/profil") },
+      { id: "new-hw", label: t(lang, "palette_nouveau_devoir"), hint: t(lang, "home"), keywords: "nouveau devoir ajouter homework add", icon: Plus, run: () => router.push("/app") },
+      { id: "new-chat", label: t(lang, "palette_nouveau_chat"), hint: t(lang, "palette_hint_assistant"), keywords: "nouveau chat ia discuter question", icon: MessageCircle, run: () => router.push("/app/ai") },
     ],
-    [router]
+    [router, lang]
   );
 
   const results = useMemo(() => {
@@ -86,8 +88,8 @@ export default function CommandPalette() {
 
   useEffect(() => {
     if (open) {
-      const t = setTimeout(() => inputRef.current?.focus(), 30);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => inputRef.current?.focus(), 30);
+      return () => clearTimeout(timer);
     }
   }, [open ]);
 
@@ -144,7 +146,7 @@ export default function CommandPalette() {
             transition={{ duration: 0.18 }}
             role="dialog"
             aria-modal="true"
-            aria-label="Palette de commande"
+            aria-label={t(lang, "palette_dialogue_aria")}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={onKeyDown}
             style={{
@@ -162,21 +164,21 @@ export default function CommandPalette() {
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Tape une action ou une page…"
-                aria-label="Rechercher une action"
+                placeholder={t(lang, "palette_placeholder")}
+                aria-label={t(lang, "palette_recherche_aria")}
                 style={{
                   flex: 1, background: "none", border: "none", outline: "none",
                   color: "#fff", fontSize: 16,
                 }}
               />
               <kbd style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)", padding: "3px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
-                Échap
+                {t(lang, "palette_echap")}
               </kbd>
             </div>
-            <div ref={listRef} role="listbox" aria-label="Actions" style={{ maxHeight: 340, overflowY: "auto", padding: 8 }}>
+            <div ref={listRef} role="listbox" aria-label={t(lang, "palette_actions_aria")} style={{ maxHeight: 340, overflowY: "auto", padding: 8 }}>
               {results.length === 0 && (
                 <div style={{ padding: "24px 16px", textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: 14 }}>
-                  Aucune action trouvée pour « {query} »
+                  {t(lang, "palette_aucune_action")} « {query} »
                 </div>
               )}
               {results.map((a, i) => {
@@ -214,9 +216,9 @@ export default function CommandPalette() {
               })}
             </div>
             <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", gap: 16, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
-              <span><kbd style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)" }}>↑↓</kbd> naviguer</span>
-              <span><kbd style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)" }}>↵</kbd> ouvrir</span>
-              <span><kbd style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)" }}>Ctrl K</kbd> partout</span>
+              <span><kbd style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)" }}>↑↓</kbd> {t(lang, "palette_naviguer")}</span>
+              <span><kbd style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)" }}>↵</kbd> {t(lang, "palette_ouvrir")}</span>
+              <span><kbd style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)" }}>Ctrl K</kbd> {t(lang, "palette_partout")}</span>
             </div>
           </motion.div>
         </motion.div>
