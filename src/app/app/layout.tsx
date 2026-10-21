@@ -272,7 +272,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
           
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="header-actions" style={{ position: 'relative' }}>
-            <button onClick={() => setShowCreditsInfo(v => !v)} aria-label="Infos sur les crédits" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => setShowCreditsInfo(v => !v)} aria-label={t(lang, 'credits_info_label')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', color: 'var(--a)', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
                ⚡ {['founder', 'co-founder', 'moderator'].includes(user?.role) ? t(lang, 'credits_unlimited') : `${tokens} cr.`}
             </button>
             {showCreditsInfo && (
