@@ -7,6 +7,10 @@
 // .mjs AVANT .js), donc tout réglage placé ici n'était peut-être jamais lu. Le doublon est
 // supprimé. Garde-fous locaux : `npm run typecheck` et `npm run check:i18n`.
 const nextConfig = {
+  // `three` (et @react-three/*) publie du JS moderne non transpilé : Next doit le
+  // transpiler pour les navigateurs ciblés. Ajouté le 19/10/2026 avec le chantier 3D
+  // (hero React Three Fiber). Sans ça, la syntaxe moderne de three casse le build.
+  transpilePackages: ['three'],
   // `/api/health` aimerait dire QUEL build tourne. Ces variables sont reprises de
   // l'environnement AU BUILD et figées dans le bundle — ce qui est le bon régime pour
   // une information sur le build, pas une mesure faite à la demande.
