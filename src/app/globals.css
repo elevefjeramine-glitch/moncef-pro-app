@@ -1060,6 +1060,27 @@ a { text-decoration: none; color: inherit; }
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* ── Chantier 3D (19/10/2026) : couches du hero ──────────────────────────
+   .hero-mesh : gradient shader animé (ou repli statique) en fond de hero.
+   .hero-3d-canvas : scène R3F (blob à droite du titre), masquée sous 1024px
+   car le hero est centré : sur petit écran le blob écraserait le texte.
+   Les deux sont purement décoratifs (aria-hidden côté JSX) et ne captent
+   jamais le pointeur. */
+.hero-mesh {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+.hero-mesh > div, .hero-mesh > canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+}
+.hero-3d-canvas {
+  position: absolute; top: 0; bottom: 0; right: -8%; width: 58%; z-index: 0;
+  pointer-events: none;
+}
+.hero-3d-canvas > div { width: 100%; height: 100%; }
+@media (max-width: 1023px) {
+  .hero-3d-canvas { display: none; }
+}
+
 .vitrine-panel {
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -2918,4 +2939,213 @@ input, textarea, select {
 @media (prefers-reduced-motion: reduce) {
   .profil-fx .profil-orb > span { animation: none; }
   .profil-fx .profil-tilt { will-change: auto; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. DESIGN RAFFINÉ — direction artistique (19/10/2026)
+   Boutons créatifs, marquee, grain, stickers, ghost numerals, micro-délires.
+   Zéro easing par défaut : tout en cubic-bezier(.16,1,.3,1).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ——— Micro-délice global : sélection + scrollbar ——— */
+::selection { background: var(--a); color: #012a24; }
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #070a14; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #5982FF, #00D2B6); border-radius: 8px; border: 2px solid #070a14; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #7b9bff, #00e9c9); }
+
+/* ——— Grain de film : overlay SVG fixe, subtil ——— */
+.grain-overlay {
+  position: fixed; inset: 0; z-index: 2000; pointer-events: none; opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ——— CreativeButton : bordure dégradée animée + shine + flèche + appui 3D ——— */
+.creative-btn {
+  position: relative; display: inline-block; border-radius: 999px; padding: 2px;
+  background: linear-gradient(120deg, #5982FF, #00D2B6, #a78bfa, #5982FF);
+  background-size: 300% 300%; animation: creative-border-flow 5s ease infinite;
+  text-decoration: none; border: none; cursor: pointer;
+  box-shadow: 0 8px 32px rgba(89,130,255,0.35);
+  transition: box-shadow 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.15s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes creative-border-flow {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.creative-btn:hover { box-shadow: 0 14px 44px rgba(0,210,182,0.45); }
+.creative-btn:active { transform: scale(0.96); }
+.creative-btn:focus-visible { outline: 3px solid var(--a); outline-offset: 4px; }
+.creative-btn-inner {
+  position: relative; display: inline-flex; align-items: center; gap: 12px;
+  border-radius: 999px; background: #0a0e1c; color: #fff;
+  padding: 18px 40px; font-family: var(--font2); font-weight: 800; font-size: 17px;
+  letter-spacing: -0.01em; overflow: hidden; white-space: nowrap;
+  transition: background 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+.creative-btn:hover .creative-btn-inner { background: #111832; }
+/* Balayage de brillance */
+.creative-btn-inner::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.32) 50%, transparent 58%);
+  transform: translateX(-130%);
+}
+.creative-btn:hover .creative-btn-inner::after { transform: translateX(130%); transition: transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+.creative-btn-label { position: relative; z-index: 1; }
+.creative-btn-arrow {
+  position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--p), var(--a)); color: #04121a;
+  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+[dir="rtl"] .creative-btn-arrow svg { transform: scaleX(-1); }
+.creative-btn:hover .creative-btn-arrow { transform: translateX(6px); }
+[dir="rtl"] .creative-btn:hover .creative-btn-arrow { transform: translateX(-6px); }
+/* Variante compacte (header) */
+.creative-btn-compact .creative-btn-inner { padding: 10px 22px; font-size: 14px; gap: 8px; }
+.creative-btn-compact .creative-btn-arrow { width: 24px; height: 24px; }
+.creative-btn-compact .creative-btn-arrow svg { width: 14px; height: 14px; }
+
+/* ——— Marquee : bandeau défilant infini ——— */
+.marquee { overflow: hidden; white-space: nowrap; user-select: none; }
+.marquee-track { display: inline-flex; width: max-content; animation: marquee-scroll 30s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee-scroll { to { transform: translateX(-50%); } }
+.marquee-row { display: inline-flex; align-items: center; }
+.marquee-item {
+  display: inline-flex; align-items: center; gap: 28px; padding: 0 28px 0 0;
+  font-family: var(--font2); font-weight: 900; letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.marquee-dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--p), var(--a)); flex-shrink: 0; }
+
+/* ——— Stickers : badges flottants façon autocollant ——— */
+.sticker {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #fff, #dbe4ff); color: #0a0e1c;
+  font-family: var(--font2); font-weight: 900; font-size: 13px; letter-spacing: -0.01em;
+  padding: 12px 20px; border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.8);
+  transform: rotate(var(--sticker-tilt, -4deg)); white-space: nowrap;
+}
+.sticker-drift-a { animation: sticker-float-a 5s cubic-bezier(0.16,1,0.3,1) infinite; }
+.sticker-drift-b { animation: sticker-float-b 6.5s cubic-bezier(0.16,1,0.3,1) infinite; }
+@keyframes sticker-float-a {
+  0%,100% { translate: 0 0; rotate: var(--sticker-tilt, -4deg); }
+  50% { translate: 0 -14px; rotate: calc(var(--sticker-tilt, -4deg) + 3deg); }
+}
+@keyframes sticker-float-b {
+  0%,100% { translate: 0 0; rotate: var(--sticker-tilt, 4deg); }
+  50% { translate: 0 12px; rotate: calc(var(--sticker-tilt, 4deg) - 3deg); }
+}
+
+/* ——— Ghost numerals : chiffres fantômes géants ——— */
+.ghost-numeral {
+  font-family: var(--font2); font-weight: 900; line-height: 0.8; user-select: none;
+  font-size: clamp(120px, 17vw, 250px); letter-spacing: -0.05em;
+  color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,0.13);
+}
+
+/* ——— Mot fantôme du hero : outline géant derrière le titre ——— */
+.hero-ghost-word {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none; user-select: none; z-index: 0;
+  font-family: var(--font2); font-weight: 900; letter-spacing: -0.04em;
+  font-size: clamp(90px, 20vw, 300px); line-height: 1;
+  color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.07);
+  transform: translateY(-6%);
+}
+
+/* ——— Cartes : lift + lueur de bordure + reflet au survol ——— */
+.card-luxe { position: relative; transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), box-shadow 0.45s cubic-bezier(0.16,1,0.3,1), border-color 0.45s; }
+.card-luxe:hover {
+  transform: translateY(-8px);
+  border-color: rgba(0,210,182,0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,210,182,0.15), 0 0 44px rgba(89,130,255,0.12);
+}
+.card-luxe::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.09) 50%, transparent 58%);
+  transform: translateX(-130%); opacity: 0;
+}
+.card-luxe:hover::after { opacity: 1; transform: translateX(130%); transition: transform 0.9s cubic-bezier(0.16,1,0.3,1), opacity 0.3s; }
+
+/* ——— Séparateur avec personnalité ——— */
+.section-flourish { display: flex; align-items: center; gap: 16px; margin: 0 auto; max-width: 1100px; padding: 0 24px; }
+.section-flourish::before, .section-flourish::after {
+  content: ""; height: 1px; flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+}
+.section-flourish-diamond { width: 10px; height: 10px; transform: rotate(45deg); background: linear-gradient(135deg, var(--p), var(--a)); flex-shrink: 0; }
+
+/* ——— Bandeau marquee de la landing ——— */
+.landing-marquee-band {
+  border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.35); padding: 20px 0; position: relative; z-index: 2;
+}
+.landing-marquee-band .marquee-item { font-size: clamp(18px, 2.6vw, 30px); color: rgba(255,255,255,0.85); }
+.landing-marquee-band .marquee-item .marquee-hl {
+  background: linear-gradient(120deg, var(--p), var(--a)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ——— Polish CTA & rythme (19/10/2026) : hiérarchie stricte ——— */
+/* Le header n'a qu'un CTA visible à la fois avec le hero : tant que le bloc
+   d'actions du hero est à l'écran, le CTA du header s'efface — mais il garde
+   sa place dans le flux (pas de saut de layout). visibility:hidden le retire
+   aussi de l'ordre de tabulation. */
+.navbar-cta {
+  display: inline-flex;
+  transition: opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.45s cubic-bezier(0.16,1,0.3,1), visibility 0s;
+}
+.navbar-cta--hidden {
+  opacity: 0; transform: translateY(-8px); visibility: hidden; pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.45s cubic-bezier(0.16,1,0.3,1), visibility 0s 0.45s;
+}
+
+/* ——— Échelle d'espacement unique des sections ——— */
+.landing-vspace { padding-top: clamp(72px, 9vw, 120px); padding-bottom: clamp(72px, 9vw, 120px); }
+.footer-pad { padding: clamp(56px, 7vw, 88px) 24px; }
+
+/* ——— Appel final : un seul CTA de clôture ——— */
+.final-cta { text-align: center; }
+.kicker-pill {
+  background: var(--p-g-deep); color: #fff; font-size: 12px; font-weight: 900;
+  padding: 6px 16px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em;
+}
+.final-cta-title {
+  font-family: var(--font2); font-weight: 800; letter-spacing: -0.04em; line-height: 1.05;
+  font-size: clamp(34px, 5vw, 64px); margin: 24px 0 16px; color: #fff;
+}
+.final-cta-lede {
+  color: rgba(255,255,255,0.6); font-size: clamp(15px, 2.4vw, 18px); line-height: 1.65;
+  max-width: 560px; margin: 0 auto 40px;
+}
+
+/* ——— Mouvements réduits : tout le design raffiné devient statique ——— */
+@media (prefers-reduced-motion: reduce) {
+  .creative-btn, .creative-btn-inner::after { animation: none; }
+  .marquee-track { animation: none; }
+  .sticker-drift-a, .sticker-drift-b { animation: none; }
+  .card-luxe, .card-luxe::after { transition: none; }
+}
+
+/* ——— Stickers du hero : positionnement ——— */
+.hero-stickers { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.hero-sticker { position: absolute; }
+.hero-sticker-left { top: 26%; left: 5%; }
+.hero-sticker-right { top: 34%; right: 5%; }
+@media (max-width: 1100px) { .hero-stickers { display: none; } }
+
+/* ——— Reflet carte sans transform (cohabite avec TiltCard / rise-in) ——— */
+.card-glare { position: relative; }
+.card-glare::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.09) 50%, transparent 58%);
+  transform: translateX(-130%); opacity: 0;
+}
+.card-glare:hover::after { opacity: 1; transform: translateX(130%); transition: transform 0.9s cubic-bezier(0.16,1,0.3,1), opacity 0.3s; }
+.card-glare:hover { border-color: rgba(0,210,182,0.35); box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 44px rgba(89,130,255,0.12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-glare::after { display: none; }
 }
