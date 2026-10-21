@@ -12,7 +12,7 @@ import { marked } from "marked";
 export default function AIPage() {
   const lang = useLanguage();
   const [messages, setMessages] = useState<any[]>([
-    { role: 'assistant', content: '👋 Bonjour ! Je suis **Moncef IA**, votre assistant pédagogique tout-en-un.\n\nVoici ce que je peux faire :\n📚 **Devoirs** — Ajouter, modifier la progression, changer les dates, marquer comme terminé\n🗓️ **Emploi du temps** — Ajouter, supprimer ou déplacer des cours par simple description\n📅 **Événements** — Créer des rappels et événements dans votre calendrier\n📸 **Image EDT** — Analysez une photo de votre emploi du temps\n\nComment puis-je vous aider ?' }
+    { role: 'assistant', content: t(lang, 'ai_welcome') }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -164,7 +164,7 @@ export default function AIPage() {
         clearFn();
         loadExistingSchedule();
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: `❌ Erreur : ${data.error}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_error_prefix') + data.error }]);
       }
     } catch { setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_error_tech') }]); }
     finally { setImporting(false); }
@@ -173,7 +173,7 @@ export default function AIPage() {
   const importSchedule = async (entries: any) => {
     await scheduleOp(
       entries, 'insert',
-      (d: any) => `✅ ${d.inserted} cours ajouté(s) ! Consultez votre Emploi du Temps. 🎉`,
+      (d: any) => `✅ ${d.inserted} ${t(lang,'ai_sch_imported')}`,
       () => setScheduleData(null)
     );
   };
@@ -183,7 +183,7 @@ export default function AIPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erreur : vous devez être connecté pour ajouter des devoirs." }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_hw_login_needed') }]);
         return;
       }
 
@@ -198,22 +198,22 @@ export default function AIPage() {
         if (isUpdate) {
           setMessages(prev => [...prev, { 
             role: 'assistant', 
-            content: `✅ ${data.updated} devoir(s) mis à jour avec succès ! 📊` 
+            content: `✅ ${data.updated} ${t(lang,'ai_hw_updated')}` 
           }]);
           setHomeworkUpdateData(null);
         } else {
           setMessages(prev => [...prev, { 
             role: 'assistant', 
-            content: `✅ ${data.inserted} devoir(s) ajouté(s) avec succès ! Rendez-vous dans la section "Accueil" pour les consulter. 📚` 
+            content: `✅ ${data.inserted} ${t(lang,'ai_hw_added')}` 
           }]);
           setHomeworkData(null);
         }
         loadExistingHomework(); // Refresh the homework list
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: `❌ Erreur : ${data.error}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_error_prefix') + data.error }]);
       }
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erreur technique lors de la mise à jour des devoirs." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_hw_update_error') }]);
     } finally {
       setImporting(false);
     }
@@ -277,7 +277,7 @@ export default function AIPage() {
     });
 
     // For display in UI
-    const displayContent = userMsg || "📸 Image(s) envoyée(s)";
+    const displayContent = userMsg || t(lang,'ai_images_sent');
     const newMessages = [...messages, { role: 'user', content: displayContent, images: imagesCopy.map(i => i.preview) }];
     setMessages(newMessages);
     setAttachedImages([]);
@@ -403,14 +403,14 @@ Exemples :
         let data: any = {};
         try { data = await res.json(); } catch { /* corps illisible */ }
         if (!res.ok) {
-          setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || "Désolé, une erreur est survenue." }]);
+          setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || t(lang,'ai_error') }]);
           setLoading(false);
           return;
         }
         if (data.newTokens !== undefined) {
           useUserStore.getState().setCredits(data.newTokens);
         }
-        const finalText = applyStructuredTags(data.response || "Désolé, je n'ai pas compris.");
+        const finalText = applyStructuredTags(data.response || t(lang,'ai_not_understood'));
         setMessages(prev => [...prev, { role: 'assistant', content: finalText, cost: data.cost || 0 }]);
         setLoading(false);
         return;
@@ -481,7 +481,7 @@ Exemples :
 
       let aiReply = fullText.trim();
       if (!aiReply) {
-        aiReply = streamInfo.error || "Désolé, je n'ai pas compris.";
+        aiReply = streamInfo.error || t(lang,'ai_not_understood');
       }
       aiReply = applyStructuredTags(aiReply);
 
@@ -507,10 +507,10 @@ Exemples :
         // Si un stream était en cours, on remplace son placeholder plutôt
         // que d'empiler un second message d'erreur.
         if (last && last.role === 'assistant' && last.streaming) {
-          next[next.length - 1] = { ...last, content: "Désolé, une erreur technique est survenue.", streaming: false };
+          next[next.length - 1] = { ...last, content: t(lang,'ai_error_tech'), streaming: false };
           return next;
         }
-        return [...prev, { role: 'assistant', content: "Désolé, une erreur technique est survenue." }];
+        return [...prev, { role: 'assistant', content: t(lang,'ai_error_tech') }];
       });
     } finally {
       setLoading(false);
@@ -612,8 +612,8 @@ Exemples :
                     )}
                     {isAi && !msg.streaming && (msg.cost > 0 || msg.stopped) && (
                       <div style={{ display: 'flex', gap: 8, fontSize: '11px', color: 'rgba(255,255,255,0.35)', paddingLeft: 4 }}>
-                        {msg.cost > 0 && <span>−{msg.cost} crédits</span>}
-                        {msg.stopped && <span>⏹ Réponse arrêtée</span>}
+                        {msg.cost > 0 && <span>−{msg.cost} {t(lang,'ai_credits')}</span>}
+                        {msg.stopped && <span>⏹ {t(lang,'ai_stopped')}</span>}
                       </div>
                     )}
                   </div>
@@ -682,7 +682,7 @@ Exemples :
                 onClick={() => setScheduleData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}
               >
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -725,7 +725,7 @@ Exemples :
                 disabled={importing}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'var(--p)', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}
               >
-                <Check size={18} /> {importing ? 'Ajout en cours...' : 'Confirmer l\'ajout'}
+                <Check size={18} /> {importing ? t(lang,'ai_hw_adding') : t(lang,'ai_hw_confirm_add')}
               </motion.button>
               <motion.button 
                 whileHover={{ scale: 1.03 }} 
@@ -733,7 +733,7 @@ Exemples :
                 onClick={() => setHomeworkData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}
               >
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -757,9 +757,9 @@ Exemples :
                   <span style={{ color: 'var(--a)', fontWeight: 700, fontSize: '12px' }}>
                     {existingHomework.find(h => h.id === entry.id)?.subject || 'Devoir'}
                   </span>
-                  {entry.progression !== undefined && <span style={{ color: 'rgba(255,255,255,0.6)' }}>📊 Progression → {entry.progression}%</span>}
-                  {entry.due_date !== undefined && <span style={{ color: 'rgba(255,255,255,0.6)' }}>📅 Date → {entry.due_date || 'supprimée'}</span>}
-                  {entry.status !== undefined && <span style={{ color: 'rgba(255,255,255,0.6)' }}>🔄 Statut → {entry.status}</span>}
+                  {entry.progression !== undefined && <span style={{ color: 'rgba(255,255,255,0.6)' }}>📊 {t(lang,'ai_progression')} → {entry.progression}%</span>}
+                  {entry.due_date !== undefined && <span style={{ color: 'rgba(255,255,255,0.6)' }}>📅 {t(lang,'ai_date_label')} → {entry.due_date || t(lang,'ai_date_deleted')}</span>}
+                  {entry.status !== undefined && <span style={{ color: 'rgba(255,255,255,0.6)' }}>🔄 {t(lang,'ai_status_label')} → {entry.status}</span>}
                 </div>
               ))}
             </div>
@@ -777,7 +777,7 @@ Exemples :
                 onClick={() => setHomeworkUpdateData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}
               >
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -795,7 +795,7 @@ Exemples :
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto', marginBottom: '14px' }}>
               {scheduleAddData.map((s: any, i: any) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', padding: '8px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: '10px', fontSize: '13px', color: '#fff', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--a)', fontWeight: 700, minWidth: 60 }}>Sem. {s.week}</span>
+                  <span style={{ color: 'var(--a)', fontWeight: 700, minWidth: 60 }}>{t(lang,'ai_week')} {s.week}</span>
                   <span style={{ color: 'rgba(255,255,255,0.6)', minWidth: 70 }}>{DAYS_FR[s.day_index]}</span>
                   <span style={{ fontWeight: 600 }}>{s.subj}</span>
                   {s.time_slot && <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>🕐 {s.time_slot}</span>}
@@ -804,13 +804,13 @@ Exemples :
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={importing}
-                onClick={() => scheduleOp(scheduleAddData, 'insert', (d: any) => `✅ ${d.inserted} cours ajouté(s) à l'EDT !`, () => setScheduleAddData(null))}
+                onClick={() => scheduleOp(scheduleAddData, 'insert', (d: any) => `✅ ${d.inserted} ${t(lang,'ai_sch_added')}`, () => setScheduleAddData(null))}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'var(--a)', color: '#000', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}>
                 <Check size={18} /> {importing ? t(lang,'ai_sch_adding') : t(lang,'btn_confirm')}
               </motion.button>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setScheduleAddData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -830,20 +830,20 @@ Exemples :
                 const slot = existingSchedule.find(e => e.id === s.id);
                 return (
                   <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,71,87,0.08)', borderRadius: '10px', fontSize: '13px', color: '#fff', border: '1px solid rgba(255,71,87,0.2)' }}>
-                    {slot ? `${DAYS_FR[slot.day_index]} — ${slot.subj} (${slot.time_slot || '?'}) Sem.${slot.week}` : `ID: ${s.id}`}
+                    {slot ? `${DAYS_FR[slot.day_index]} — ${slot.subj} (${slot.time_slot || '?'}) ${t(lang,'ai_week')}.${slot.week}` : `ID: ${s.id}`}
                   </div>
                 );
               })}
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={importing}
-                onClick={() => scheduleOp(scheduleDeleteData, 'delete', (d: any) => `✅ ${d.deleted} cours supprimé(s) de l'EDT !`, () => setScheduleDeleteData(null))}
+                onClick={() => scheduleOp(scheduleDeleteData, 'delete', (d: any) => `✅ ${d.deleted} ${t(lang,'ai_sch_deleted')}`, () => setScheduleDeleteData(null))}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4757', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}>
                 <Check size={18} /> {importing ? t(lang,'ai_sch_deleting') : t(lang,'ai_sch_confirm_delete')}
               </motion.button>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setScheduleDeleteData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -863,24 +863,24 @@ Exemples :
                 const slot = existingSchedule.find(e => e.id === s.id);
                 return (
                   <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,165,2,0.06)', borderRadius: '10px', fontSize: '13px', color: '#fff', border: '1px solid rgba(255,165,2,0.2)' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{slot ? `${slot.subj}` : 'Cours'} →</span>{' '}
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{slot ? `${slot.subj}` : t(lang,'ai_course')} →</span>{' '}
                     {s.subj && <span style={{ color: '#ffa502' }}>📝 {s.subj} </span>}
                     {s.time_slot && <span style={{ color: '#ffa502' }}>🕐 {s.time_slot} </span>}
                     {s.day_index !== undefined && <span style={{ color: '#ffa502' }}>📅 {DAYS_FR[s.day_index]} </span>}
-                    {s.week && <span style={{ color: '#ffa502' }}>Sem.{s.week}</span>}
+                    {s.week && <span style={{ color: '#ffa502' }}>{t(lang,'ai_week')}.{s.week}</span>}
                   </div>
                 );
               })}
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={importing}
-                onClick={() => scheduleOp(scheduleUpdateData, 'update', (d: any) => `✅ ${d.updated} cours modifié(s) dans l'EDT !`, () => setScheduleUpdateData(null))}
+                onClick={() => scheduleOp(scheduleUpdateData, 'update', (d: any) => `✅ ${d.updated} ${t(lang,'ai_sch_updated')}`, () => setScheduleUpdateData(null))}
                 style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ffa502', color: '#000', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}>
                 <Check size={18} /> {importing ? t(lang,'ai_sch_updating') : t(lang,'ai_sch_confirm_update')}
               </motion.button>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setScheduleUpdateData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -907,7 +907,7 @@ Exemples :
                       <div style={{ fontWeight: 700 }}>{ev.title}</div>
                       {ev.description && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{ev.description}</div>}
                     </div>
-                    <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: 600, whiteSpace: 'nowrap' }}>📅 {ev.event_date}{ev.event_time ? ` à ${ev.event_time}` : ''}</span>
+                    <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: 600, whiteSpace: 'nowrap' }}>📅 {ev.event_date}{ev.event_time ? ` ${t(lang,'ai_at')} ${ev.event_time}` : ''}</span>
                   </div>
                 );
               })}
@@ -921,9 +921,9 @@ Exemples :
                   if (!session) { setImporting(false); return; }
                   const res = await fetch('/api/events-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: eventData, authToken: session.access_token }) });
                   const data = await res.json();
-                  if (data.success) setMessages(prev => [...prev, { role: 'assistant', content: `✅ ${data.inserted} événement(s) ajouté(s) au calendrier ! 🗓️` }]);
-                  else if (data.setupRequired) setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ **Configuration manquante** : ${data.error}` }]);
-                  else setMessages(prev => [...prev, { role: 'assistant', content: `❌ Erreur : ${data.error}` }]);
+                  if (data.success) setMessages(prev => [...prev, { role: 'assistant', content: `✅ ${data.inserted} ${t(lang,'ai_event_added')}` }]);
+                  else if (data.setupRequired) setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_event_setup') + data.error }]);
+                  else setMessages(prev => [...prev, { role: 'assistant', content: t(lang,'ai_error_prefix') + data.error }]);
                   setEventData(null);
                   setImporting(false);
                 }}
@@ -937,7 +937,7 @@ Exemples :
                 onClick={() => setEventData(null)}
                 style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}
               >
-                <X size={16} /> Annuler
+                <X size={16} /> {t(lang,'comm_cancel')}
               </motion.button>
             </div>
           </motion.div>
@@ -965,10 +965,10 @@ Exemples :
         {messages.length <= 1 && !loading && !streaming && (
           <div style={{ padding: '0 30px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {[
-              "Explique-moi les équations du premier degré",
-              "Fais-moi un quiz de 5 questions en physique-chimie",
-              "Résume-moi mon chapitre d'histoire-géo",
-              "Aide-moi à planifier mes révisions de la semaine",
+              t(lang,'ai_chip_equations'),
+              t(lang,'ai_chip_quiz'),
+              t(lang,'ai_chip_resume'),
+              t(lang,'ai_chip_plan'),
             ].map((chip) => (
               <button
                 key={chip}
@@ -999,25 +999,25 @@ Exemples :
               whileTap={{ scale: 0.9 }}
               onClick={() => fileInputRef.current?.click()}
               style={{ background: 'none', border: 'none', color: attachedImages.length > 0 ? 'var(--a)' : 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}
-              title="Joindre une image (ex: capture d'écran de votre emploi du temps)"
+              title={t(lang,'ai_attach_title')}
             >
               <ImagePlus size={22} />
             </motion.button>
 
             <input 
               style={{ flex: 1, background: 'none', border: 'none', color: '#fff', fontSize: '15px', outline: 'none' }} 
-              placeholder={attachedImages.length > 0 ? "Ajoutez un message ou envoyez directement..." : t(lang, 'ai_placeholder')} 
+              placeholder={attachedImages.length > 0 ? t(lang,'ai_placeholder_images') : t(lang, 'ai_placeholder')} 
               value={input} 
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               disabled={loading || streaming}
             />
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={() => (streaming ? stopStream() : sendMessage())} disabled={loading} title={streaming ? "Arrêter la réponse" : undefined}>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn" style={{ width: '48px', height: '48px', borderRadius: '18px', padding: 0 }} onClick={() => (streaming ? stopStream() : sendMessage())} disabled={loading} title={streaming ? t(lang,'ai_stop_title') : undefined}>
               {streaming ? <Square size={20} /> : <Send size={20} style={{ marginLeft: lang === 'ar' ? '2px' : '-2px', transform: lang === 'ar' ? 'scaleX(-1)' : 'none' }} />}
             </motion.button>
           </div>
           <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
-            {t(lang, 'ai_disclaimer')} • 📸 Joignez une capture de votre EDT pour l'importer automatiquement
+            {t(lang, 'ai_disclaimer')} • 📸 {t(lang,'ai_import_hint')}
           </div>
         </div>
 
