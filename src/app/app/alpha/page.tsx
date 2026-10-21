@@ -9,11 +9,11 @@ import { useRouter } from "next/navigation";
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 
-const ROLE_COLORS: Record<string, any> = {
-  founder: { color: '#FFD700', bg: 'rgba(255,215,0,0.15)', label: '👑 Fondateur' },
-  moderator: { color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', label: '🛡️ Modérateur' },
-  normal: { color: 'rgba(255,255,255,0.6)', bg: 'rgba(255,255,255,0.05)', label: '👤 Utilisateur' },
-};
+const getRoleColors = (lang: string): Record<string, any> => ({
+  founder: { color: '#FFD700', bg: 'rgba(255,215,0,0.15)', label: t(lang, 'role_founder_full') },
+  moderator: { color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', label: t(lang, 'role_moderator_full') },
+  normal: { color: 'rgba(255,255,255,0.6)', bg: 'rgba(255,255,255,0.05)', label: t(lang, 'alpha_role_user') },
+});
 
 function StatCard({ icon: Icon, label, value, sub, color = '#FFD700', delay = 0 }: any) {
   return (
@@ -60,7 +60,7 @@ export default function AlphaPage() {
   // suppressions que l'humain doit encore confirmer.
   type Tour = { role: string; content: string; actions?: { outil: string; cible?: string; resultat: Record<string, any> }[]; aExecuter?: { cible: string; id: string; email: string }[]; avertissements?: string[] };
   const [messages, setMessages] = useState<Tour[]>([
-    { role: 'assistant', content: '👑 ALPHA — Interface d\'administration activée. Je peux analyser vos données, gérer les utilisateurs et vous fournir des statistiques en temps réel. Quelle est votre directive ?' }
+    { role: 'assistant', content: t(lang, 'alpha_welcome') }
   ]);
   const [input, setInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -150,7 +150,7 @@ export default function AlphaPage() {
     if (!editingUser) return;
     const res = await alphaFetch('UPDATE_USER', { userId: editingUser.id, updates: { role: editRole, tokens: Number(editTokens) } });
     if (res?.success) {
-      setActionMsg(`✅ ${editingUser.first_name || editingUser.email} mis à jour`);
+      setActionMsg(`✅ ${editingUser.first_name || editingUser.email} ${t(lang,'alpha_user_updated')}`);
       setEditingUser(null);
       loadStats();
     } else {
@@ -160,10 +160,10 @@ export default function AlphaPage() {
   };
 
   const handleDeleteUser = async (userId: any, name: any) => {
-    if (!confirm(`Supprimer ${name} ? Cette action est irréversible.`)) return;
+    if (!confirm(`${t(lang,'alpha_del_prefix')} ${name} ${t(lang,'alpha_del_suffix')}`)) return;
     const res = await alphaFetch('DELETE_USER', { userId });
     if (res?.success) {
-      setActionMsg(`✅ Utilisateur supprimé`);
+      setActionMsg(t(lang,'alpha_user_deleted'));
       setUsers(prev => prev.filter(u => u.id !== userId)); // Instant UI update
       loadStats();
     } else {
@@ -175,7 +175,7 @@ export default function AlphaPage() {
   const handleDeleteHomework = async (hwId: any, subject: any) => {
     const res = await alphaFetch('DELETE_HOMEWORK', { hwId });
     if (res?.success) {
-      setActionMsg(`✅ Devoir "${subject}" supprimé`);
+      setActionMsg(`✅ Devoir "${subject}" ${t(lang,'alpha_deleted')}`);
       setAllHomework(prev => prev.filter((h: any) => h.id !== hwId));
     } else setActionMsg(`❌ ${res?.error}`);
     setTimeout(() => setActionMsg(''), 3000);
@@ -206,14 +206,14 @@ export default function AlphaPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: `\u274c ${data?.error || 'Assistant indisponible.'}` }]);
+        setMessages((prev) => [...prev, { role: 'assistant', content: `\u274c ${data?.error || t(lang,'alpha_assistant_unavailable')}` }]);
         return;
       }
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: data.reponse || 'Réponse vide.',
+          content: data.reponse || t(lang,'alpha_empty_response'),
           actions: Array.isArray(data.actions) ? data.actions : [],
           aExecuter: Array.isArray(data.a_executer) ? data.a_executer : [],
           avertissements: Array.isArray(data.avertissements) ? data.avertissements : [],
@@ -223,7 +223,7 @@ export default function AlphaPage() {
     } catch {
       // Panne réseau, réponse illisible : la bulle le dit au lieu de s'éteindre
       // en silence en laissant l'admin croire que la commande est partie.
-      setMessages((prev) => [...prev, { role: 'assistant', content: '❌ Le serveur na pas répondu — aucune action na été exécutée.' }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: t(lang,'alpha_no_response') }]);
     } finally {
       setAiLoading(false);
     }
@@ -328,11 +328,11 @@ export default function AlphaPage() {
       {tab === 'dashboard' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <StatCard icon={Users} label="Utilisateurs inscrits" value={stats?.users?.count} color="#FFD700" delay={0} />
+            <StatCard icon={Users} label={t(lang,'alpha_stat_users')} value={stats?.users?.count} color="#FFD700" delay={0} />
             <StatCard icon={BookOpen} label="Devoirs total" value={stats?.homework?.count} color="#a78bfa" delay={0.05}
-              sub={`${hwByStatus.todo} à faire • ${hwByStatus.in_progress} en cours`} />
-            <StatCard icon={MessageSquare} label="Messages envoyés" value={stats?.messages?.count} color="#00D2B6" delay={0.1} />
-            <StatCard icon={Calendar} label="Cours planifiés" value={stats?.schedule?.count} color="#f97316" delay={0.15} />
+              sub={`${hwByStatus.todo} ${t(lang,'alpha_todo_suffix')} • ${hwByStatus.in_progress} ${t(lang,'alpha_in_progress_suffix')}`} />
+            <StatCard icon={MessageSquare} label={t(lang,'alpha_stat_messages')} value={stats?.messages?.count} color="#00D2B6" delay={0.1} />
+            <StatCard icon={Calendar} label={t(lang,'alpha_stat_courses')} value={stats?.schedule?.count} color="#f97316" delay={0.15} />
           </div>
 
           {/* Homework status breakdown */}
@@ -340,13 +340,13 @@ export default function AlphaPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               style={{ background: 'rgba(0,0,0,0.4)', borderRadius: 20, padding: 24, border: '1px solid rgba(255,215,0,0.1)' }}>
               <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#FFD700', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <BarChart3 size={18} /> Répartition des Devoirs
+                <BarChart3 size={18} /> {t(lang,'alpha_hw_completion')}
               </h3>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 {[
-                  { label: '📋 À faire', count: hwByStatus.todo, color: 'rgba(255,255,255,0.6)' },
-                  { label: '⏳ En cours', count: hwByStatus.in_progress, color: '#00D2B6' },
-                  { label: '✅ Terminés', count: hwByStatus.done, color: '#2ed573' },
+                  { label: t(lang,'alpha_hw_todo'), count: hwByStatus.todo, color: 'rgba(255,255,255,0.6)' },
+                  { label: t(lang,'alpha_hw_in_progress'), count: hwByStatus.in_progress, color: '#00D2B6' },
+                  { label: t(lang,'alpha_hw_done'), count: hwByStatus.done, color: '#2ed573' },
                 ].map(item => (
                   <div key={item.label} style={{ flex: 1, minWidth: 100, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
                     <div style={{ fontSize: 28, fontWeight: 800, color: item.color }}>{item.count}</div>
@@ -358,7 +358,7 @@ export default function AlphaPage() {
               {stats?.homework?.count > 0 && (
                 <div style={{ marginTop: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>
-                    <span>Taux de complétion global</span>
+                    <span>{t(lang,'alpha_completion_global')}</span>
                     <span style={{ color: '#2ed573', fontWeight: 700 }}>{Math.round((hwByStatus.done / stats.homework.count) * 100)}%</span>
                   </div>
                   <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
@@ -376,11 +376,11 @@ export default function AlphaPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
               style={{ background: 'rgba(0,0,0,0.4)', borderRadius: 20, padding: 24, border: '1px solid rgba(255,215,0,0.1)' }}>
               <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#FFD700', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Users size={18} /> Inscrits récents
+                <Users size={18} /> {t(lang,'alpha_recent_users')}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {users.slice(0, 5).map(u => {
-                  const rc = ROLE_COLORS[u.role as string] || ROLE_COLORS.normal || {};
+                  const rc = getRoleColors(lang)[u.role as string] || getRoleColors(lang).normal || {};
                   return (
                     <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                       <div style={{ width: 34, height: 34, borderRadius: 10, background: rc.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
@@ -405,10 +405,10 @@ export default function AlphaPage() {
               style={{ padding: 20, borderRadius: 16, background: 'rgba(255,165,2,0.08)', border: '1px solid rgba(255,165,2,0.25)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <AlertTriangle size={20} color="#ffa502" style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#ffa502' }}>Clé Service Role manquante</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#ffa502' }}>{t(lang,'alpha_service_key_missing')}</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
-                  Pour activer toutes les fonctionnalités admin, ajoutez <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>SUPABASE_SERVICE_ROLE_KEY</code> dans vos variables d’environnement Netlify et dans <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>.env.local</code>.
-                  <br />Trouvez-la dans : Supabase → Settings → API → service_role key.
+                  {t(lang,'alpha_service_key_desc')}, {t(lang,'alpha_key_add')} <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>SUPABASE_SERVICE_ROLE_KEY</code> {t(lang,'alpha_key_setup_2')} <code style={{ background: 'rgba(0,0,0,0.4)', padding: '1px 6px', borderRadius: 4 }}>.env.local</code>.
+                  <br />{t(lang,'alpha_key_setup_3')}
                 </div>
               </div>
             </motion.div>
@@ -419,7 +419,7 @@ export default function AlphaPage() {
       {/* USERS TAB */}
       {tab === 'users' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{users.length} utilisateurs enregistrés</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{users.length} {t(lang,'alpha_registered_users')}</div>
           {userRole !== 'founder' && (
             // Dit, pas caché : un modérateur qui cherche le crayon ou la corbeille
             // doit comprendre pourquoi ils ne sont pas là.
@@ -428,7 +428,7 @@ export default function AlphaPage() {
             </div>
           )}
           {users.map(u => {
-            const rc = ROLE_COLORS[u.role as string] || ROLE_COLORS.normal || {};
+            const rc = getRoleColors(lang)[u.role as string] || getRoleColors(lang).normal || {};
             const isEditing = editingUser?.id === u.id;
             return (
               <motion.div key={u.id} layout
@@ -468,12 +468,12 @@ export default function AlphaPage() {
                       style={{ overflow: 'hidden', borderTop: '1px solid rgba(255,215,0,0.15)' }}>
                       <div style={{ padding: '16px 20px', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', background: 'rgba(255,215,0,0.03)' }}>
                         <div style={{ flex: '1 1 150px' }}>
-                          <label style={{ fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, display: 'block', marginBottom: 6 }}>RÔLE</label>
+                          <label style={{ fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, display: 'block', marginBottom: 6 }}>{t(lang,'alpha_role')}</label>
                           <select value={editRole} onChange={e => setEditRole(e.target.value)}
                             style={{ width: '100%', padding: '8px 12px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,215,0,0.3)', color: '#fff', fontSize: 13, outline: 'none' }}>
-                            <option value="normal">👤 Normal</option>
-                            <option value="moderator">🛡️ Modérateur</option>
-                            {userRole === 'founder' && <option value="founder">👑 Fondateur</option>}
+                            <option value="normal">{t(lang,'role_normal')}</option>
+                            <option value="moderator">{t(lang,'role_moderator_full')}</option>
+                            {userRole === 'founder' && <option value="founder">{t(lang,'role_founder_full')}</option>}
                           </select>
                         </div>
                         <div style={{ flex: '1 1 120px' }}>
@@ -484,7 +484,7 @@ export default function AlphaPage() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', paddingBottom: 1 }}>
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleUpdateUser}
                             style={{ padding: '8px 16px', borderRadius: 10, background: '#FFD700', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <Check size={14} /> Sauvegarder
+                            <Check size={14} /> {t(lang,'alpha_save_changes')}
                           </motion.button>
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setEditingUser(null)}
                             style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -500,7 +500,7 @@ export default function AlphaPage() {
           })}
           {users.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
-              {loadingData ? 'Chargement...' : (serviceKeyMissing ? 'Clé service role requise' : 'Aucun utilisateur trouvé.')}
+              {loadingData ? t(lang,'alpha_loading') : (serviceKeyMissing ? t(lang,'alpha_key_required') : t(lang,'alpha_no_users'))}
             </div>
           )}
         </motion.div>
@@ -537,7 +537,7 @@ export default function AlphaPage() {
           ))}
           {allHomework.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
-              {loadingData ? 'Chargement...' : (serviceKeyMissing ? 'Clé service role requise' : 'Aucun devoir pour le moment.')}
+              {loadingData ? t(lang,'alpha_loading') : (serviceKeyMissing ? t(lang,'alpha_key_required') : t(lang,'alpha_no_hw_yet'))}
             </div>
           )}
         </motion.div>
@@ -567,23 +567,23 @@ export default function AlphaPage() {
                             {a.resultat?.avant !== undefined ? ` · ${a.resultat.avant} → ${a.resultat.relu_en_base ?? '?'}` : ''}
                             {a.resultat?.relu_en_base !== undefined && a.resultat?.avant === undefined ? ` · relu : ${typeof a.resultat.relu_en_base === 'object' ? JSON.stringify(a.resultat.relu_en_base) : a.resultat.relu_en_base}` : ''}
                             {a.resultat?.erreur ? ` · ${a.resultat.erreur}` : ''}
-                            {a.resultat?.ligne_cree ? ' · profil recréé' : ''}
+                            {a.resultat?.ligne_cree ? ` · ${t(lang,'alpha_profile_recreated')}` : ''}
                             {a.resultat?.rappel ? ` · ${a.resultat.rappel}` : ''}
                           </div>
                         ))}
                         {(msg.aExecuter || []).map((pr) => (
                           <div key={pr.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11.5, padding: '7px 10px', borderRadius: 10, background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)' }}>
-                            <span>Suppression à confirmer : <strong>{pr.email}</strong></span>
+                            <span>{t(lang,'alpha_delete_confirm_label')} <strong>{pr.email}</strong></span>
                             <button
                               type="button"
                               onClick={async () => {
                                 const r = await alphaFetch('DELETE_USER', { userId: pr.id });
-                                setActionMsg(r?.success ? `\u2705 ${pr.email} supprimé` : `\u274c ${r?.error}`);
+                                setActionMsg(r?.success ? `\u2705 ${pr.email} ${t(lang,'alpha_deleted')}` : `\u274c ${r?.error}`);
                                 setTimeout(() => setActionMsg(''), 4000);
                               }}
                               style={{ background: '#ff6b6b', color: '#12060a', border: 0, borderRadius: 8, padding: '4px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
                             >
-                              Confirmer
+                              {t(lang,'btn_confirm')}
                             </button>
                           </div>
                         ))}
@@ -611,7 +611,7 @@ export default function AlphaPage() {
           </div>
           {/* Quick commands */}
           <div style={{ padding: '12px 24px', borderTop: '1px solid rgba(255,215,0,0.1)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {['Donne-moi les stats complètes', 'Qui sont les utilisateurs ?', 'Analyse la progression des devoirs', 'Combien de messages aujourd\'hui ?'].map(cmd => (
+            {[t(lang,'alpha_cmd_stats'), t(lang,'alpha_cmd_users'), t(lang,'alpha_cmd_progress'), t(lang,'alpha_cmd_messages')].map(cmd => (
               <button key={cmd} onClick={() => setInput(cmd)}
                 style={{ padding: '5px 12px', borderRadius: 8, background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', color: 'rgba(255,215,0,0.7)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
                 {cmd}
@@ -622,7 +622,7 @@ export default function AlphaPage() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,215,0,0.03)', border: '1px solid rgba(255,215,0,0.2)', padding: '8px 8px 8px 20px', borderRadius: 20 }}>
               <Terminal size={16} color="#FFD700" style={{ opacity: 0.6 }} />
               <input style={{ flex: 1, background: 'none', border: 'none', color: '#fff', fontSize: 14, outline: 'none', fontFamily: 'monospace' }}
-                placeholder="Directive ALPHA..." value={input}
+                placeholder={t(lang,'alpha_input_placeholder')} value={input}
                 onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendAiMessage()} disabled={aiLoading} />
               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={sendAiMessage} disabled={aiLoading}
                 style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg, #FFD700, #D4AF37)', border: 'none', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(255,215,0,0.25)' }}>
