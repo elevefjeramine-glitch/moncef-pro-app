@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Sparkles, Zap, BookOpen, Bot, UserCircle } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 import { useUserStore } from "@/store/useUserStore";
+import { useLanguage, t } from "@/utils/i18n";
 
 const STORAGE_KEY = "moncef_onboarding_v1";
 
@@ -18,39 +19,6 @@ type Step = {
   // auto = vérifié en base ; manual = coché par l'élève
   auto?: "homework" | "thunder";
 };
-
-const STEPS: Step[] = [
-  {
-    id: "devoir",
-    label: "Ajoute ton premier devoir",
-    desc: "Tes devoirs, échéances et priorités au même endroit.",
-    href: "/app",
-    icon: BookOpen,
-    auto: "homework",
-  },
-  {
-    id: "thunder",
-    label: "Pose ta première question à Thunder",
-    desc: "Thunder répond en citant tes cours.",
-    href: "/app/thunder",
-    icon: Zap,
-    auto: "thunder",
-  },
-  {
-    id: "assistant",
-    label: "Discute avec l'assistant IA",
-    desc: "Il gère devoirs, emploi du temps et événements.",
-    href: "/app/ai",
-    icon: Bot,
-  },
-  {
-    id: "profil",
-    label: "Découvre ton profil",
-    desc: "Grade, série et statistiques d'activité.",
-    href: "/app/profil",
-    icon: UserCircle,
-  },
-];
 
 type Stored = { done: string[]; dismissed: boolean };
 
@@ -70,9 +38,46 @@ function readStored(): Stored {
 
 export default function OnboardingChecklist() {
   const { user } = useUserStore();
+  const lang = useLanguage();
   const [done, setDone] = useState<string[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [ready, setReady] = useState(false);
+
+  const STEPS: Step[] = useMemo(
+    () => [
+      {
+        id: "devoir",
+        label: t(lang, "onboard_devoir_label"),
+        desc: t(lang, "onboard_devoir_desc"),
+        href: "/app",
+        icon: BookOpen,
+        auto: "homework",
+      },
+      {
+        id: "thunder",
+        label: t(lang, "onboard_thunder_label"),
+        desc: t(lang, "onboard_thunder_desc"),
+        href: "/app/thunder",
+        icon: Zap,
+        auto: "thunder",
+      },
+      {
+        id: "assistant",
+        label: t(lang, "onboard_assistant_label"),
+        desc: t(lang, "onboard_assistant_desc"),
+        href: "/app/ai",
+        icon: Bot,
+      },
+      {
+        id: "profil",
+        label: t(lang, "onboard_profil_label"),
+        desc: t(lang, "onboard_profil_desc"),
+        href: "/app/profil",
+        icon: UserCircle,
+      },
+    ],
+    [lang]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -132,11 +137,11 @@ export default function OnboardingChecklist() {
         exit={{ opacity: 0, y: -8 }}
         className="card"
         style={{ padding: 20, marginBottom: 20, position: "relative" }}
-        aria-label="Prise en main"
+        aria-label={t(lang, "onboard_prise_en_main")}
       >
         <button
           onClick={() => persist(done, true)}
-          aria-label="Masquer la prise en main"
+          aria-label={t(lang, "onboard_masquer")}
           style={{
             position: "absolute", top: 12, right: 12, background: "none",
             border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", padding: 4,
@@ -148,7 +153,7 @@ export default function OnboardingChecklist() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <Sparkles size={18} color="var(--a)" />
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#fff" }}>
-            Bienvenue sur Moncef IA — {done.length}/{STEPS.length}
+            {t(lang, "onboard_bienvenue")} — {done.length}/{STEPS.length}
           </h3>
         </div>
 
@@ -178,7 +183,7 @@ export default function OnboardingChecklist() {
                 <button
                   onClick={() => toggle(s.id)}
                   aria-pressed={checked}
-                  aria-label={checked ? `Marquer « ${s.label} » comme à faire` : `Marquer « ${s.label} » comme fait`}
+                  aria-label={t(lang, "onboard_marquer") + " « " + s.label + " » " + (checked ? t(lang, "onboard_comme_fait") : t(lang, "onboard_comme_a_faire"))}
                   style={{
                     width: 26, height: 26, borderRadius: 8, flexShrink: 0, cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center",
