@@ -332,9 +332,9 @@ function CommContent() {
   // ─── Delete Message ───────────────────────────────────────
   const deleteMessage = async (msgId: any) => {
     const ok = await confirm({
-      title: "Supprimer le message ?",
-      message: "Supprimer ce message définitivement ?",
-      confirmLabel: "Supprimer",
+      title: t(lang,'comm_del_msg_title'),
+      message: t(lang,'comm_del_msg_body'),
+      confirmLabel: t(lang,'btn_delete'),
       danger: true,
     });
     if (!ok) return;
@@ -345,7 +345,7 @@ function CommContent() {
     const { error } = await supabase.from('conversation_messages').delete().eq('id', msgId);
     if (error) {
       console.error('Error deleting message:', error);
-      toastApi.error("Erreur lors de la suppression du message.");
+      toastApi.error(t(lang,'comm_err_delete_msg'));
     }
     
     loadConversations(currentUser.id);
@@ -372,7 +372,7 @@ function CommContent() {
     }]).select().single();
     
     if (error || !conv) { 
-      toastApi.error("Impossible de créer la conversation. Exécutez le script 'supabase/security-fix-rls.sql' dans votre SQL Editor Supabase pour corriger ce bug.");
+      toastApi.error(t(lang,'comm_err_create_conv'));
       console.error('Error creating DM:', error); 
       return; 
     }
@@ -406,7 +406,7 @@ function CommContent() {
       c.type === 'group' && c.name?.toLowerCase() === groupName.trim().toLowerCase()
     );
     if (existingGroup) {
-      toastApi.error("Un groupe avec ce nom existe déjà. Veuillez choisir un autre nom !");
+      toastApi.error(t(lang,'comm_err_group_exists'));
       return;
     }
     
@@ -418,9 +418,9 @@ function CommContent() {
     
     if (error || !conv) { 
       if (error?.code === '23505') {
-        toastApi.error("Ce nom de groupe est déjà pris par un autre utilisateur dans la base de données.");
+        toastApi.error(t(lang,'comm_err_group_taken'));
       } else {
-        toastApi.error("Impossible de créer le groupe. Exécutez le script SQL dans votre Supabase !");
+        toastApi.error(t(lang,'comm_err_group_create'));
       }
       console.error('Error creating group:', error); 
       return; 
@@ -456,16 +456,16 @@ function CommContent() {
   const deleteConversation = async (convId: any) => {
     if (!currentUser) return;
     const ok = await confirm({
-      title: "Supprimer la conversation ?",
-      message: "Cette action est irréversible pour tous les membres.",
-      confirmLabel: "Supprimer",
+      title: t(lang,'comm_del_conv_title'),
+      message: t(lang,'comm_del_conv_body'),
+      confirmLabel: t(lang,'btn_delete'),
       danger: true,
     });
     if (!ok) return;
     
     const { error } = await supabase.from('conversations').delete().eq('id', convId);
     if (error) {
-      toastApi.error("Erreur lors de la suppression. Vous n'avez peut-être pas les droits (seul le créateur ou l'admin peut supprimer).");
+      toastApi.error(t(lang,'comm_err_delete_rights'));
       console.error(error);
       return;
     }
@@ -601,7 +601,7 @@ function CommContent() {
                   whileHover={{ scale: 1.1, color: '#ff4545' }}
                   onClick={() => deleteMessage(msg.id)}
                   style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer', padding: 4, transition: 'color 0.2s' }}
-                  title="Supprimer le message"
+                  title={t(lang,'comm_del_msg')}
                 >
                   <X size={14} />
                 </motion.button>
@@ -613,7 +613,7 @@ function CommContent() {
                 onClick={() => retryMessage(msg)}
                 style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', color: '#ff6b6b', fontSize: 12, fontWeight: 600, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', marginTop: 4 }}
               >
-                ⚠️ Non envoyé — Réessayer
+                ⚠️ {t(lang,'comm_not_sent_retry')}
               </button>
             )}
           </motion.div>
@@ -719,7 +719,7 @@ function CommContent() {
                       {conv.type === 'group' && <Hash size={13} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: 0.5 }} />}
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getConvName(conv)}</span>
                       {conv.type === 'dm' && conv.dmPartner?.role === 'founder' && <span style={{ fontSize: 10, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700', padding: '1px 5px', borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>👑 ALPHA</span>}
-                      {conv.type === 'dm' && conv.dmPartner?.role === 'moderator' && <span style={{ fontSize: 10, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', padding: '1px 5px', borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>🛡️ MOD</span>}
+                      {conv.type === 'dm' && conv.dmPartner?.role === 'moderator' && <span style={{ fontSize: 10, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', padding: '1px 5px', borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>🛡️ {t(lang,'comm_mod_short')}</span>}
                     </div>
                     <div className="conv-last">{getLastMsgPreview(conv)}</div>
                   </div>
@@ -743,7 +743,7 @@ function CommContent() {
                 className="comm-back-btn"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setActiveConv(null); setShowInfoPanel(false); }}
-                aria-label="Retour aux conversations"
+                aria-label={t(lang,'comm_back_convs')}
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, width: 40, height: 40, cursor: 'pointer', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}
               >
                 <ChevronLeft size={20} />
@@ -758,7 +758,7 @@ function CommContent() {
                 <div className="chat-header-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {getConvName(activeConv)}
                   {activeConv.type === 'dm' && activeConv.dmPartner?.role === 'founder' && <span style={{ fontSize: 11, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>👑 Fondateur</span>}
-                  {activeConv.type === 'dm' && activeConv.dmPartner?.role === 'moderator' && <span style={{ fontSize: 11, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>🛡️ Modérateur</span>}
+                  {activeConv.type === 'dm' && activeConv.dmPartner?.role === 'moderator' && <span style={{ fontSize: 11, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>🛡️ {t(lang,'comm_moderator_badge')}</span>}
                 </div>
                 <div className="chat-header-status">
                   {activeConv.type === 'group' 
@@ -771,7 +771,7 @@ function CommContent() {
                       const dotColor = isOnline ? (isDnd ? '#FF3366' : '#00D2B6') : 'rgba(255,255,255,0.3)';
                       const bgColor = isOnline ? (isDnd ? 'rgba(255, 51, 102, 0.15)' : 'rgba(0, 210, 182, 0.15)') : 'rgba(255, 255, 255, 0.05)';
                       const borderColor = isOnline ? (isDnd ? 'rgba(255, 51, 102, 0.3)' : 'rgba(0, 210, 182, 0.3)') : 'rgba(255, 255, 255, 0.1)';
-                      const label = isOnline ? (isDnd ? 'Ne pas déranger' : 'En ligne') : 'Hors ligne';
+                      const label = isOnline ? (isDnd ? t(lang,'comm_dnd') : t(lang,'comm_online')) : t(lang,'comm_offline');
 
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: bgColor, color: dotColor, border: `1px solid ${borderColor}` }}>
@@ -979,7 +979,7 @@ function CommContent() {
                   ))}
                   {allUsers.length === 0 && (
                     <div style={{ textAlign: 'center', padding: 30, color: 'rgba(255,255,255,0.3)' }}>
-                      Aucun utilisateur trouvé
+                      {t(lang,'comm_no_users')}
                     </div>
                   )}
                 </div>
