@@ -1,7 +1,13 @@
-import Link from 'next/link';
+'use client';
 
-// Page 404 brandée en français (remplace la 404 Next.js par défaut en anglais).
+import { useState } from 'react';
+import Link from 'next/link';
+import { t } from '@/utils/i18n';
+
+// Page 404 : hors du LanguageContext.Provider (monté seulement dans /app),
+// on lit la langue persistée comme les autres pages publiques (site_lang).
 export default function NotFound() {
+  const [lang] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('site_lang') || 'fr' : 'fr'));
   return (
     <div
       style={{
@@ -18,22 +24,21 @@ export default function NotFound() {
     >
       <div style={{ fontSize: 64 }} aria-hidden="true">🧭</div>
       <h1 style={{ fontSize: 28, fontWeight: 800, color: '#fff', margin: 0 }}>
-        Page introuvable
+        {t(lang, 'notfound_titre')}
       </h1>
       <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 420, margin: 0 }}>
-        Cette page n'existe pas ou a été déplacée. Pas de panique, on te ramène
-        en terrain connu.
+        {t(lang, 'notfound_message')}
       </p>
       <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
         <Link href="/" className="btn" style={{ textDecoration: 'none' }}>
-          Accueil du site
+          {t(lang, 'notfound_accueil_site')}
         </Link>
         <Link
           href="/app"
           className="btn-ghost btn"
           style={{ textDecoration: 'none' }}
         >
-          Mon espace
+          {t(lang, 'notfound_mon_espace')}
         </Link>
       </div>
     </div>
