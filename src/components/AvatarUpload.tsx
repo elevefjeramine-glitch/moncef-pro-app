@@ -32,6 +32,8 @@ export default function AvatarUpload({ userId, currentUrl, initials, accent, onS
   const [error, setError] = useState("");
   const [googleUrl, setGoogleUrl] = useState<string | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
+  // L'URL OAuth peut être périmée/inaccessible → on bascule sur les initiales.
+  const [oauthBroken, setOauthBroken] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -46,9 +48,10 @@ export default function AvatarUpload({ userId, currentUrl, initials, accent, onS
     setError("");
   };
 
-  // Bonus : proposer la photo du compte Google si la session OAuth en a une.
+  // Photo du compte OAuth (Google, …) récupérée DÈS LE MONTAGE :
+  // elle sert d'avatar par défaut quand aucune photo n'a été uploadée,
+  // et le bouton « Utiliser ma photo Google » de la modale la sauvegarde en base.
   useEffect(() => {
-    if (!open) return;
     (async () => {
       try {
         const { data } = await supabase.auth.getUser();
@@ -56,13 +59,21 @@ export default function AvatarUpload({ userId, currentUrl, initials, accent, onS
           data?.user?.user_metadata?.avatar_url ||
           data?.user?.user_metadata?.picture ||
           null;
-        if (pic && pic !== currentUrl) setGoogleUrl(String(pic));
+        if (pic && pic !== currentUrl) {
+          setGoogleUrl(String(pic));
+          setOauthBroken(false);
+        }
       } catch {
         /* non bloquant */
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open ]);
+  }, []);
+
+  // Priorité d'affichage : photo uploadée → photo OAuth → initiales.
+  const oauthPhoto = !oauthBroken ? googleUrl : null;
+  const displayUrl = currentUrl || oauthPhoto;
+  const isOauthPhoto = !currentUrl && !!oauthPhoto;
 
   const clamp = (x: number, y: number, z: number, nat: { w: number; h: number }) => {
     const fit = Math.max(CIRCLE / nat.w, CIRCLE / nat.h);
@@ -226,10 +237,11 @@ export default function AvatarUpload({ userId, currentUrl, initials, accent, onS
             border: "2px solid rgba(255,255,255,0.15)",
           }}
         >
-          {currentUrl ? (
+          {displayUrl ? (
             <img
-              src={currentUrl}
+              src={displayUrl}
               alt="Photo de profil"
+              onError={isOauthPhoto ? () => setOauthBroken(true) : undefined}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
@@ -311,7 +323,7 @@ export default function AvatarUpload({ userId, currentUrl, initials, accent, onS
                     style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                     <ImagePlus size={16} /> Choisir une image
                   </button>
-                  {googleUrl && (
+                  {googleUrl && !oauthBroken && (
                     <button type="button" className="btn-ghost" onClick={useGooglePhoto} disabled={googleBusy}
                       style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       {googleBusy ? (
