@@ -476,7 +476,7 @@ export async function POST(req: Request) {
 // string renvoient la même réponse (400 · reason=API_KEY_INVALID), donc le transport
 // change rien au contrat ; en revanche une URL passe dans les journaux des proxys,
 // l'historique de la fonction, parfois dans le message d'erreur — une clé non.
-const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
+const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
             body: JSON.stringify({
