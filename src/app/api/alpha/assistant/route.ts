@@ -278,7 +278,7 @@ export async function POST(req: Request) {
       .map((m: Message) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content).slice(0, 4000) }] }));
 
     const appeler = async (corps: Record<string, unknown>) => {
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
         body: JSON.stringify(corps),
@@ -458,8 +458,8 @@ export async function POST(req: Request) {
           echecsFournisseurs.push(`${f}/${avecOutils ? "outils" : "texte"} : ${motif.slice(0, 150)}`);
           // « quota exceeded » / « rate limit » : changer de canal n'y change rien, le
           // compte est saturé pour la minute. Passer au fournisseur suivant directement
-          // évite de faire attendre l'élève 14 s de plus pour le même refus.
-          if (/quota|rate limit|insufficient/i.test(motif)) break;
+          // évite de faire attendre l'élève 14 s de plus pour le même refus — un 403 free tier / billing bascule tout de suite sur Groq.
+          if (/quota|rate limit|insufficient|free tier|billing|403/i.test(motif)) break;
         }
       }
       if (tour1) break;
