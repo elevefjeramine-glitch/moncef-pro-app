@@ -58,7 +58,7 @@ const ROUTES: RouteDoc[] = [
       ["500", "Aucune clé API trouvée. Configurez GEMINI_API_KEY ou GROQ_API_KEY..."],
     ],
     notes: [
-      "Le champ `model` n'existe pas : le serveur choisit. Modèle principal `gemini-2.5-flash (Google, free tier)` (Google), secours `openai/gpt-oss-20b` via Groq, essayés dans cet ordre jusqu'au premier qui répond.",
+            "Le champ `model` n'existe pas : le serveur choisit. Modèle principal `gemini-2.5-flash` (Google, free tier), secours `openai/gpt-oss-20b` via Groq, essayés dans cet ordre jusqu'au premier qui répond.",
       "Chaque réponse réussie coûte 10 crédits. Un échec du modèle ne débite rien.",
       "Une image passe en `inlineData` au modèle ; le format accepté est une data URL base64 dans une partie `image_url`.",
       "Timeout de 20 s par appel fournisseur, une tentative supplémentaire sur erreur réseau, 429, 502, 503, 504.",
