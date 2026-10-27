@@ -202,7 +202,7 @@ export async function POST(req: Request) {
     const providers: { name: string; run: () => Promise<string>; stream: () => AsyncGenerator<string> }[] = [];
 
     if (GEMINI_KEY) {
-      const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash";
+      const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash";
       const buildGeminiBody = () => ({
         systemInstruction: { parts: [{ text: enhancedSystem }] },
         contents: messages.map((m: any) => ({
