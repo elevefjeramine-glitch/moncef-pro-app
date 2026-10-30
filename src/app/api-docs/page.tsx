@@ -58,7 +58,7 @@ const ROUTES: RouteDoc[] = [
       ["500", "Aucune clé API trouvée. Configurez GEMINI_API_KEY ou GROQ_API_KEY..."],
     ],
     notes: [
-            "Le champ `model` n'existe pas : le serveur choisit. Modèle principal `gemini-2.5-flash` (Google, free tier), secours `openai/gpt-oss-20b` via Groq, essayés dans cet ordre jusqu'au premier qui répond.",
+      "Le champ `model` n'existe pas : le serveur choisit. Modèles `gemini-3.8-flash` puis `gemini-3.6-flash` (Google, free tier), secours `openai/gpt-oss-20b` via Groq, essayés dans cet ordre jusqu'au premier qui répond.",
       "Chaque réponse réussie coûte 10 crédits. Un échec du modèle ne débite rien.",
       "Une image passe en `inlineData` au modèle ; le format accepté est une data URL base64 dans une partie `image_url`.",
       "Timeout de 20 s par appel fournisseur, une tentative supplémentaire sur erreur réseau, 429, 502, 503, 504.",
@@ -349,7 +349,7 @@ const content = {
     base_hint: "Toutes les routes sont sur le même domaine que le site. Les exemples ci-dessous utilisent déjà cette origine.",
     auth_title: "Authentification",
     auth_1: "En-tête HTTP :",
-    auth_2: "Forme historique, acceptée par les trois routes d'import :",
+    auth_2: "Corps JSON (sans jeton — il passe uniquement dans l'en-tête ci-dessus) :",
     auth_3: "Obtenir un jeton (connexion par mot de passe, réponse mesurée : expires_in = 3600 s) :",
     auth_note: "Le jeton est le access_token émis par Supabase. Aucune clé API dédiée n'existe : un jeton expiré donne 401, il faut se reconnecter.",
     credits_title: "Crédits",
@@ -400,7 +400,7 @@ const content = {
     base_hint: "Every route lives on the same origin as the site. The examples below already use that origin.",
     auth_title: "Authentication",
     auth_1: "HTTP header:",
-    auth_2: "Historic form, accepted by the three import routes:",
+    auth_2: "JSON body (no token — it goes only in the header above):",
     auth_3: "Getting a token (password sign-in, measured response: expires_in = 3600 s):",
     auth_note: "The token is the Supabase access_token. There is no separate API key: an expired token returns 401 and you sign in again.",
     credits_title: "Credits",
@@ -451,7 +451,7 @@ const content = {
     base_hint: "Todas las rutas están en el mismo dominio que el sitio. Los ejemplos ya usan ese origen.",
     auth_title: "Autenticación",
     auth_1: "Cabecera HTTP:",
-    auth_2: "Forma histórica, aceptada por las tres rutas de importación:",
+    auth_2: "Cuerpo JSON (sin token — solo va en la cabecera anterior):",
     auth_3: "Obtener un token (inicio de sesión con contraseña, medido: expires_in = 3600 s):",
     auth_note: "El token es el access_token de Supabase. No existe clave de API propia: un token caducado devuelve 401 y hay que volver a iniciar sesión.",
     credits_title: "Créditos",
@@ -502,7 +502,7 @@ const content = {
     base_hint: "كل المسارات على نفس نطاق الموقع. والأمثلة أدناه تستعمل هذا العنوان أصلًا.",
     auth_title: "المصادقة",
     auth_1: "ترويسة HTTP:",
-    auth_2: "الشكل التاريخي المقبول في مسارات الاستيراد الثلاثة:",
+    auth_2: "جسم JSON (بدون رمز — يُرسل فقط في الترويسة أعلاه):",
     auth_3: "الحصول على رمز (الدخول بكلمة السر، قياسًا: expires_in = 3600 ثانية):",
     auth_note: "الرمز هو access_token الذي يصدره Supabase. لا يوجد مفتاح API مستقل: الرمز المنتهي يعيد 401 ويُعاد الدخول.",
     credits_title: "الرصيد",
@@ -553,7 +553,7 @@ const content = {
     base_hint: "所有接口与站点同源。下方示例已使用该地址。",
     auth_title: "鉴权",
     auth_1: "HTTP 请求头：",
-    auth_2: "历史形式，三个导入接口同样接受：",
+    auth_2: "JSON 正文（不含令牌，令牌仅通过上面的请求头发送）：",
     auth_3: "获取令牌（用密码登录，实测响应：expires_in = 3600 秒）：",
     auth_note: "令牌即 Supabase 颁发的 access_token。不存在独立的 API 密钥；令牌过期返回 401，需重新登录。",
     credits_title: "额度",
@@ -701,7 +701,7 @@ export default function ApiDocsPage() {
           </pre>
           <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: "0 0 6px" }}>{t.auth_2}</p>
           <pre style={{ margin: "0 0 16px", padding: "12px 16px", background: "#0a0f1d", borderRadius: "10px", fontSize: "12.5px", color: "#a5f3fc", fontFamily: "ui-monospace, monospace", overflowX: "auto" }}>
-            {`{ "authToken": "<access_token>", "entries": [ … ] }`}
+            {`{ "entries": [ … ] }`}
           </pre>
           <CodeBlock id="token" title={`curl — ${t.auth_3}`} text={tokenCurl} copyState={copyState} onCopy={handleCopy} copiedLabel={t.copied} copyLabel={t.copy} />
           <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.5)", margin: 0, lineHeight: 1.7 }}>{t.auth_note}</p>
