@@ -201,8 +201,13 @@ export async function POST(req: Request) {
     // Les fournisseurs sont maintenant essayés en ordre jusqu'au premier qui répond.
     const providers: { name: string; run: () => Promise<string>; stream: () => AsyncGenerator<string> }[] = [];
 
-    if (GEMINI_KEY) {
-      const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash";
+    // 30/10/2026 : gemini-2.5-flash est fermé aux nouveaux utilisateurs (HTTP 404
+    // « no longer available to new users ») — Google renvoie vers gemini-3.8-flash.
+    // On essaie 3.8 puis 3.6, puis Groq (fournisseur suivant dans la liste).
+    for (const [GEMINI_MODEL_NAME, GEMINI_MODEL_URL] of [
+      ["gemini-3.8-flash", "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash"],
+      ["gemini-3.6-flash", "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash"],
+    ] as const) {
       const buildGeminiBody = () => ({
         systemInstruction: { parts: [{ text: enhancedSystem }] },
         contents: messages.map((m: any) => ({
@@ -223,7 +228,7 @@ export async function POST(req: Request) {
         })),
       });
       providers.push({
-        name: 'Gemini',
+        name: `Gemini ${GEMINI_MODEL_NAME}`,
         run: async () => {
           const response = await fetchWithTimeout(
             // La clé passe par l'en-tête x-goog-api-key, jamais par l'URL : une URL se
