@@ -467,16 +467,18 @@ export async function POST(req: Request) {
           : promptAsk(question, material);
 
     const fournisseurs: { nom: string; appeler: () => Promise<string> }[] = [];
-    if (GEMINI) {
+    // 30/10/2026 : gemini-2.5-flash fermé aux nouveaux utilisateurs (404) —
+    // on essaie gemini-3.8-flash puis gemini-3.6-flash, puis Groq.
+    for (const GEMINI_MODEL of ["gemini-3.8-flash", "gemini-3.6-flash"]) {
       fournisseurs.push({
-        nom: "Gemini",
+        nom: `Gemini ${GEMINI_MODEL}`,
         appeler: async () => {
           // La clé voyage dans `x-goog-api-key`, plus dans `?key=`. Vérifié le 29/08/2026 sur
 // l'API Google : une clé invalide envoyée par en-tête et la même envoyée en query
 // string renvoient la même réponse (400 · reason=API_KEY_INVALID), donc le transport
 // change rien au contrat ; en revanche une URL passe dans les journaux des proxys,
 // l'historique de la fonction, parfois dans le message d'erreur — une clé non.
-const res = await fetchAvecDelai("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+const res = await fetchAvecDelai(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
             body: JSON.stringify({
