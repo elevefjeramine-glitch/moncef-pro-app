@@ -124,7 +124,7 @@ export async function POST(req: Request) {
   if (refus) return refus;
   try {
     type Message = { role: string; content: string };
-    const corps = (await lireJson(req, LIMITE_CORPS.alpha)) as { messages?: unknown; authToken?: string };
+    const corps = (await lireJson(req, LIMITE_CORPS.alpha)) as { messages?: unknown };
     const messages: Message[] = (Array.isArray(corps?.messages) ? (corps.messages as unknown[]) : [])
       .map((m) => ({ role: String((m as Message)?.role ?? ""), content: String((m as Message)?.content ?? "") }))
       .slice(-14);
@@ -133,10 +133,13 @@ export async function POST(req: Request) {
     if (!GEMINI) return NextResponse.json({ error: "Aucune clé Gemini configurée : l'assistant à actions est indisponible." }, { status: 503 });
 
     // Session + rôle, relus côté serveur (jamais le rôle annoncé par le client).
+    // Jeton UNIQUEMENT via Authorization: Bearer — absent ou invalide → 401.
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    if (!token) return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
     const anon = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "", {
-      global: { headers: { Authorization: `Bearer ${String(corps?.authToken ?? "")}` } },
+      global: { headers: { Authorization: `Bearer ${token}` } },
     });
-    const { data: sess, error: errAuth } = await anon.auth.getUser();
+    const { data: sess, error: errAuth } = await anon.auth.getUser(token);
     if (errAuth || !sess?.user) return NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 });
     // Rate limiting APRÈS auth : l'utilisateur est identifié (sess.user.id).
     // Placé avant le contrôle de rôle : même un appel rejeté plus loin compte,
@@ -278,7 +281,9 @@ export async function POST(req: Request) {
       .map((m: Message) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content).slice(0, 4000) }] }));
 
     const appeler = async (corps: Record<string, unknown>) => {
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+      // 30/10/2026 : gemini-2.5-flash fermé aux nouveaux utilisateurs (404) —
+      // Google renvoie vers gemini-3.8-flash ; Groq reste le secours suivant.
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
         body: JSON.stringify(corps),
@@ -458,8 +463,10 @@ export async function POST(req: Request) {
           echecsFournisseurs.push(`${f}/${avecOutils ? "outils" : "texte"} : ${motif.slice(0, 150)}`);
           // « quota exceeded » / « rate limit » : changer de canal n'y change rien, le
           // compte est saturé pour la minute. Passer au fournisseur suivant directement
-          // évite de faire attendre l'élève 14 s de plus pour le même refus — un 403 free tier / billing bascule tout de suite sur Groq.
-          if (/quota|rate limit|insufficient|free tier|billing|403/i.test(motif)) break;
+          // évite de faire attendre l'élève 14 s de plus pour le même refus.
+          // Même logique pour un 403 « free tier / billing » Gemini : le second canal
+          // (texte) échouera pareil, on bascule tout de suite sur Groq.
+          if (/quota|rate limit|insufficient|free tier|billing|403|404|no longer available/i.test(motif)) break;
         }
       }
       if (tour1) break;
