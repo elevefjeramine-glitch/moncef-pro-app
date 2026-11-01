@@ -53,10 +53,17 @@ export default function TiltCard({ children, className, style, delay = 0, onClic
         ...style,
         perspective: 1200,
         transformStyle: "preserve-3d",
+        // Plafond 5° : x et y vont de -0.5 à 0.5, donc ×10 = ±5°.
+        // (Avant : ×20, soit jusqu'à 10°, trop violent pour des cartes.)
         transform: to(
           [x, y],
-          (xVal, yVal) => `rotateX(${yVal * -20}deg) rotateY(${xVal * 20}deg)`
+          (xVal, yVal) => `rotateX(${yVal * -10}deg) rotateY(${xVal * 10}deg)`
         ),
+        // Soulèvement au survol : ombre plus forte, sans toucher au transform
+        // piloté par react-spring (un translateY CSS entrerait en conflit).
+        boxShadow: isHovered
+          ? "0 24px 48px rgba(89,130,255,0.18)"
+          : style?.boxShadow,
       }}
       className={cn("relative overflow-hidden transition-shadow duration-300", className)}
     >
