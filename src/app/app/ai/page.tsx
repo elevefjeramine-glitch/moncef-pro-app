@@ -6,6 +6,8 @@ import { Send, Bot, Sparkles, User, RefreshCw, ImagePlus, CalendarPlus, X, Check
 import { useLanguage, t } from "@/utils/i18n";
 import { supabase } from "@/utils/supabase/client";
 import { useUserStore } from "@/store/useUserStore";
+import TypingDots from "@/components/motion/TypingDots";
+import FondantSkeleton from "@/components/motion/FondantSkeleton";
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 
@@ -631,10 +633,14 @@ Exemples :
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0,210,182,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--a)' }}>
                   <Bot size={20} />
                 </div>
-                <div style={{ padding: '16px 20px', borderRadius: '20px', borderTopLeftRadius: '4px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} style={{ width: 6, height: 6, background: 'var(--a)', borderRadius: '50%' }} />
-                  <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} style={{ width: 6, height: 6, background: 'var(--a)', borderRadius: '50%' }} />
-                  <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} style={{ width: 6, height: 6, background: 'var(--a)', borderRadius: '50%' }} />
+                <div style={{ padding: '16px 20px', borderRadius: '20px', borderTopLeftRadius: '4px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 120 }}>
+                  {(() => {
+                    // Analyse de photo en cours : le dernier message utilisateur
+                    // porte des images -> squelette fondant plutôt que des points.
+                    // Sinon : indicateur de frappe fondant (texte seul).
+                    const lastUser = [...messages].reverse().find((m: any) => m.role === 'user');
+                    return lastUser?.images?.length > 0 ? <FondantSkeleton lines={3} /> : <TypingDots />;
+                  })()}
                 </div>
               </motion.div>
             )}
