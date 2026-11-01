@@ -8,6 +8,7 @@ import TiltCard from "@/components/TiltCard";
 import { useLanguage, t } from "@/utils/i18n";
 
 import { Skeleton } from "@/components/ui/Skeleton";
+import SuccessCheck from "@/components/motion/SuccessCheck";
 import { useUserStore } from "@/store/useUserStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -46,6 +47,9 @@ export default function DashboardPage() {
   const [newProgression, setNewProgression] = useState(0);
   // C5 (audit UI/UX 2026-10-04) : message d'erreur inline quand le formulaire est incomplet
   const [formError, setFormError] = useState("");
+  // Confirmation visuelle d'ajout : libellé réel saisi par l'utilisateur,
+  // conservé avant la remise à zéro du formulaire (jamais de texte inventé).
+  const [justAdded, setJustAdded] = useState<string | null>(null);
   const subjInputRef = useRef<HTMLInputElement>(null);
   // Sections temporelles repliables (quick win audit 2026-10-04)
   const [collapsedHwSections, setCollapsedHwSections] = useState<Record<string, boolean>>({ later: true });
@@ -275,6 +279,8 @@ export default function DashboardPage() {
       is_done: newStatus === 'done'
     }]);
     
+    // Confirmation : on garde le libellé réel avant de vider le formulaire.
+    setJustAdded(`${newSubj} — ${newTask}`);
     // Reset form
     setNewSubj(""); setNewTask(""); setNewTeacher(""); 
     setNewDueDate(""); setNewPriority("normal"); setNewStatus("todo"); 
@@ -454,13 +460,24 @@ export default function DashboardPage() {
                 )}
                 <motion.button 
                   whileHover={{ scale: 1.02 }} 
-                  whileTap={{ scale: 0.98 }} 
+                  whileTap={{ scale: 0.97 }} 
                   className="btn" 
                   style={{ height: 50, borderRadius: 14, fontSize: 16, fontWeight: 700, gap: 10 }} 
                   onClick={addHomework}
                 >
                   <Plus size={20} /> {t(lang,'btn_add')} {t(lang,'hw_task')}
                 </motion.button>
+                {justAdded && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    role="status"
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--a)', fontWeight: 600 }}
+                  >
+                    <SuccessCheck size={22} />
+                    <span>{justAdded}</span>
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           )}
