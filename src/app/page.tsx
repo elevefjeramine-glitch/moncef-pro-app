@@ -13,6 +13,10 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import TiltCard from "@/components/TiltCard";
+import FondantBlobs from "@/components/motion/FondantBlobs";
+import HeroSpotlight from "@/components/motion/HeroSpotlight";
+import CreditCounter from "@/components/motion/CreditCounter";
+import Reveal from "@/components/motion/Reveal";
 import Logo from "@/components/Logo";
 
 // TiltCard n''utilise ni window ni IntersectionObserver (relu dans src/components/TiltCard.tsx) :
@@ -477,22 +481,7 @@ export default function Home() {
       </AnimatePresence>
       {/* ── BACKGROUND AMBIANCE ── */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <motion.div
-          animate={reduceMotion ? { scale: 1, opacity: 0.1 } : { scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 20, repeat: Infinity, ease: "linear" }}
-          style={{
-            position: "absolute", top: "-10%", left: "-10%", width: "50%", height: "50%",
-            background: "radial-gradient(circle, var(--p) 0%, transparent 70%)", filter: "blur(120px)"
-          }}
-        />
-        <motion.div
-          animate={reduceMotion ? { scale: 1, opacity: 0.08 } : { scale: [1.2, 1, 1.2], opacity: [0.08, 0.15, 0.08] }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 15, repeat: Infinity, ease: "linear" }}
-          style={{
-            position: "absolute", bottom: "-10%", right: "-10%", width: "40%", height: "40%",
-            background: "radial-gradient(circle, var(--a) 0%, transparent 70%)", filter: "blur(100px)"
-          }}
-        />
+        <FondantBlobs />
         <div style={{ position: "absolute", inset: 0, opacity: 0.02, backgroundImage: BRUIT }} />
       </div>
 
@@ -535,7 +524,7 @@ export default function Home() {
                 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 style={{ fontSize: '11px', fontWeight: 900, color: 'var(--a)', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.15em' }}
               >
-                <Zap size={11} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : `${credits} credits`}
+                <Zap size={11} fill="var(--a)" /> {['founder', 'moderator'].includes(user.role) ? 'Illimité' : <CreditCounter value={credits} suffix=" credits" />}
               </motion.div>
               <Link href="/app" className="btn btn-premium" style={{ minHeight: 44, padding: "0 28px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
                 {t(lang, "dashboard")} <ArrowRight size={16} />
@@ -566,6 +555,7 @@ export default function Home() {
           justifyContent: "center", alignItems: "center",
           padding: "160px 24px 100px", textAlign: "center", position: "relative"
         }}>
+          <HeroSpotlight />
           
           <motion.div variants={stagger} initial="hidden" animate="show" style={{ position: "relative", zIndex: 1, maxWidth: 1000 }}>
             
@@ -688,7 +678,8 @@ export default function Home() {
               { n: "2", title: t(lang, "how_s2t"), desc: t(lang, "how_s2d"), icon: <ClipboardList size={22} /> },
               { n: "3", title: t(lang, "how_s3t"), desc: t(lang, "how_s3d"), icon: <Bot size={22} /> },
             ].map((s, i) => (
-              <div key={s.n} className="rise-in card" style={{ padding: "40px 32px", animationDelay: `${i * 0.08}s`, position: "relative" }}>
+              <Reveal key={s.n} delay={i * 0.08} className="reveal-stretch">
+              <div className="card" style={{ padding: "40px 32px", position: "relative" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
                   <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--p-g)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 8px 20px rgba(89,130,255,0.35)" }}>
                     {s.icon}
@@ -698,6 +689,7 @@ export default function Home() {
                 <h3 style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font2)", marginBottom: 12 }}>{s.title}</h3>
                 <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.7 }}>{s.desc}</p>
               </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -823,6 +815,7 @@ export default function Home() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 32, maxWidth: 1300, margin: "0 auto" }}>
             {(FEATURES[lang as keyof typeof FEATURES] ?? FEATURES.fr).map((feat, idx) => (
+              <Reveal key={feat.title} delay={idx * 0.08} className="reveal-stretch">
               <FeatureCard
                 key={feat.title}
                 icon={feat.icon}
@@ -836,6 +829,7 @@ export default function Home() {
                    on arrondit au centième de seconde. */
                 delay={Math.round((0.1 + idx * 0.1) * 100) / 100}
               />
+              </Reveal>
             ))}
           </div>
         </div>
@@ -976,7 +970,7 @@ function FeatureCard({ icon, title, desc, list = [], premium = false, accent, et
   // Thunder passe au violet avec une étiquette « IA » qui dit ce qu'elle est.
   const teinte = accent ?? (premium ? "var(--gold)" : "var(--p)");
   return (
-    <TiltCard className="card card-gsap rise-in-fade" style={{ padding: "48px 32px", position: "relative", overflow: "hidden", animationDelay: `${delay}s` }}>
+    <TiltCard className="card card-gsap" style={{ padding: "48px 32px", position: "relative", overflow: "hidden", height: "100%" }}>
       {(premium || etiquette) && (
         <div style={{
           position: "absolute", top: 12, right: 12, background: teinte, color: "#000",
