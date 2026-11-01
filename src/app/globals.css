@@ -151,7 +151,7 @@
   box-shadow: 0 8px 24px rgba(0, 210, 182, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
 }
 .btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.97);
 }
 
 .btn-premium {
@@ -166,7 +166,7 @@
   transform: translateY(-3px) scale(1.03);
 }
 .btn-premium:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.97);
   box-shadow: 0 4px 14px rgba(89, 130, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
@@ -3148,4 +3148,42 @@ input, textarea, select {
 
 @media (prefers-reduced-motion: reduce) {
   .card-glare::after { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS UX/UI — lot du 01/11/2026 (fusionné sur master)
+   Tout est scopé, transform/opacity seulement, et coupé par la règle
+   globale prefers-reduced-motion (durées quasi nulles) ci-dessus.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 1. Orbes fondants du hero : morphing de border-radius + dérive lente.
+   Les orbes restent derrière le titre (z-index du conteneur parent). */
+.fondant-blobs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.fondant-blob { position: absolute; border-radius: 58% 42% 55% 45% / 45% 55% 42% 58%; filter: blur(90px); will-change: transform, border-radius; }
+.fondant-blob--blue { width: 52%; height: 52%; top: -12%; left: -8%; background: radial-gradient(circle, var(--p) 0%, transparent 70%); opacity: 0.55; animation: fondant-morph 22s ease-in-out infinite; }
+.fondant-blob--teal { width: 42%; height: 42%; bottom: -10%; right: -6%; background: radial-gradient(circle, var(--a) 0%, transparent 70%); opacity: 0.45; animation: fondant-morph 18s ease-in-out infinite reverse; }
+.fondant-blob--violet { width: 34%; height: 34%; top: 30%; left: 58%; background: radial-gradient(circle, #a78bfa 0%, transparent 70%); opacity: 0.35; animation: fondant-morph 26s ease-in-out infinite; animation-delay: -6s; }
+@keyframes fondant-morph {
+  0%, 100% { border-radius: 58% 42% 55% 45% / 45% 55% 42% 58%; transform: translate(0, 0) scale(1); }
+  33% { border-radius: 45% 55% 48% 52% / 58% 42% 55% 45%; transform: translate(4%, -3%) scale(1.08); }
+  66% { border-radius: 52% 48% 60% 40% / 40% 60% 45% 55%; transform: translate(-3%, 4%) scale(0.94); }
+}
+
+/* 3. Enveloppe des révélations en cascade : l'enfant (carte) remplit la case
+   de la grille, pour que les cartes d'une rangée gardent la même hauteur. */
+.reveal-stretch { display: flex; }
+.reveal-stretch > * { flex: 1; min-width: 0; }
+
+/* 6. Squelettes fondants : pulsation douce en vague, en plus du shimmer
+   existant (Skeleton / .th-squelette). */
+.fondant-skeleton { animation: fondant-pulse 2.2s ease-in-out infinite; }
+@keyframes fondant-pulse {
+  0%, 100% { opacity: 0.55; transform: scaleY(0.92); }
+  50% { opacity: 1; transform: scaleY(1.06); }
+}
+.thunder .th-squelette i { animation: th-shimmer 1.25s linear infinite, fondant-pulse 2.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fondant-blob, .fondant-skeleton { animation: none; }
+  .thunder .th-squelette i { animation: none; }
 }
