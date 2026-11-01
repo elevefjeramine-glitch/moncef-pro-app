@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import FondantSkeleton from "@/components/motion/FondantSkeleton";
 import { ArrowRight, Bell, BookOpen, Bot, Check, Copy, FileUp, Globe, Layers, Link2, ListChecks, Mic, MicOff, Plus, Scissors, Send, ShieldAlert, Trash2, Volume2, VolumeX, Zap } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
@@ -911,6 +912,11 @@ export default function ThunderPage() {
                   <Scissors size={14} /> {decoupe.enCours ? t(lang, "thunder_fiches_attente") : t(lang, "thunder_fiches_lancer")}
                 </button>
               </div>
+              {decoupe.enCours && (
+                <div style={{ marginTop: 12 }}>
+                  <FondantSkeleton lines={3} />
+                </div>
+              )}
               {decoupe.erreur && <p className="th-depot-erreur">{decoupe.erreur}</p>}
               {decoupe.rapport && (
                 <div className="th-fiches">
